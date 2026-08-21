@@ -1,26 +1,97 @@
 @import "tailwindcss";
 
+/* 1. Definisikan warna & font kustom di sini untuk Tailwind v4 */
+@theme {
+  --color-rule: #e5e5e0; /* Sesuaikan kode warna ini dengan warna asli projectmu */
+  --color-ink: #111111;
+  --color-paper: #fafaf7;
+  --color-mute: #71717a;
+  
+  --font-body: var(--font-sans), sans-serif; /* Sesuaikan jika pakai font lain */
+  --spacing-wrap: 1200px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+::-webkit-scrollbar{
+  display: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--color-rule); /* Atau tetap pakai theme("colors.rule") */
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-paper text-ink font-body antialiased;
+}
+
+/* visible keyboard focus everywhere, no exceptions */
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* shared editorial primitives */
+.eyebrow {
+  @apply font-mono text-[11px] uppercase tracking-widest text-mute;
+}
+
+.hairline-y {
+  border-top-width: 1px;
+  border-bottom-width: 1px;
+}
+
+.wrap {
+  @apply mx-auto w-full max-w-[var(--spacing-wrap)] px-5 sm:px-8;
+}
+
+/* duotone placeholder "photo" texture */
+.photo-tone {
+  position: relative;
+  background-color: var(--color-ink);
+  overflow: hidden;
+}
+
+.photo-tone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      115deg,
+      rgba(250, 250, 247, 0.06) 0px,
+      rgba(250, 250, 247, 0.06) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+  mix-blend-mode: overlay;
+}
+
+.photo-tone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 20% 15%, rgba(250, 250, 247, 0.16), transparent 60%);
 }
