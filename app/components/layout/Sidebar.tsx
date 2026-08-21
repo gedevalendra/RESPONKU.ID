@@ -1,15 +1,7 @@
 import Link from "next/link";
-import { categories, getTrending } from "@/lib/data";
-import TrendingList from "../landing/TrendingList";
-import NewsletterForm from "../landing/NewsletterForm";
-
-const categorySlug: Record<string, string> = {
-  Ekonomi: "ekonomi",
-  Teknologi: "teknologi",
-  Politik: "politik",
-  Olahraga: "olahraga",
-  Budaya: "budaya",
-};
+import { categories, categorySlug, getTrending } from "@/lib/data";
+import TrendingList from "../../components/landing/TrendingList";
+import NewsletterForm from "../../components/landing/NewsletterForm";
 
 export default function Sidebar() {
   const trending = getTrending(5);

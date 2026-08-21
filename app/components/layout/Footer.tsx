@@ -40,7 +40,7 @@ export default function Footer() {
       <div className="wrap grid grid-cols-2 gap-y-10 py-14 sm:grid-cols-4">
         <div className="col-span-2 sm:col-span-1">
           <span className="font-display text-3xl">
-            WARTA<span className="text-mute">.</span>
+            ResponKu<span className="text-mute">.</span>
           </span>
           <p className="mt-3 max-w-[22ch] text-sm text-mute">
             Kabar hari ini, ditulis dengan jelas.
@@ -60,12 +60,6 @@ export default function Footer() {
             </ul>
           </div>
         ))}
-      </div>
-      <div className="border-t border-rule py-5">
-        <div className="wrap flex flex-col gap-2 font-mono text-[11px] text-mute sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} WARTA. Seluruh hak cipta dilindungi.</span>
-          <span>Diterbitkan di Bandar Lampung, Indonesia</span>
-        </div>
       </div>
     </footer>
   );

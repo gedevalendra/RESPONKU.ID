@@ -2,15 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { categories } from "@/lib/data";
-
-const categorySlug: Record<string, string> = {
-  Ekonomi: "ekonomi",
-  Teknologi: "teknologi",
-  Politik: "politik",
-  Olahraga: "olahraga",
-  Budaya: "budaya",
-};
+import { categories, categorySlug } from "@/lib/data";
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false);

@@ -43,8 +43,6 @@ export default function HomePage() {
   );
 }
 
-// small local wrapper kept in the page file since it's a one-off layout tweak,
-// not a general-purpose reusable primitive like the components in /components
 function ArticleRow({ article }: { article: Article }) {
   return <ArticleCard article={article} variant="row" />;
 }

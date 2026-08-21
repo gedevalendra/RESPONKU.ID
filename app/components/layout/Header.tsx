@@ -1,15 +1,7 @@
 import Link from "next/link";
-import { categories, breakingHeadlines } from "@/lib/data";
-import TickerBar from "../landing/TickerBar";
+import { categories, categorySlug, breakingHeadlines } from "@/lib/data";
+import TickerBar from "../../components/landing/TickerBar";
 import MobileNav from "./MobileNav";
-
-const categorySlug: Record<string, string> = {
-  Ekonomi: "ekonomi",
-  Teknologi: "teknologi",
-  Politik: "politik",
-  Olahraga: "olahraga",
-  Budaya: "budaya",
-};
 
 function todayLabel(): string {
   return new Intl.DateTimeFormat("id-ID", {
@@ -22,23 +14,21 @@ function todayLabel(): string {
 
 export default function Header() {
   return (
-    <header>
-      {/* meta strip */}
-      <div className="wrap hidden items-center justify-between py-2.5 sm:flex">
-        <span className="font-mono text-[11px] uppercase tracking-widest2 text-mute">
-          {todayLabel()}
-        </span>
-        <span className="font-mono text-[11px] uppercase tracking-widest2 text-mute">
-          Edisi No. 214 · Bandar Lampung
-        </span>
-      </div>
-
+    <header className="sticky top-0 bg-white z-100">
       {/* nameplate */}
       <div className="rule-thick wrap flex items-center justify-between border-b border-rule py-5 sm:py-6">
         <Link href="/" className="font-display text-4xl tracking-tight sm:text-5xl">
-          WARTA<span className="text-mute">.</span>
+          ResponKu
         </Link>
-        <MobileNav />
+        <div className="flex items-center gap-4 lg:hidden">
+          <Link
+            href="/masuk"
+            className="border border-ink px-3 py-1.5 font-mono text-xs uppercase tracking-widest2"
+          >
+            Masuk
+          </Link>
+          <MobileNav />
+        </div>
       </div>
 
       {/* category nav */}
@@ -57,6 +47,12 @@ export default function Header() {
           className="ml-auto font-mono text-xs uppercase tracking-widest2 text-mute hover:text-ink"
         >
           Tentang Redaksi
+        </Link>
+        <Link
+          href="/masuk"
+          className="border border-ink px-4 py-1.5 font-mono text-xs uppercase tracking-widest2 hover:bg-ink hover:text-paper transition-colors"
+        >
+          Masuk
         </Link>
       </nav>
 

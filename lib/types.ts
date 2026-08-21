@@ -17,4 +17,5 @@ export interface Article {
   views: number;
   breaking?: boolean;
   featured?: boolean;
+  content: string[];
 }

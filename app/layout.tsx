@@ -24,9 +24,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WARTA. — Kabar Hari Ini, Ditulis dengan Jelas",
+  title: "ResponKu. — Kabar Hari Ini, Ditulis dengan Jelas",
   description:
-    "WARTA. menyajikan berita ekonomi, teknologi, politik, olahraga, dan budaya secara ringkas dan berimbang.",
+    "ResponKu. menyajikan berita ekonomi, teknologi, politik, olahraga, dan budaya secara ringkas dan berimbang.",
 };
 
 export default function RootLayout({
