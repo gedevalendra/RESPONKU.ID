@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { articles, getArticleBySlug, getRelated, formatDate } from "@/lib/data";
+import { getArticleBySlug, getRelated, formatDate } from "@/lib/data";
 import CategoryBadge from "../../components/landing/CategoryBadge";
 import ArticleCard from "../../components/landing/ArticleCard";
 import Sidebar from "../../components/layout/Sidebar";
+import ArticleEngagement from "../../components/article/ArticleEngagement";
+import { getArticleFromDatabase } from "@/lib/db";
+import ArticleBody from "@/app/components/article/ArticleBody";
+
+export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
-  return articles.map((a) => ({ slug: a.slug }));
+  return [];
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
-  const article = getArticleBySlug(params.slug);
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const article = await getArticleBySlug(params.slug);
   if (!article) return { title: "Artikel Tidak Ditemukan — WARTA." };
   return {
     title: `${article.title} — WARTA.`,
@@ -19,11 +24,11 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   };
 }
 
-export default function ArticlePage({ params }: { params: { slug: string } }) {
-  const article = getArticleBySlug(params.slug);
+export default async function ArticlePage({ params }: { params: { slug: string } }) {
+  const article = await getArticleFromDatabase(params.slug);
   if (!article) notFound();
 
-  const related = getRelated(article, 3);
+  const related = await getRelated(article, 3);
 
   return (
     <article className="wrap py-8 sm:py-12">
@@ -51,12 +56,10 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
       <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-8">
           <div className="flex flex-col gap-5 text-base leading-relaxed sm:text-lg">
-            {article.content.map((paragraph, i) => (
-              <p key={i} className={i === 0 ? "drop-cap" : undefined}>
-                {paragraph}
-              </p>
-            ))}
+            <ArticleBody content={article.content} contentBlocks={article.contentBlocks} />
           </div>
+
+          <ArticleEngagement articleSlug={article.slug} />
 
           {related.length > 0 && (
             <div className="mt-16 border-t border-rule pt-8">

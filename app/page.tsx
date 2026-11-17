@@ -5,8 +5,12 @@ import ArticleCard from "./components/landing/ArticleCard";
 import { getFeatured, getByCategory } from "@/lib/data";
 import { Article } from "@/lib/types";
 
-export default function HomePage() {
-  const featured = getFeatured();
+export default async function HomePage() {
+  const featured = await getFeatured();
+  const [economy, politics, technology, sports, culture] = await Promise.all([
+    getByCategory("Ekonomi", 1), getByCategory("Politik", 1), getByCategory("Teknologi", 2),
+    getByCategory("Olahraga", 4), getByCategory("Budaya", 4),
+  ]);
 
   return (
     <>
@@ -18,8 +22,7 @@ export default function HomePage() {
             <h2 className="font-display text-display-md">Terbaru</h2>
           </div>
           <div className="divide-y divide-rule">
-            {getByCategory("Ekonomi", 1)
-              .concat(getByCategory("Politik", 1), getByCategory("Teknologi", 2))
+            {economy.concat(politics, technology)
               .map((article) => (
                 <ArticleRow key={article.id} article={article} />
               ))}
@@ -31,13 +34,13 @@ export default function HomePage() {
       </div>
 
       <div className="border-t border-rule">
-        <SectionGrid category="Teknologi" items={getByCategory("Teknologi", 4)} />
+        <SectionGrid category="Teknologi" items={technology} />
       </div>
       <div className="border-t border-rule">
-        <SectionGrid category="Olahraga" items={getByCategory("Olahraga", 4)} />
+        <SectionGrid category="Olahraga" items={sports} />
       </div>
       <div className="border-t border-rule">
-        <SectionGrid category="Budaya" items={getByCategory("Budaya", 4)} />
+        <SectionGrid category="Budaya" items={culture} />
       </div>
     </>
   );

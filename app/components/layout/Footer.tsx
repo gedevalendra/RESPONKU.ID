@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { categories } from "@/lib/data";
+import { categories } from "@/lib/content";
 
 const categorySlug: Record<string, string> = {
   Ekonomi: "ekonomi",

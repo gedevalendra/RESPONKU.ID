@@ -3,8 +3,8 @@ import { categories, categorySlug, getTrending } from "@/lib/data";
 import TrendingList from "../../components/landing/TrendingList";
 import NewsletterForm from "../../components/landing/NewsletterForm";
 
-export default function Sidebar() {
-  const trending = getTrending(5);
+export default async function Sidebar() {
+  const trending = await getTrending(5);
 
   return (
     <aside className="flex flex-col gap-10">

@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { categories, categorySlug, breakingHeadlines } from "@/lib/data";
+import { breakingHeadlines } from "@/lib/content";
 import TickerBar from "../../components/landing/TickerBar";
 import MobileNav from "./MobileNav";
+import { getActor } from "@/lib/authz";
+import AccountMenu from "@/app/components/auth/AccountMenu";
+import ArticleNavMenu from "./ArticleNavMenu";
+import { listArticleCategories } from "@/lib/db";
 
 function todayLabel(): string {
   return new Intl.DateTimeFormat("id-ID", {
@@ -12,49 +16,35 @@ function todayLabel(): string {
   }).format(new Date());
 }
 
-export default function Header() {
+export default async function Header() {
+  const [actor, articleCategories] = await Promise.all([getActor(), listArticleCategories()]);
   return (
     <header className="sticky top-0 bg-white z-100">
-      {/* nameplate */}
-      <div className="rule-thick wrap flex items-center justify-between border-b border-rule py-5 sm:py-6">
+      <div className="wrap flex items-center gap-5 border-b border-gray-100 py-4 sm:py-5 lg:gap-8">
         <Link href="/" className="font-display text-4xl tracking-tight sm:text-5xl">
           ResponKu
         </Link>
-        <div className="flex items-center gap-4 lg:hidden">
-          <Link
-            href="/masuk"
-            className="border border-ink px-3 py-1.5 font-mono text-xs uppercase tracking-widest2"
-          >
-            Masuk
-          </Link>
-          <MobileNav />
+
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-5 xl:gap-8 lg:flex">
+          <Link href="/" className="whitespace-nowrap font-mono text-xs uppercase tracking-widest2 text-gray-800 hover:text-blue-500">Beranda</Link>
+          <ArticleNavMenu categories={articleCategories} />
+          <Link href="/artikel" className="whitespace-nowrap font-mono text-xs uppercase tracking-widest2 text-gray-800 hover:text-blue-500">Terbaru</Link>
+          <Link href="/artikel?sort=popular" className="whitespace-nowrap font-mono text-xs uppercase tracking-widest2 text-gray-800 hover:text-blue-500">Terpopuler</Link>
+        </nav>
+
+        <div className="ml-auto flex shrink-0 items-center gap-3 lg:gap-5">
+          <div className="hidden items-center gap-5 lg:flex">
+            <Link href="/tentang" className="font-mono text-xs uppercase tracking-widest2 text-gray-500 hover:text-blue-500">
+              Tentang
+            </Link>
+            {actor ? <AccountMenu actor={actor} /> : <Link href="/akun" className="font-mono text-xs uppercase tracking-widest2 text-gray-500 hover:text-blue-500">Akun</Link>}
+            {!actor && <Link href="/masuk" className="bg-blue-500 px-4 py-2 font-mono text-xs uppercase tracking-widest2 text-white transition-colors hover:bg-blue-600">Masuk</Link>}
+          </div>
+          {!actor && <Link href="/masuk" className="bg-blue-500 px-3 py-2 font-mono text-xs uppercase tracking-widest2 text-white lg:hidden">Masuk</Link>}
+          {actor && <Link href="/akun" className="font-mono text-xs uppercase tracking-widest2 text-gray-800 hover:text-blue-500 lg:hidden">Akun</Link>}
+          <MobileNav authenticated={Boolean(actor)} articleCategories={articleCategories} />
         </div>
       </div>
-
-      {/* category nav */}
-      <nav className="wrap hidden items-center gap-8 border-b border-rule py-3.5 lg:flex">
-        {categories.map((category) => (
-          <Link
-            key={category}
-            href={`/kategori/${categorySlug[category]}`}
-            className="font-mono text-xs uppercase tracking-widest2 text-ink/80 hover:text-ink"
-          >
-            {category}
-          </Link>
-        ))}
-        <Link
-          href="/tentang"
-          className="ml-auto font-mono text-xs uppercase tracking-widest2 text-mute hover:text-ink"
-        >
-          Tentang Redaksi
-        </Link>
-        <Link
-          href="/masuk"
-          className="border border-ink px-4 py-1.5 font-mono text-xs uppercase tracking-widest2 hover:bg-ink hover:text-paper transition-colors"
-        >
-          Masuk
-        </Link>
-      </nav>
 
       <TickerBar headlines={breakingHeadlines} />
     </header>

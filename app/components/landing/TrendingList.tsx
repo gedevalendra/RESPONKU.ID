@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Article } from "@/lib/types";
-import { formatViews } from "@/lib/data";
+import { formatViews } from "@/lib/content";
 
 export default function TrendingList({ items }: { items: Article[] }) {
   return (

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Article } from "@/lib/types";
-import { formatDate } from "@/lib/data";
+import { formatDate } from "@/lib/content";
 import CategoryBadge from "./CategoryBadge";
 
 export default function HeroSection({ stories }: { stories: Article[] }) {

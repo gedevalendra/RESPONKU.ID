@@ -2,5 +2,8 @@ node_modules
 .next
 out
 .env*.local
+atlas-credentials.env
+client_secret_*.json
+*.tsbuildinfo
 .DS_Store
 next-env.d.ts

@@ -3,11 +3,13 @@
 import { useState } from "react";
 
 export default function NewsletterForm() {
-  const [status, setStatus] = useState<"idle" | "sent">("idle");
+  const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setStatus("sent");
+    const email = new FormData(e.currentTarget).get("email");
+    const response = await fetch("/api/newsletter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+    setStatus(response.ok ? "sent" : "error");
   }
 
   return (
@@ -27,6 +29,7 @@ export default function NewsletterForm() {
           </label>
           <input
             id="newsletter-email"
+            name="email"
             type="email"
             required
             placeholder="nama@email.com"
@@ -38,6 +41,7 @@ export default function NewsletterForm() {
           >
             Berlangganan
           </button>
+          {status === "error" && <p className="font-mono text-[11px] text-signal">Pendaftaran gagal. Pastikan Supabase sudah diisi.</p>}
         </form>
       )}
     </div>

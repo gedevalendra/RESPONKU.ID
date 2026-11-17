@@ -2,12 +2,15 @@
 
 /* 1. Definisikan warna & font kustom di sini untuk Tailwind v4 */
 @theme {
-  --color-rule: #e5e5e0; /* Sesuaikan kode warna ini dengan warna asli projectmu */
-  --color-ink: #111111;
-  --color-paper: #fafaf7;
-  --color-mute: #71717a;
+  --color-rule: #e5e7eb;
+  --color-ink: #1f2937;
+  --color-paper: #ffffff;
+  --color-mute: #6b7280;
+  --color-accent: #3b82f6;
   
-  --font-body: var(--font-sans), sans-serif; /* Sesuaikan jika pakai font lain */
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-body: Arial, Helvetica, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --spacing-wrap: 1200px;
 }
 
@@ -20,7 +23,28 @@
 }
 
 * {
-  border-color: var(--color-rule); /* Atau tetap pakai theme("colors.rule") */
+  border-color: var(--color-rule);
+}
+
+/* Flat white interface: separators stay subtle, controls do not use boxed borders. */
+.border-ink,
+.border-signal {
+  border-color: transparent !important;
+}
+
+input,
+textarea,
+select {
+  border: 0 !important;
+  background-color: #f9fafb !important;
+  box-shadow: inset 0 0 0 1px #e5e7eb;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  box-shadow: inset 0 0 0 1px var(--color-ink);
 }
 
 html {
@@ -33,12 +57,12 @@ body {
 
 /* visible keyboard focus everywhere, no exceptions */
 :focus-visible {
-  outline: 2px solid var(--color-ink);
+  outline: 1px solid var(--color-ink);
   outline-offset: 3px;
 }
 
 ::selection {
-  background: var(--color-ink);
+  background: var(--color-accent);
   color: var(--color-paper);
 }
 
@@ -65,6 +89,51 @@ body {
 
 .wrap {
   @apply mx-auto w-full max-w-[var(--spacing-wrap)] px-5 sm:px-8;
+}
+
+.about-page .font-display {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+@media (min-width: 1024px) {
+  .wrap > .grid:has(> aside) {
+    display: block;
+  }
+
+  .wrap > .grid:has(> aside) > main.min-w-0 {
+    width: calc(100% - 16rem);
+    margin-left: 16rem;
+    padding-left: 2rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .wrap > .grid:has(> aside) {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .wrap > .grid:has(> aside) > aside {
+    position: static;
+    width: 100%;
+    min-width: 0;
+    box-shadow: none;
+  }
+
+  .wrap > .grid:has(> aside) > aside nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .wrap > .grid:has(> aside) > main.min-w-0 {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    padding-left: 0;
+  }
 }
 
 /* duotone placeholder "photo" texture */
