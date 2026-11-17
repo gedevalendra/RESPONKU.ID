@@ -4,7 +4,9 @@ export default function NotFound() {
   return (
     <div className="wrap flex flex-col items-center justify-center py-24 text-center">
       <p className="eyebrow">404</p>
-      <h1 className="mt-3 font-display text-display-md">Halaman tidak ditemukan.</h1>
+      <h1 className="mt-3 font-display text-display-md">
+        Halaman tidak ditemukan.
+      </h1>
       <p className="mt-3 max-w-md text-mute">
         Artikel yang Anda cari mungkin sudah dipindahkan atau belum pernah ada.
       </p>

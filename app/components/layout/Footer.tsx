@@ -12,7 +12,10 @@ const categorySlug: Record<string, string> = {
 const columns = [
   {
     title: "Kanal",
-    links: categories.map((c) => ({ label: c, href: `/kategori/${categorySlug[c]}` })),
+    links: categories.map((c) => ({
+      label: c,
+      href: `/kategori/${categorySlug[c]}`,
+    })),
   },
   {
     title: "Redaksi",
@@ -52,7 +55,10 @@ export default function Footer() {
             <ul className="mt-4 flex flex-col gap-2.5">
               {col.links.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="text-sm hover:underline underline-offset-4">
+                  <Link
+                    href={link.href}
+                    className="text-sm hover:underline underline-offset-4"
+                  >
                     {link.label}
                   </Link>
                 </li>

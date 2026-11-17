@@ -3,24 +3,328 @@
 import { useEffect, useState } from "react";
 import type { AboutPage, AboutSection, AboutSectionType } from "@/lib/about";
 
-function makeSection(type: AboutSectionType = "text"): AboutSection { return { id: `section-${Date.now()}`, type, eyebrow: "Bagian baru", title: "Judul bagian baru", paragraphs: ["Tulis isi bagian di sini."] }; }
+function makeSection(type: AboutSectionType = "text"): AboutSection {
+  return {
+    id: `section-${Date.now()}`,
+    type,
+    eyebrow: "Bagian baru",
+    title: "Judul bagian baru",
+    paragraphs: ["Tulis isi bagian di sini."],
+  };
+}
 
 export default function AboutManager() {
-  const [page, setPage] = useState<AboutPage | null>(null); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
-  async function load() { const response = await fetch("/api/admin/about", { cache: "no-store" }); const data = await response.json(); if (response.ok) setPage(data); else setMessage(data.error || "Konten gagal dimuat."); }
-  useEffect(() => { void load(); }, []);
-  function update<K extends keyof AboutPage>(key: K, value: AboutPage[K]) { setPage((current) => current ? { ...current, [key]: value } : current); }
-  function updateSection(id: string, patch: Partial<AboutSection>) { setPage((current) => current ? { ...current, sections: current.sections.map((section) => section.id === id ? { ...section, ...patch } : section) } : current); }
-  function move(id: string, direction: -1 | 1) { setPage((current) => { if (!current) return current; const index = current.sections.findIndex((section) => section.id === id); const target = index + direction; if (index < 0 || target < 0 || target >= current.sections.length) return current; const sections = [...current.sections]; [sections[index], sections[target]] = [sections[target], sections[index]]; return { ...current, sections }; }); }
-  function remove(id: string) { setPage((current) => current ? { ...current, sections: current.sections.filter((section) => section.id !== id) } : current); }
-  function addItem(section: AboutSection) { updateSection(section.id, { items: [...(section.items || []), { id: `item-${Date.now()}`, title: "Judul poin", text: "Isi poin" }] }); }
-  function updateItem(section: AboutSection, itemId: string, key: "title" | "text", value: string) { updateSection(section.id, { items: (section.items || []).map((item) => item.id === itemId ? { ...item, [key]: value } : item) }); }
-  async function save() { if (!page) return; setBusy(true); setMessage(""); const response = await fetch("/api/admin/about", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(page) }); const data = await response.json(); setBusy(false); setMessage(response.ok ? "Halaman Tentang berhasil disimpan." : data.error || "Gagal menyimpan halaman."); if (response.ok) setPage(data); }
-  if (!page) return <section className="mt-16"><p className="text-sm text-mute">Memuat editor Tentang...</p></section>;
-  return <section className="mt-16"><div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink pb-4"><div><p className="eyebrow">CMS halaman statis</p><h2 className="mt-2 font-display text-display-md">Edit Tentang ResponKu</h2><p className="mt-2 text-sm text-mute">Tambah, hapus, dan ubah urutan bagian tanpa menyentuh kode.</p></div><button type="button" disabled={busy} onClick={() => void save()} className="bg-blue-500 px-5 py-3 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-blue-600 disabled:opacity-50">{busy ? "Menyimpan..." : "Simpan halaman"}</button></div>
-    {message && <p className="mt-4 font-mono text-xs text-blue-600">{message}</p>}
-    <div className="mt-6 grid gap-3 bg-white p-5 shadow-sm"><label className="grid gap-2 text-sm"><span className="eyebrow">Judul utama</span><input value={page.title} onChange={(event) => update("title", event.target.value)} className="px-3 py-3" /></label><label className="grid gap-2 text-sm"><span className="eyebrow">Intro</span><textarea value={page.intro} onChange={(event) => update("intro", event.target.value)} className="min-h-24 px-3 py-3" /></label><div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-2 text-sm"><span className="eyebrow">Judul sidebar</span><input value={page.sidebarTitle} onChange={(event) => update("sidebarTitle", event.target.value)} className="px-3 py-3" /></label><label className="grid gap-2 text-sm"><span className="eyebrow">Teks sidebar</span><textarea value={page.sidebarText} onChange={(event) => update("sidebarText", event.target.value)} className="min-h-20 px-3 py-3" /></label></div></div>
-    <div className="mt-6 flex flex-wrap gap-2"><span className="w-full eyebrow">Tambah bagian baru</span>{([ ["text", "Teks"], ["highlight", "Sorotan biru"], ["cards", "Kartu prinsip"], ["list", "Daftar ketentuan"] ] as const).map(([type, label]) => <button key={type} type="button" onClick={() => setPage((current) => current ? { ...current, sections: [...current.sections, makeSection(type)] } : current)} className="bg-blue-50 px-3 py-2 font-mono text-xs text-blue-600 hover:bg-blue-500 hover:text-white">+ {label}</button>)}</div>
-    <div className="mt-6 space-y-5">{page.sections.map((section, index) => <article key={section.id} className="bg-white p-5 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-3"><div><span className="eyebrow">Bagian {index + 1} · {section.type}</span><h3 className="mt-1 font-display text-xl">{section.title}</h3></div><div className="flex gap-3 font-mono text-xs"><button type="button" onClick={() => move(section.id, -1)} disabled={index === 0} className="text-gray-500 hover:text-blue-500 disabled:opacity-30">↑ Naik</button><button type="button" onClick={() => move(section.id, 1)} disabled={index === page.sections.length - 1} className="text-gray-500 hover:text-blue-500 disabled:opacity-30">↓ Turun</button><button type="button" onClick={() => remove(section.id)} className="text-gray-500 hover:text-blue-500">Hapus</button></div></div><div className="mt-5 grid gap-3"><div className="grid gap-3 sm:grid-cols-[180px_1fr]"><input value={section.eyebrow} onChange={(event) => updateSection(section.id, { eyebrow: event.target.value })} placeholder="Label kecil" className="px-3 py-3" /><input value={section.title} onChange={(event) => updateSection(section.id, { title: event.target.value })} placeholder="Judul bagian" className="px-3 py-3" /></div><textarea value={section.paragraphs.join("\n\n")} onChange={(event) => updateSection(section.id, { paragraphs: event.target.value.split("\n\n").map((text) => text.trim()).filter(Boolean) })} placeholder="Paragraf. Pisahkan dengan baris kosong." className="min-h-32 px-3 py-3" />{section.type === "cards" && <div className="space-y-3"><button type="button" onClick={() => addItem(section)} className="font-mono text-xs text-blue-500 hover:text-blue-700">+ Tambah kartu</button>{(section.items || []).map((item) => <div key={item.id} className="grid gap-2 bg-gray-50 p-3 sm:grid-cols-2"><input value={item.title} onChange={(event) => updateItem(section, item.id, "title", event.target.value)} className="px-3 py-2" /><textarea value={item.text} onChange={(event) => updateItem(section, item.id, "text", event.target.value)} className="min-h-16 px-3 py-2" /></div>)}</div>}{section.type === "list" && <textarea value={(section.listItems || []).join("\n")} onChange={(event) => updateSection(section.id, { listItems: event.target.value.split("\n").map((text) => text.trim()).filter(Boolean) })} placeholder="Satu ketentuan per baris" className="min-h-40 px-3 py-3" />}</div></article>)}</div>
-  </section>;
+  const [page, setPage] = useState<AboutPage | null>(null);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function load() {
+    const response = await fetch("/api/admin/about", { cache: "no-store" });
+    const data = await response.json();
+    if (response.ok) setPage(data);
+    else setMessage(data.error || "Konten gagal dimuat.");
+  }
+  useEffect(() => {
+    void load();
+  }, []);
+  function update<K extends keyof AboutPage>(key: K, value: AboutPage[K]) {
+    setPage((current) => (current ? { ...current, [key]: value } : current));
+  }
+  function updateSection(id: string, patch: Partial<AboutSection>) {
+    setPage((current) =>
+      current
+        ? {
+            ...current,
+            sections: current.sections.map((section) =>
+              section.id === id ? { ...section, ...patch } : section,
+            ),
+          }
+        : current,
+    );
+  }
+  function move(id: string, direction: -1 | 1) {
+    setPage((current) => {
+      if (!current) return current;
+      const index = current.sections.findIndex((section) => section.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.sections.length)
+        return current;
+      const sections = [...current.sections];
+      [sections[index], sections[target]] = [sections[target], sections[index]];
+      return { ...current, sections };
+    });
+  }
+  function remove(id: string) {
+    setPage((current) =>
+      current
+        ? {
+            ...current,
+            sections: current.sections.filter((section) => section.id !== id),
+          }
+        : current,
+    );
+  }
+  function addItem(section: AboutSection) {
+    updateSection(section.id, {
+      items: [
+        ...(section.items || []),
+        { id: `item-${Date.now()}`, title: "Judul poin", text: "Isi poin" },
+      ],
+    });
+  }
+  function updateItem(
+    section: AboutSection,
+    itemId: string,
+    key: "title" | "text",
+    value: string,
+  ) {
+    updateSection(section.id, {
+      items: (section.items || []).map((item) =>
+        item.id === itemId ? { ...item, [key]: value } : item,
+      ),
+    });
+  }
+  async function save() {
+    if (!page) return;
+    setBusy(true);
+    setMessage("");
+    const response = await fetch("/api/admin/about", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(page),
+    });
+    const data = await response.json();
+    setBusy(false);
+    setMessage(
+      response.ok
+        ? "Halaman Tentang berhasil disimpan."
+        : data.error || "Gagal menyimpan halaman.",
+    );
+    if (response.ok) setPage(data);
+  }
+  if (!page)
+    return (
+      <section className="mt-16">
+        <p className="text-sm text-mute">Memuat editor Tentang...</p>
+      </section>
+    );
+  return (
+    <section className="mt-16">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink pb-4">
+        <div>
+          <p className="eyebrow">CMS halaman statis</p>
+          <h2 className="mt-2 font-display text-display-md">
+            Edit Tentang ResponKu
+          </h2>
+          <p className="mt-2 text-sm text-mute">
+            Tambah, hapus, dan ubah urutan bagian tanpa menyentuh kode.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void save()}
+          className="bg-blue-500 px-5 py-3 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-blue-600 disabled:opacity-50"
+        >
+          {busy ? "Menyimpan..." : "Simpan halaman"}
+        </button>
+      </div>
+      {message && (
+        <p className="mt-4 font-mono text-xs text-blue-600">{message}</p>
+      )}
+      <div className="mt-6 grid gap-3 bg-white p-5 shadow-sm">
+        <label className="grid gap-2 text-sm">
+          <span className="eyebrow">Judul utama</span>
+          <input
+            value={page.title}
+            onChange={(event) => update("title", event.target.value)}
+            className="px-3 py-3"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
+          <span className="eyebrow">Intro</span>
+          <textarea
+            value={page.intro}
+            onChange={(event) => update("intro", event.target.value)}
+            className="min-h-24 px-3 py-3"
+          />
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-2 text-sm">
+            <span className="eyebrow">Judul sidebar</span>
+            <input
+              value={page.sidebarTitle}
+              onChange={(event) => update("sidebarTitle", event.target.value)}
+              className="px-3 py-3"
+            />
+          </label>
+          <label className="grid gap-2 text-sm">
+            <span className="eyebrow">Teks sidebar</span>
+            <textarea
+              value={page.sidebarText}
+              onChange={(event) => update("sidebarText", event.target.value)}
+              className="min-h-20 px-3 py-3"
+            />
+          </label>
+        </div>
+      </div>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <span className="w-full eyebrow">Tambah bagian baru</span>
+        {(
+          [
+            ["text", "Teks"],
+            ["highlight", "Sorotan biru"],
+            ["cards", "Kartu prinsip"],
+            ["list", "Daftar ketentuan"],
+          ] as const
+        ).map(([type, label]) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() =>
+              setPage((current) =>
+                current
+                  ? {
+                      ...current,
+                      sections: [...current.sections, makeSection(type)],
+                    }
+                  : current,
+              )
+            }
+            className="bg-blue-50 px-3 py-2 font-mono text-xs text-blue-600 hover:bg-blue-500 hover:text-white"
+          >
+            + {label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-6 space-y-5">
+        {page.sections.map((section, index) => (
+          <article key={section.id} className="bg-white p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <span className="eyebrow">
+                  Bagian {index + 1} · {section.type}
+                </span>
+                <h3 className="mt-1 font-display text-xl">{section.title}</h3>
+              </div>
+              <div className="flex gap-3 font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={() => move(section.id, -1)}
+                  disabled={index === 0}
+                  className="text-gray-500 hover:text-blue-500 disabled:opacity-30"
+                >
+                  ↑ Naik
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(section.id, 1)}
+                  disabled={index === page.sections.length - 1}
+                  className="text-gray-500 hover:text-blue-500 disabled:opacity-30"
+                >
+                  ↓ Turun
+                </button>
+                <button
+                  type="button"
+                  onClick={() => remove(section.id)}
+                  className="text-gray-500 hover:text-blue-500"
+                >
+                  Hapus
+                </button>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+                <input
+                  value={section.eyebrow}
+                  onChange={(event) =>
+                    updateSection(section.id, { eyebrow: event.target.value })
+                  }
+                  placeholder="Label kecil"
+                  className="px-3 py-3"
+                />
+                <input
+                  value={section.title}
+                  onChange={(event) =>
+                    updateSection(section.id, { title: event.target.value })
+                  }
+                  placeholder="Judul bagian"
+                  className="px-3 py-3"
+                />
+              </div>
+              <textarea
+                value={section.paragraphs.join("\n\n")}
+                onChange={(event) =>
+                  updateSection(section.id, {
+                    paragraphs: event.target.value
+                      .split("\n\n")
+                      .map((text) => text.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="Paragraf. Pisahkan dengan baris kosong."
+                className="min-h-32 px-3 py-3"
+              />
+              {section.type === "cards" && (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => addItem(section)}
+                    className="font-mono text-xs text-blue-500 hover:text-blue-700"
+                  >
+                    + Tambah kartu
+                  </button>
+                  {(section.items || []).map((item) => (
+                    <div
+                      key={item.id}
+                      className="grid gap-2 bg-gray-50 p-3 sm:grid-cols-2"
+                    >
+                      <input
+                        value={item.title}
+                        onChange={(event) =>
+                          updateItem(
+                            section,
+                            item.id,
+                            "title",
+                            event.target.value,
+                          )
+                        }
+                        className="px-3 py-2"
+                      />
+                      <textarea
+                        value={item.text}
+                        onChange={(event) =>
+                          updateItem(
+                            section,
+                            item.id,
+                            "text",
+                            event.target.value,
+                          )
+                        }
+                        className="min-h-16 px-3 py-2"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {section.type === "list" && (
+                <textarea
+                  value={(section.listItems || []).join("\n")}
+                  onChange={(event) =>
+                    updateSection(section.id, {
+                      listItems: event.target.value
+                        .split("\n")
+                        .map((text) => text.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                  placeholder="Satu ketentuan per baris"
+                  className="min-h-40 px-3 py-3"
+                />
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }

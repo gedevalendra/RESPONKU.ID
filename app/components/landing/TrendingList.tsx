@@ -17,7 +17,10 @@ export default function TrendingList({ items }: { items: Article[] }) {
             </span>
             <div className="min-w-0">
               <h3 className="font-display text-base leading-snug">
-                <Link href={`/artikel/${item.slug}`} className="underline-offset-4 hover:underline">
+                <Link
+                  href={`/artikel/${item.slug}`}
+                  className="underline-offset-4 hover:underline"
+                >
                   {item.title}
                 </Link>
               </h3>

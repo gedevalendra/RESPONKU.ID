@@ -2,7 +2,9 @@ import "server-only";
 import { MongoClient, type Db } from "mongodb";
 import { env } from "@/lib/env";
 
-const globalForMongo = globalThis as unknown as { mongoPromise?: Promise<MongoClient> };
+const globalForMongo = globalThis as unknown as {
+  mongoPromise?: Promise<MongoClient>;
+};
 
 export async function getMongoDb(): Promise<Db | null> {
   if (!env.mongodbUri) return null;
@@ -14,7 +16,10 @@ export async function getMongoDb(): Promise<Db | null> {
     return (await globalForMongo.mongoPromise).db(env.mongodbDbName);
   } catch (error) {
     globalForMongo.mongoPromise = undefined;
-    console.error("MongoDB connection failed:", error instanceof Error ? error.message : error);
+    console.error(
+      "MongoDB connection failed:",
+      error instanceof Error ? error.message : error,
+    );
     return null;
   }
 }

@@ -58,7 +58,8 @@ export default function ArticleCard({
           </Link>
         </h3>
         <p className="mt-3 font-mono text-[11px] text-mute">
-          {article.author} · {formatDate(article.date)} · {article.readTime} menit baca
+          {article.author} · {formatDate(article.date)} · {article.readTime}{" "}
+          menit baca
         </p>
       </div>
     </article>

@@ -19,7 +19,10 @@ export default function SectionGrid({
 }) {
   return (
     <section className="wrap py-10">
-      <SectionHeading title={category} href={`/kategori/${categorySlug[category]}`} />
+      <SectionHeading
+        title={category}
+        href={`/kategori/${categorySlug[category]}`}
+      />
       <div className="grid grid-cols-1 gap-x-8 gap-y-10 pt-8 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((item) => (
           <ArticleCard key={item.id} article={item} variant="stacked" />

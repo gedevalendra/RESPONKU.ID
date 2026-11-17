@@ -4,7 +4,8 @@ import LoginForm from "../components/auth/LoginForm";
 
 export const metadata: Metadata = {
   title: "Masuk — WARTA.",
-  description: "Masuk ke akun WARTA. untuk menyimpan artikel dan mengatur langganan.",
+  description:
+    "Masuk ke akun WARTA. untuk menyimpan artikel dan mengatur langganan.",
 };
 
 export default function LoginPage() {
@@ -12,7 +13,9 @@ export default function LoginPage() {
     <div className="wrap flex justify-center py-16 sm:py-24">
       <div className="w-full max-w-sm">
         <p className="eyebrow text-center">Akun Pembaca</p>
-        <h1 className="mt-3 text-center font-display text-display-md">Masuk ke WARTA.</h1>
+        <h1 className="mt-3 text-center font-display text-display-md">
+          Masuk ke WARTA.
+        </h1>
         <p className="mt-2 text-center text-sm text-mute">
           Simpan artikel favorit dan atur langganan ringkasan pagi.
         </p>

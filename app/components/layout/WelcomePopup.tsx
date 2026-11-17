@@ -1,0 +1,16 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+type Popup = { enabled: boolean; title: string; text: string; image: string; version: string };
+export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
+  const [popup, setPopup] = useState<Popup>({ enabled: false, title: "", text: "", image: "", version: "" });
+  const [message, setMessage] = useState("");
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { void fetch("/api/popup").then((response) => response.json()).then(({ popup: value }) => {
+    if (!value) return;
+    setPopup(value);
+    if (!admin && value.enabled && localStorage.getItem("responku-popup") !== value.version && !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/superadmin")) dialog.current?.showModal();
+  }).catch(() => {}); }, [admin]);
+  function close() { localStorage.setItem("responku-popup", popup.version); dialog.current?.close(); }
+  if (admin) return <form className="max-w-2xl space-y-4 bg-white p-6" onSubmit={async (event) => { event.preventDefault(); const response = await fetch("/api/popup", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(popup) }); setMessage(response.ok ? "Popup disimpan" : "Gagal menyimpan popup"); }}><label className="flex gap-2"><input type="checkbox" checked={popup.enabled} onChange={(event) => setPopup({ ...popup, enabled: event.target.checked })} />Tampilkan popup</label><input className="w-full p-3" placeholder="Judul" value={popup.title} onChange={(event) => setPopup({ ...popup, title: event.target.value })} /><textarea className="w-full p-3" rows={6} placeholder="Informasi" value={popup.text} onChange={(event) => setPopup({ ...popup, text: event.target.value })} /><label className="block text-sm">Gambar opsional<input type="file" accept="image/png,image/jpeg,image/webp" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; const { convertToWebp } = await import("@/app/components/article/ArticleComposer"); try { const blob = await convertToWebp(file); const form = new FormData(); form.append("file", new File([blob], "popup.webp", { type: "image/webp" })); const response = await fetch("/api/uploads/image", { method: "POST", body: form }); const data = await response.json(); if (!response.ok) throw new Error(data.error); setPopup({ ...popup, image: data.url }); } catch { setMessage("Upload gambar gagal"); } }} /></label>{popup.image && <><img src={popup.image} alt="Preview popup" className="max-h-48 object-contain" /><button type="button" onClick={() => setPopup({ ...popup, image: "" })}>Hapus gambar</button></>}<button className="bg-blue-500 px-4 py-2 text-white">Simpan</button><p role="status">{message}</p></form>;
+  return <dialog ref={dialog} onCancel={close} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-xl bg-white p-6 backdrop:bg-black/40"><button className="float-right p-2" onClick={close} aria-label="Tutup">✕</button><h2 className="text-xl font-semibold">{popup.title}</h2>{popup.image && <img src={popup.image} alt="Informasi ResponKu" className="my-4 max-h-72 w-full object-contain" />}<p className="my-4 whitespace-pre-wrap text-sm leading-6">{popup.text}</p><button className="bg-blue-500 px-4 py-2 text-white" onClick={close}>Mengerti</button></dialog>;
+}

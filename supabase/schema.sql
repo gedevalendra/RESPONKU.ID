@@ -16,6 +16,8 @@ create table if not exists public.profiles (
 alter table public.profiles add column if not exists username varchar(50);
 alter table public.profiles add column if not exists organization varchar(150);
 alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists background_url text;
+alter table public.profiles add column if not exists bio varchar(300) not null default '';
 
 create or replace function public.handle_new_user() returns trigger language plpgsql security definer set search_path = public as $$
 begin
@@ -55,6 +57,16 @@ create table if not exists public.newsletter_subscribers (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,
+  title varchar(120) not null,
+  body varchar(500) not null,
+  href text,
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.bookmarks (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -66,6 +78,7 @@ create table if not exists public.bookmarks (
 alter table public.comments enable row level security;
 alter table public.article_reactions enable row level security;
 alter table public.newsletter_subscribers enable row level security;
+alter table public.notifications enable row level security;
 alter table public.bookmarks enable row level security;
 alter table public.profiles enable row level security;
 
@@ -75,6 +88,8 @@ create policy "anonymous comments are submitted for moderation" on public.commen
 create policy "reaction counts are readable" on public.article_reactions for select using (true);
 create policy "visitors can react" on public.article_reactions for insert with check (length(visitor_id) >= 8);
 create policy "newsletter signup" on public.newsletter_subscribers for insert with check (true);
+create policy "users read own notifications" on public.notifications for select using (auth.uid()::text = user_id);
+create policy "users mark own notifications" on public.notifications for update using (auth.uid()::text = user_id);
 create policy "users manage own bookmarks" on public.bookmarks for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "users read own profile" on public.profiles for select using (auth.uid() = id);
 

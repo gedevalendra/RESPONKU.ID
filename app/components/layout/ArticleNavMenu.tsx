@@ -3,16 +3,45 @@
 import Link from "next/link";
 import { slugifyCategory } from "@/lib/content";
 
-export default function ArticleNavMenu({ categories }: { categories: string[] }) {
-  return <div className="group relative">
-    <button type="button" aria-haspopup="menu" className="flex items-center gap-1 whitespace-nowrap font-mono text-xs uppercase tracking-widest2 text-gray-800 transition-colors hover:text-blue-500 group-hover:text-blue-500">
-      Artikel <span aria-hidden="true">⌄</span>
-    </button>
-    <div className="invisible absolute left-1/2 top-full z-50 w-56 -translate-x-1/2 translate-y-2 bg-white p-2 opacity-0 shadow-xl ring-1 ring-gray-100 transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
-      <Link href="/artikel" className="block px-3 py-2.5 font-mono text-xs uppercase tracking-widest2 transition-colors hover:bg-blue-50 hover:text-blue-600">Semua artikel</Link>
-      {categories.length > 0 && <div className="my-1 border-t border-gray-100" />}
-      {categories.map((category) => <Link key={category} href={`/kategori/${slugifyCategory(category)}`} className="block px-3 py-2.5 font-mono text-xs uppercase tracking-widest2 transition-colors hover:bg-blue-50 hover:text-blue-600">{category}</Link>)}
-      {categories.length === 0 && <p className="px-3 py-2 font-mono text-[10px] normal-case tracking-normal text-gray-500">Belum ada kategori artikel terbit.</p>}
+export default function ArticleNavMenu({
+  categories,
+}: {
+  categories: string[];
+}) {
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        className="flex items-center gap-1 whitespace-nowrap font-mono text-xs uppercase tracking-widest2 text-gray-800 transition-colors hover:text-blue-500 group-hover:text-blue-500"
+      >
+        Artikel <span aria-hidden="true">⌄</span>
+      </button>
+      <div className="invisible absolute left-1/2 top-full z-50 w-56 -translate-x-1/2 translate-y-2 bg-white p-2 opacity-0 shadow-xl ring-1 ring-gray-100 transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+        <Link
+          href="/artikel"
+          className="block px-3 py-2.5 font-mono text-xs uppercase tracking-widest2 transition-colors hover:bg-blue-50 hover:text-blue-600"
+        >
+          Semua artikel
+        </Link>
+        {categories.length > 0 && (
+          <div className="my-1 border-t border-gray-100" />
+        )}
+        {categories.map((category) => (
+          <Link
+            key={category}
+            href={`/kategori/${slugifyCategory(category)}`}
+            className="block px-3 py-2.5 font-mono text-xs uppercase tracking-widest2 transition-colors hover:bg-blue-50 hover:text-blue-600"
+          >
+            {category}
+          </Link>
+        ))}
+        {categories.length === 0 && (
+          <p className="px-3 py-2 font-mono text-[10px] normal-case tracking-normal text-gray-500">
+            Belum ada kategori artikel terbit.
+          </p>
+        )}
+      </div>
     </div>
-  </div>;
+  );
 }

@@ -8,8 +8,11 @@ import { Article } from "@/lib/types";
 export default async function HomePage() {
   const featured = await getFeatured();
   const [economy, politics, technology, sports, culture] = await Promise.all([
-    getByCategory("Ekonomi", 1), getByCategory("Politik", 1), getByCategory("Teknologi", 2),
-    getByCategory("Olahraga", 4), getByCategory("Budaya", 4),
+    getByCategory("Ekonomi", 1),
+    getByCategory("Politik", 1),
+    getByCategory("Teknologi", 2),
+    getByCategory("Olahraga", 4),
+    getByCategory("Budaya", 4),
   ]);
   return (
     <>
@@ -21,10 +24,9 @@ export default async function HomePage() {
             <h2 className="font-display text-display-md">Terbaru</h2>
           </div>
           <div className="divide-y divide-rule">
-            {economy.concat(politics, technology)
-              .map((article) => (
-                <ArticleRow key={article.id} article={article} />
-              ))}
+            {economy.concat(politics, technology).map((article) => (
+              <ArticleRow key={article.id} article={article} />
+            ))}
           </div>
         </div>
         <div className="lg:col-span-4">

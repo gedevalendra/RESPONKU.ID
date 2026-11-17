@@ -15,6 +15,7 @@ export interface Article {
   date: string;
   readTime: number;
   views: number;
+  thumbnailUrl: string;
   breaking?: boolean;
   featured?: boolean;
   content: string[];
@@ -43,7 +44,34 @@ export type Comment = {
   status: "published" | "pending";
 };
 
-export type ReactionSummary = { like: number; insightful: number; celebrate: number };
+export type ReactionSummary = {
+  like: number;
+  insightful: number;
+  celebrate: number;
+};
+
+export type Notification = {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  href?: string;
+  readAt?: string | null;
+  createdAt: string;
+};
 
 export type UserRole = "reader" | "author" | "admin" | "superadmin";
-export type Profile = { id: string; email: string; displayName: string; role: UserRole; username?: string; organization?: string; avatarUrl?: string; provider?: "supabase" | "google" | "funikin"; emailConfirmed?: boolean };
+export type Profile = {
+  verified?: boolean;
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  username?: string;
+  organization?: string;
+  avatarUrl?: string;
+  backgroundUrl?: string;
+  bio?: string;
+  provider?: "supabase" | "google" | "funikin";
+  emailConfirmed?: boolean;
+};

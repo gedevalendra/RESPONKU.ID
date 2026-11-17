@@ -1,14 +1,122 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { UserRole } from "@/lib/types";
 
-type User = { id: string; email: string; display_name: string; role: UserRole; source?: "supabase" | "oauth" };
+type User = {
+  id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  verified: boolean;
+  organizationId: string;
+};
 
 export default function UserRoleManager() {
-  const [users, setUsers] = useState<User[]>([]); const [message, setMessage] = useState("");
-  async function load() { const r = await fetch("/api/admin/users"); const d = await r.json(); if (r.ok) setUsers(d.users); else setMessage(d.error); }
-  useEffect(() => { void load(); }, []);
-  async function changeRole(id: string, role: UserRole, source: "supabase" | "oauth" = "supabase") { const r = await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role, source }) }); if (r.ok) await load(); else setMessage((await r.json()).error); }
-  return <section className="mt-14"><div className="flex items-baseline justify-between border-b border-ink pb-3"><h2 className="font-display text-display-md">Manajemen akses</h2><span className="eyebrow">superadmin</span></div>{message && <p className="mt-3 font-mono text-xs text-signal">{message}</p>}<div className="divide-y divide-rule">{users.map((user) => <div key={`${user.source}-${user.id}`} className="flex flex-wrap items-center justify-between gap-4 py-4"><div><p className="font-display text-lg">{user.display_name}</p><p className="font-mono text-[11px] text-mute">{user.email} · {user.source || "supabase"}</p></div><select value={user.role} onChange={(e) => void changeRole(user.id, e.target.value as UserRole, user.source || "supabase")} className="border border-ink bg-paper px-3 py-2 font-mono text-xs"><option value="reader">reader</option><option value="author">author</option><option value="admin">admin</option><option value="superadmin">superadmin</option></select></div>)}</div></section>;
+  const [users, setUsers] = useState<User[]>([]);
+  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([]);
+  const [query, setQuery] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [actorId, setActorId] = useState("");
+  const [actorRole, setActorRole] = useState("");
+  const [deleting, setDeleting] = useState<User | null>(null);
+  const [confirmation, setConfirmation] = useState("");
+
+  async function load() {
+    const response = await fetch("/api/admin/users", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Gagal memuat pengguna");
+    setUsers(data.users);
+    setOrganizations(data.organizations);
+    setActorId(data.actorId);
+    setActorRole(data.actorRole);
+  }
+
+  useEffect(() => {
+    void load().catch((error) => setMessage(error.message));
+  }, []);
+
+  async function mutate(user: User, method: "PATCH" | "DELETE", body: object) {
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setDeleting(null);
+      setConfirmation("");
+      await load();
+      setMessage(method === "DELETE" ? "Akun berhasil dihapus." : "Pengguna berhasil diperbarui.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Perubahan gagal disimpan.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const filtered = users.filter((user) => `${user.display_name} ${user.email}`.toLowerCase().includes(query.toLowerCase()));
+
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-xl font-semibold">Daftar pengguna ({users.length})</h2>
+        <input aria-label="Cari pengguna" className="w-full p-3 sm:w-80" placeholder="Cari nama atau email…" value={query} onChange={(event) => setQuery(event.target.value)} />
+      </div>
+      <p role="status" className="text-sm text-mute">{message}</p>
+      <div className="divide-y divide-rule bg-white">
+        {filtered.map((user) => {
+          const protectedUser = user.role === "superadmin";
+          const protectedRole = protectedUser || user.id === actorId || (user.role === "admin" && actorRole !== "superadmin");
+          return (
+            <div key={user.id} className="space-y-4 p-5">
+              <div className="flex flex-wrap justify-between gap-3">
+                <div>
+                  <a href={`/akun/${user.id}`} className="font-medium hover:text-blue-500">{user.display_name} {user.verified && <i className="bx bxs-badge-check align-middle text-blue-500" role="img" aria-label="Terverifikasi" />}</a>
+                  <p className="break-all text-sm text-mute">{user.email}</p>
+                </div>
+                <button disabled={busy || protectedRole} className="text-sm text-red-600 disabled:opacity-40" onClick={() => { setDeleting(user); setConfirmation(""); }}>Hapus akun</button>
+              </div>
+              <div className="flex flex-wrap items-end gap-4">
+                <label className="grid gap-1 text-sm">Peran
+                  <select disabled={busy || protectedRole} value={user.role} className="p-3 disabled:opacity-50" onChange={(event) => void mutate(user, "PATCH", { role: event.target.value })}>
+                    <option value="reader">Pengguna</option>
+                    <option value="author">Penulis</option>
+                    <option value="admin">Admin</option>
+                    {protectedUser && <option value="superadmin">Superadmin</option>}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm">Organisasi
+                  <select disabled={busy || protectedUser} value={user.organizationId} className="max-w-full p-3 disabled:opacity-50" onChange={(event) => void mutate(user, "PATCH", { organizationId: event.target.value || null })}>
+                    <option value="">Tanpa organisasi</option>
+                    {organizations.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}
+                  </select>
+                </label>
+                <button disabled={busy || protectedUser} className="px-3 py-3 text-sm text-blue-500 disabled:opacity-40" onClick={() => void mutate(user, "PATCH", { verified: !user.verified })}>
+                  {user.verified ? "Cabut centang biru" : "Verifikasi akun"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && <p className="p-5 text-sm text-mute">Pengguna tidak ditemukan.</p>}
+      </div>
+      {deleting && (
+        <div role="dialog" aria-modal="true" aria-labelledby="delete-account-title" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-5">
+          <div className="w-full max-w-md space-y-4 bg-white p-6">
+            <h3 id="delete-account-title" className="text-lg font-semibold">Hapus akun {deleting.display_name}?</h3>
+            <p className="text-sm text-mute">Penghapusan permanen. Artikel terbit tetap menjadi arsip redaksi. Ketik nama akun untuk mengonfirmasi.</p>
+            <input autoFocus className="w-full p-3" aria-label="Nama akun untuk konfirmasi" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
+            <div className="flex gap-3">
+              <button disabled={busy} onClick={() => setDeleting(null)} className="px-4 py-2">Batal</button>
+              <button disabled={busy || confirmation !== deleting.display_name} onClick={() => void mutate(deleting, "DELETE", { confirmation })} className="bg-red-600 px-4 py-2 text-white disabled:opacity-50">{busy ? "Menghapus…" : "Hapus permanen"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }

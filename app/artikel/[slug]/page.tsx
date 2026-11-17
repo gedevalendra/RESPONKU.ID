@@ -15,7 +15,11 @@ export function generateStaticParams() {
   return [];
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
   const article = await getArticleBySlug(params.slug);
   if (!article) return { title: "Artikel Tidak Ditemukan — WARTA." };
   return {
@@ -24,7 +28,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function ArticlePage({ params }: { params: { slug: string } }) {
+export default async function ArticlePage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const article = await getArticleFromDatabase(params.slug);
   if (!article) notFound();
 
@@ -39,7 +47,10 @@ export default async function ArticlePage({ params }: { params: { slug: string }
       <div className="mt-6 max-w-3xl">
         {article.breaking && (
           <span className="mb-3 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest2 text-signal">
-            <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-hidden="true" />
+            <span
+              className="h-1.5 w-1.5 rounded-full bg-signal"
+              aria-hidden="true"
+            />
             Breaking
           </span>
         )}
@@ -47,16 +58,31 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         <h1 className="mt-3 font-display text-display-lg">{article.title}</h1>
         <p className="mt-4 text-lg text-mute">{article.dek}</p>
         <p className="mt-5 font-mono text-[11px] text-mute">
-          Oleh {article.author} · {formatDate(article.date)} · {article.readTime} menit baca
+          Oleh {article.authorId ? <a href={`/akun/${article.authorId}`} className="hover:text-blue-500">{article.author}</a> : article.author} · {formatDate(article.date)} ·{" "}
+          {article.readTime} menit baca
         </p>
       </div>
 
-      <div className="photo-tone mt-8 aspect-[16/9] w-full sm:aspect-[21/9]" aria-hidden="true" />
+      {article.thumbnailUrl ? (
+        <img
+          src={article.thumbnailUrl}
+          alt={`Thumbnail: ${article.title}`}
+          className="mt-8 aspect-[16/9] w-full object-cover sm:aspect-[21/9]"
+        />
+      ) : (
+        <div
+          className="photo-tone mt-8 aspect-[16/9] w-full sm:aspect-[21/9]"
+          aria-hidden="true"
+        />
+      )}
 
       <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-8">
           <div className="flex flex-col gap-5 text-base leading-relaxed sm:text-lg">
-            <ArticleBody content={article.content} contentBlocks={article.contentBlocks} />
+            <ArticleBody
+              content={article.content}
+              contentBlocks={article.contentBlocks}
+            />
           </div>
 
           <ArticleEngagement articleSlug={article.slug} />

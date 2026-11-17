@@ -8,7 +8,11 @@ export default function NewsletterForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const email = new FormData(e.currentTarget).get("email");
-    const response = await fetch("/api/newsletter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+    const response = await fetch("/api/newsletter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
     setStatus(response.ok ? "sent" : "error");
   }
 
@@ -41,7 +45,11 @@ export default function NewsletterForm() {
           >
             Berlangganan
           </button>
-          {status === "error" && <p className="font-mono text-[11px] text-signal">Pendaftaran gagal. Pastikan Supabase sudah diisi.</p>}
+          {status === "error" && (
+            <p className="font-mono text-[11px] text-signal">
+              Pendaftaran gagal. Pastikan Supabase sudah diisi.
+            </p>
+          )}
         </form>
       )}
     </div>
