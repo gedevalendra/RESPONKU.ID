@@ -5,10 +5,14 @@ import type { Profile, UserRole } from "@/lib/types";
 import { env } from "@/lib/env";
 import { getOAuthActor } from "@/lib/oauth";
 import { roleForEmail } from "@/lib/roles";
+import { communityDb } from "@/lib/community";
 
 export async function getActor(): Promise<Profile | null> {
   const oauthActor = await getOAuthActor();
-  if (oauthActor) return oauthActor;
+  if (oauthActor) {
+    const override = await (await communityDb()).collection("account_roles").findOne({ userId: oauthActor.id });
+    return { ...oauthActor, role: (override?.role || oauthActor.role) as UserRole };
+  }
   if (!env.supabaseUrl || !env.supabasePublicKey) return null;
   const authClient = getSupabaseAuthServer();
   const {
@@ -23,12 +27,13 @@ export async function getActor(): Promise<Profile | null> {
     .eq("id", user.id)
     .single();
   const email = user.email || data?.email || "";
+  const override = await (await communityDb()).collection("account_roles").findOne({ userId: user.id });
   return {
     id: user.id,
     email,
     displayName: data?.display_name || user.email?.split("@")[0] || "Pembaca",
     role:
-      roleForEmail(email) === "superadmin"
+      override?.role ? override.role as UserRole : roleForEmail(email) === "superadmin"
         ? "superadmin"
         : ((data?.role || "reader") as UserRole),
   };

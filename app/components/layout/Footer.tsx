@@ -29,6 +29,7 @@ const columns = [
   {
     title: "Layanan",
     links: [
+      { label: "FAQ & Bantuan", href: "/faq" },
       { label: "Berlangganan", href: "/berlangganan" },
       { label: "Iklan", href: "/iklan" },
       { label: "Indeks Berita", href: "/indeks" },

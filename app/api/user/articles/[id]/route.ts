@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { deleteArticle, updateArticle } from "@/lib/db";
 import { getActor } from "@/lib/authz";
+import { analyzeArticle } from "@/lib/article-analysis";
 
 const block = z.discriminatedUnion("type", [
   z.object({
@@ -60,11 +61,13 @@ export async function PATCH(
         { error: "Artikel tidak ditemukan" },
         { status: 404 },
       );
+    const analysis = await analyzeArticle(parsed.data);
     return NextResponse.json({
       article: await updateArticle(
         params.id,
         {
           ...parsed.data,
+          ...analysis,
           author: actor.displayName,
           status: "pending",
           rejectionReason: undefined,
@@ -72,10 +75,10 @@ export async function PATCH(
         actor,
       ),
     });
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { error: "Artikel tidak ditemukan" },
-      { status: 404 },
+      { error: error instanceof Error ? error.message : "Artikel gagal diperbarui" },
+      { status: 503 },
     );
   }
 }

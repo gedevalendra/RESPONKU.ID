@@ -55,16 +55,7 @@ export default async function AboutPage() {
   const page = await getAboutPage();
   return (
     <div className="about-page wrap py-12 sm:py-16 lg:py-24">
-      <header className="max-w-4xl">
-        <p className="eyebrow">Tentang ResponKu</p>
-        <h1 className="mt-4 max-w-4xl font-display text-display-lg font-normal tracking-tight text-gray-800">
-          {page.title}
-        </h1>
-        <p className="mt-6 max-w-3xl text-lg leading-relaxed text-mute sm:text-xl">
-          {page.intro}
-        </p>
-      </header>
-      <div className="mt-16 grid gap-12 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.6fr)] lg:gap-20">
+      <div className="grid gap-12 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.6fr)] lg:gap-20">
         <main className="space-y-14 text-base leading-relaxed sm:text-lg">
           {page.sections.map((section) => (
             <Section key={section.id} section={section} />

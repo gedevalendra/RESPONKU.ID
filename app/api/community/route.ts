@@ -52,6 +52,7 @@ export async function POST(request: Request) {
         createdAt: new Date().toISOString(),
       };
       await db.collection("organizations").insertOne(organization);
+      if (organization.verified) await db.collection("organization_members").updateOne({ userId: organization.ownerId, organizationId: organization.id }, { $set: { displayName: actor.displayName, status: "approved" } }, { upsert: true });
     } else if (value.action === "join" && value.id) {
       const org = await db.collection("organizations").findOne({ id: value.id, verified: true });
       if (!org) return NextResponse.json({ error: "Organisasi belum diverifikasi" }, { status: 422 });
@@ -62,6 +63,11 @@ export async function POST(request: Request) {
       await db.collection("organization_members").updateOne({ organizationId: value.id, userId: value.userId }, { $set: { status: value.approved ? "approved" : "rejected" } });
     } else if (value.action === "reviewOrganization" && value.id && isStaff(actor.role)) {
       await db.collection("organizations").updateOne({ id: value.id }, { $set: { verified: Boolean(value.approved), ...(value.ownerId ? { ownerId: value.ownerId } : {}) } });
+      const organization = await db.collection("organizations").findOne({ id: value.id });
+      if (organization && value.approved) {
+        const owner = await findManagedUser(String(organization.ownerId));
+        if (owner) await db.collection("organization_members").updateOne({ userId: owner.id, organizationId: organization.id }, { $set: { displayName: owner.name, status: "approved" } }, { upsert: true });
+      }
     } else if (value.action === "badge" && value.userId && isStaff(actor.role)) {
       await db.collection("profile_badges").updateOne({ userId: value.userId }, { $set: { verified: Boolean(value.approved) } }, { upsert: true });
     } else return NextResponse.json({ error: "Tidak berwenang atau data kurang lengkap" }, { status: 403 });

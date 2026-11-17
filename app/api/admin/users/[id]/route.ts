@@ -8,6 +8,7 @@ import { findManagedUser } from "@/lib/admin-users";
 const schema = z.object({
   role: z.enum(["reader", "author", "admin", "superadmin"]).optional(),
   verified: z.boolean().optional(),
+  displayName: z.string().trim().min(2).max(100).optional(),
   organizationId: z.string().max(150).nullable().optional(),
 });
 
@@ -19,16 +20,24 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const target = await findManagedUser(params.id);
     if (!target) return NextResponse.json({ error: "Pengguna tidak ditemukan" }, { status: 404 });
-    if (target.role === "superadmin" || parsed.data.role === "superadmin") return NextResponse.json({ error: "Akun superadmin dilindungi" }, { status: 403 });
+    if ((target.role === "superadmin" || parsed.data.role === "superadmin") && !isSuperAdmin(actor.role)) return NextResponse.json({ error: "Khusus superadmin" }, { status: 403 });
     if (actor.id === target.id && parsed.data.role) return NextResponse.json({ error: "Tidak dapat mengubah peran sendiri" }, { status: 409 });
     if (!isSuperAdmin(actor.role) && target.role === "admin" && parsed.data.role && parsed.data.role !== "admin") return NextResponse.json({ error: "Hanya superadmin dapat menurunkan peran admin" }, { status: 403 });
     const db = await communityDb();
     const patch = parsed.data;
+    if (patch.displayName) {
+      if (target.source === "oauth") await db.collection("oauth_users").updateOne({ id: target.id }, { $set: { displayName: patch.displayName } });
+      else {
+        const result = await getSupabaseAdmin()?.from("profiles").update({ display_name: patch.displayName }).eq("id", target.id);
+        if (!result || result.error) throw new Error("Nama gagal disimpan");
+      }
+    }
     if (patch.organizationId) {
       const org = await db.collection("organizations").findOne({ id: patch.organizationId, verified: true });
       if (!org) return NextResponse.json({ error: "Pilih organisasi yang telah diverifikasi" }, { status: 422 });
     }
     if (patch.role) {
+      await db.collection("account_roles").updateOne({ userId: target.id }, { $set: { role: patch.role } }, { upsert: true });
       if (target.source === "oauth") await db.collection("oauth_users").updateOne({ id: target.id }, { $set: { role: patch.role } });
       else {
         const admin = getSupabaseAdmin();
@@ -52,7 +61,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const target = await findManagedUser(params.id);
     if (!target) return NextResponse.json({ error: "Pengguna tidak ditemukan" }, { status: 404 });
-    if (target.id === actor.id || target.role === "superadmin" || (target.role === "admin" && !isSuperAdmin(actor.role))) return NextResponse.json({ error: "Akun ini dilindungi dari penghapusan" }, { status: 403 });
+    if (target.id === actor.id || ((target.role === "superadmin" || target.role === "admin") && !isSuperAdmin(actor.role))) return NextResponse.json({ error: "Akun ini dilindungi dari penghapusan" }, { status: 403 });
     const data = await request.json().catch(() => null);
     if (data?.confirmation !== target.name) return NextResponse.json({ error: "Nama konfirmasi tidak sesuai" }, { status: 422 });
     const db = await communityDb();

@@ -16,10 +16,12 @@ export default function ArticleCard({
       <article className="group flex flex-col">
         <Link
           href={`/artikel/${article.slug}`}
-          className="photo-tone aspect-[4/3] w-full"
+          className="block aspect-[4/3] w-full overflow-hidden bg-gray-100"
           aria-hidden="true"
           tabIndex={-1}
-        />
+        >
+          {article.thumbnailUrl && <img src={article.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
+        </Link>
         <div className="flex flex-1 flex-col pt-4">
           <CategoryBadge category={article.category} />
           <h3 className="mt-2 font-display text-lg leading-snug">
@@ -43,10 +45,12 @@ export default function ArticleCard({
     <article className="group flex gap-5 py-5">
       <Link
         href={`/artikel/${article.slug}`}
-        className="photo-tone hidden h-24 w-32 shrink-0 sm:block"
+        className="hidden h-24 w-32 shrink-0 overflow-hidden bg-gray-100 sm:block"
         aria-hidden="true"
         tabIndex={-1}
-      />
+      >
+        {article.thumbnailUrl && <img src={article.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
+      </Link>
       <div className="flex flex-1 flex-col justify-center">
         <CategoryBadge category={article.category} />
         <h3 className="mt-1.5 font-display text-lg leading-snug sm:text-xl">

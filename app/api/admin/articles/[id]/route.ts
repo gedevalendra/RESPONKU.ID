@@ -4,6 +4,8 @@ import { deleteArticle, updateArticle } from "@/lib/db";
 import { getActor, isStaff } from "@/lib/authz";
 import { createNotification } from "@/lib/db";
 import { sendPushToUser } from "@/lib/push";
+import { communityDb } from "@/lib/community";
+import { notifyActivity } from "@/lib/activity-notifications";
 
 const patchSchema = z.object({
   title: z.string().min(5).max(180).optional(),
@@ -80,7 +82,11 @@ export async function DELETE(
       { status: 403 },
     );
   try {
+    const db = await communityDb();
+    const article = await db.collection("articles").findOne({ id: params.id });
+    if (!article) return NextResponse.json({ error: "Artikel tidak ditemukan" }, { status: 404 });
     await deleteArticle(params.id);
+    if (article.authorId) await notifyActivity({ userId: String(article.authorId), title: "Artikel dihapus", body: `Artikel “${article.title}” telah dihapus oleh redaksi.`.slice(0, 500), href: "/akun#riwayat" }).catch(() => null);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json(

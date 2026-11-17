@@ -13,8 +13,6 @@ export const env = {
   vapidSubject: process.env.VAPID_SUBJECT || "mailto:admin@responku.id",
   mongodbUri: process.env.MONGODB_URI,
   mongodbDbName: process.env.MONGODB_DB_NAME || "responku",
-  commentsRequireModeration:
-    process.env.COMMENTS_REQUIRE_MODERATION !== "false",
 };
 
 export const hasSupabase = Boolean(

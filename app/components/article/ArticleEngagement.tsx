@@ -17,7 +17,7 @@ export default function ArticleEngagement({
 }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [reactions, setReactions] = useState(initialReactions);
-  const [name, setName] = useState("");
+  const [accountName, setAccountName] = useState("");
   const [body, setBody] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -32,6 +32,7 @@ export default function ArticleEngagement({
   }, []);
 
   useEffect(() => {
+    void fetch("/api/auth/me").then((response) => response.json()).then((data) => setAccountName(data.user?.displayName || "")).catch(() => undefined);
     void fetch(`/api/articles/${encodeURIComponent(articleSlug)}/view`, {
       method: "POST",
     });
@@ -73,15 +74,14 @@ export default function ArticleEngagement({
     const response = await fetch("/api/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ articleSlug, displayName: name, body }),
+      body: JSON.stringify({ articleSlug, body }),
     });
     const data = await response.json();
     if (response.ok) {
-      setName("");
       setBody("");
       setMessage(
         data.comment.status === "pending"
-          ? "Komentar menunggu moderasi."
+          ? "Komentar memerlukan pemeriksaan admin sebelum ditampilkan."
           : "Komentar diterbitkan.",
       );
       if (data.comment.status === "published")
@@ -133,15 +133,7 @@ export default function ArticleEngagement({
         </div>
       </div>
       <form onSubmit={submitComment} className="mt-6 grid gap-3 sm:grid-cols-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          minLength={2}
-          maxLength={60}
-          placeholder="Nama tampilan"
-          className="border border-ink bg-paper px-3 py-2.5 text-sm"
-        />
+        <p className="text-sm text-mute sm:col-span-2">{accountName ? `Berkomentar sebagai ${accountName}` : <a href="/masuk" className="text-blue-500">Masuk untuk berkomentar</a>}</p>
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -152,7 +144,7 @@ export default function ArticleEngagement({
           className="min-h-24 border border-ink bg-paper px-3 py-2.5 text-sm sm:col-span-2"
         />
         <button
-          disabled={busy}
+          disabled={busy || !accountName}
           className="w-fit bg-ink px-4 py-2.5 font-mono text-xs uppercase tracking-widest2 text-paper disabled:opacity-50"
         >
           {busy ? "Menyimpan…" : "Kirim komentar"}

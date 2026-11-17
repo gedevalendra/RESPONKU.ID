@@ -29,7 +29,7 @@ export default async function AccountPage() {
             ["/akun/artikel", "Kelola artikel"],
             ["mailto:admin@responku.id?subject=Laporan%20masalah", "Laporkan masalah"],
             ["/tentang#dukungan", "Dukungan"],
-            ["/tentang#faq", "FAQ"],
+            ["/faq", "FAQ"],
           ].map(([href, label]) => (
             <a key={href} href={href} className="block px-6 py-4 text-sm text-mute transition-colors hover:bg-gray-800/5 hover:text-ink">
               {label}

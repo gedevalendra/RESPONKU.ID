@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createArticle, listArticlesFromDatabase } from "@/lib/db";
 import { getActor } from "@/lib/authz";
+import { analyzeArticle } from "@/lib/article-analysis";
 
 const block = z.discriminatedUnion("type", [
   z.object({
@@ -60,19 +61,20 @@ export async function POST(request: Request) {
       { status: 422 },
     );
   try {
+    const analysis = await analyzeArticle(parsed.data);
     return NextResponse.json(
       {
         article: await createArticle(
-          { ...parsed.data, author: actor.displayName },
+          { ...parsed.data, ...analysis, author: actor.displayName },
           actor,
           "pending",
         ),
       },
       { status: 201 },
     );
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { error: "Artikel gagal dikirim" },
+      { error: error instanceof Error ? error.message : "Artikel gagal dikirim" },
       { status: 503 },
     );
   }

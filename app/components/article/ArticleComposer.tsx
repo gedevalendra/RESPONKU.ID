@@ -4,13 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { Article, ArticleBlock, Category } from "@/lib/types";
 import ArticleBody from "./ArticleBody";
 
-const categories: Category[] = [
-  "Ekonomi",
-  "Teknologi",
-  "Politik",
-  "Olahraga",
-  "Budaya",
-];
 type ArticleDraft = {
   title: string;
   dek: string;
@@ -85,6 +78,32 @@ export default function ArticleComposer({
   const [imageBusy, setImageBusy] = useState<string | null>(null);
   const [thumbnailBusy, setThumbnailBusy] = useState(false);
   const [error, setError] = useState("");
+  const [analysisMessage, setAnalysisMessage] = useState("Kategori dan durasi baca ditentukan otomatis dari isi artikel.");
+  const analysisText = draft.blocks.map((block) => "text" in block ? block.text : block.type === "image" ? block.caption || "" : "").join("\n");
+  useEffect(() => {
+    if (analysisText.trim().length < 80) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setAnalysisMessage("Menganalisis kategori dan durasi baca…");
+      try {
+        const response = await fetch("/api/ai/article-analysis", {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: draft.title, dek: draft.dek, content: [analysisText.slice(0, 20000)] }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        if (!controller.signal.aborted) {
+          setDraft((current) => ({ ...current, category: data.category, readTime: data.readTime }));
+          setAnalysisMessage("Kategori dan durasi baca diperbarui otomatis.");
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) setAnalysisMessage(error instanceof Error ? error.message : "Analisis belum tersedia.");
+      }
+    }, 2500);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [analysisText, draft.title, draft.dek]);
   useEffect(() => {
     setDraft(initial(article, authorName));
   }, [article, authorName]);
@@ -346,18 +365,7 @@ export default function ArticleComposer({
               />
             )}
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            <select
-              value={draft.category}
-              onChange={(event) =>
-                update("category", event.target.value as Category)
-              }
-              className="px-3 py-3 text-sm"
-            >
-              {categories.map((category) => (
-                <option key={category}>{category}</option>
-              ))}
-            </select>
+          <div className="grid gap-3">
             <input
               required
               value={draft.author}
@@ -366,36 +374,7 @@ export default function ArticleComposer({
               className="cursor-not-allowed px-3 py-3 text-sm text-mute"
             />
           </div>
-          <input
-            type="number"
-            min={1}
-            max={60}
-            value={draft.readTime}
-            onChange={(event) => update("readTime", Number(event.target.value))}
-            placeholder="Menit baca"
-            className="px-3 py-3 text-sm"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="w-full eyebrow">Tambah bagian</span>
-          {(
-            [
-              ["text", "Teks"],
-              ["heading", "Judul bagian"],
-              ["image", "Foto"],
-              ["quote", "Kutipan"],
-              ["divider", "Pemisah"],
-            ] as const
-          ).map(([type, label]) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => add(type)}
-              className="bg-blue-50 px-3 py-2 font-mono text-xs text-blue-600 transition-colors hover:bg-blue-500 hover:text-white"
-            >
-              + {label}
-            </button>
-          ))}
+          <p role="status" className="text-xs text-mute">{analysisMessage}</p>
         </div>
         <div className="space-y-3">
           {draft.blocks.map((block, index) => (
@@ -532,6 +511,27 @@ export default function ArticleComposer({
                 <p className="text-sm text-mute">Garis pemisah antarbagian.</p>
               )}
             </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="w-full eyebrow">Tambah bagian</span>
+          {(
+            [
+              ["text", "Teks"],
+              ["heading", "Judul bagian"],
+              ["image", "Foto"],
+              ["quote", "Kutipan"],
+              ["divider", "Pemisah"],
+            ] as const
+          ).map(([type, label]) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => add(type)}
+              className="bg-blue-50 px-3 py-2 font-mono text-xs text-blue-600 transition-colors hover:bg-blue-500 hover:text-white"
+            >
+              + {label}
+            </button>
           ))}
         </div>
         {error && <p className="font-mono text-xs text-blue-600">{error}</p>}

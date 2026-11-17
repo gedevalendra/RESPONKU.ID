@@ -69,7 +69,7 @@ export default function UserRoleManager() {
       <p role="status" className="text-sm text-mute">{message}</p>
       <div className="divide-y divide-rule bg-white">
         {filtered.map((user) => {
-          const protectedUser = user.role === "superadmin";
+          const protectedUser = user.role === "superadmin" && actorRole !== "superadmin";
           const protectedRole = protectedUser || user.id === actorId || (user.role === "admin" && actorRole !== "superadmin");
           return (
             <div key={user.id} className="space-y-4 p-5">
@@ -81,12 +81,16 @@ export default function UserRoleManager() {
                 <button disabled={busy || protectedRole} className="text-sm text-red-600 disabled:opacity-40" onClick={() => { setDeleting(user); setConfirmation(""); }}>Hapus akun</button>
               </div>
               <div className="flex flex-wrap items-end gap-4">
+                <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); void mutate(user, "PATCH", { displayName: new FormData(event.currentTarget).get("displayName") }); }}>
+                  <input aria-label="Nama pengguna" name="displayName" defaultValue={user.display_name} required minLength={2} maxLength={100} disabled={busy || protectedUser} className="min-w-0 p-3 text-sm" />
+                  <button disabled={busy || protectedUser} className="text-sm text-blue-500">Simpan nama</button>
+                </form>
                 <label className="grid gap-1 text-sm">Peran
                   <select disabled={busy || protectedRole} value={user.role} className="p-3 disabled:opacity-50" onChange={(event) => void mutate(user, "PATCH", { role: event.target.value })}>
                     <option value="reader">Pengguna</option>
                     <option value="author">Penulis</option>
                     <option value="admin">Admin</option>
-                    {protectedUser && <option value="superadmin">Superadmin</option>}
+                    {(actorRole === "superadmin" || user.role === "superadmin") && <option value="superadmin">Superadmin</option>}
                   </select>
                 </label>
                 <label className="grid gap-1 text-sm">Organisasi

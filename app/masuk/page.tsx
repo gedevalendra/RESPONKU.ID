@@ -3,24 +3,23 @@ import Link from "next/link";
 import LoginForm from "../components/auth/LoginForm";
 
 export const metadata: Metadata = {
-  title: "Masuk — WARTA.",
+  title: "Masuk — ResponKu",
   description:
-    "Masuk ke akun WARTA. untuk menyimpan artikel dan mengatur langganan.",
+    "Masuk ke ResponKu untuk membaca, menulis, dan mengikuti perkembangan artikel.",
 };
 
 export default function LoginPage() {
   return (
-    <div className="wrap flex justify-center py-16 sm:py-24">
-      <div className="w-full max-w-sm">
-        <p className="eyebrow text-center">Akun Pembaca</p>
-        <h1 className="mt-3 text-center font-display text-display-md">
-          Masuk ke WARTA.
+    <div className="wrap flex justify-center py-8 sm:py-14">
+      <div className="w-full max-w-2xl border-t-4 border-ink bg-white px-5 py-7 sm:px-9 sm:py-9">
+        <h1 className="font-display text-3xl leading-tight sm:text-4xl">
+          Masuk ke ResponKu
         </h1>
-        <p className="mt-2 text-center text-sm text-mute">
-          Simpan artikel favorit dan atur langganan ringkasan pagi.
+        <p className="mt-3 text-sm leading-6 text-mute">
+          Ikuti kabar terbaru, sampaikan pandangan, dan kelola tulisanmu dalam satu akun.
         </p>
 
-        <div className="mt-8 rule-thick border-t pt-8">
+        <div className="mt-6 border-t border-rule pt-6">
           <LoginForm />
         </div>
 

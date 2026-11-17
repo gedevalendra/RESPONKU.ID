@@ -26,6 +26,7 @@ export async function GET() {
   }
   const oauthUsers = await listOAuthUsers();
   const db = await communityDb();
+  const overrides = await db.collection("account_roles").find({}).toArray();
   const badges = await db.collection("profile_badges").find({}).toArray();
   const members = await db.collection("organization_members").find({ status: "approved" }).toArray();
   const organizations = await db.collection("organizations").find({ verified: true }).toArray();
@@ -45,7 +46,7 @@ export async function GET() {
       })),
     ].map((user) => ({
       ...user,
-      role: roleForEmail(String(user.email)) === "superadmin" ? "superadmin" : user.role,
+      role: overrides.find((override) => override.userId === user.id)?.role || (roleForEmail(String(user.email)) === "superadmin" ? "superadmin" : user.role),
       verified: badges.some((badge) => badge.userId === user.id && badge.verified),
       organizationId: members.find((member) => member.userId === user.id)?.organizationId || "",
     })),

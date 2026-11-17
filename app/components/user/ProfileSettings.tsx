@@ -165,7 +165,6 @@ export default function ProfileSettings({
               <p className="mt-1 truncate text-sm text-mute">{profile.username ? `@${profile.username}` : profile.email}</p>
             </div>
           </div>
-          <button type="button" onClick={() => setEditing((value) => !value)} aria-expanded={editing} className="bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100">{editing ? "Tutup edit" : "Edit profil"}</button>
         </div>
         {profile.organization && <span className="mt-4 inline-flex items-center gap-2 px-2 py-1 text-sm text-mute outline outline-1 outline-gray-200"><i className="bx bx-buildings" aria-hidden="true" />{profile.organization}<i className="bx bxs-badge-check text-gray-800" role="img" aria-label="Organisasi terverifikasi" /></span>}
         {profile.bio && <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-mute">{profile.bio}</p>}
@@ -177,6 +176,9 @@ export default function ProfileSettings({
           ["Ditolak", articleStats.rejected],
           ["Total views", articleStats.views],
         ].map(([label, value]) => <div key={label} className="flex items-center justify-between gap-2 px-5 py-3 sm:px-6"><p className="text-xs text-mute">{label}</p><p className="text-base font-semibold tabular-nums text-ink">{value}</p></div>)}
+      </div>
+      <div className="border-t border-rule px-6 py-3 text-center sm:px-8">
+        <button type="button" onClick={() => setEditing((value) => !value)} aria-expanded={editing} className="w-full py-2 text-sm font-medium text-ink transition-colors hover:bg-gray-800/5">{editing ? "Tutup edit" : "Edit profil"}</button>
       </div>
       {editing && <form onSubmit={save} className="grid gap-5 p-6 sm:p-8">
         <label className="grid gap-2 text-sm">

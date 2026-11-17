@@ -71,19 +71,18 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
           onClick={() => signIn("google")}
-          className="bg-blue-500 px-2 py-2.5 font-mono text-[10px] uppercase tracking-wider text-white hover:bg-blue-600"
+          className="min-h-12 bg-ink px-3 py-3 font-mono text-xs text-white transition-colors hover:bg-gray-700"
         >
           Google
         </button>
-        <span aria-hidden="true" />
         <button
           type="button"
           onClick={() => signIn("custom:funikin")}
-          className="bg-gray-800 px-2 py-2.5 font-mono text-[10px] uppercase tracking-wider text-white hover:bg-gray-700"
+          className="min-h-12 bg-ink px-3 py-3 font-mono text-xs text-white transition-colors hover:bg-gray-700"
         >
           FunikIn
         </button>
@@ -107,7 +106,7 @@ export default function LoginForm() {
           required
           autoComplete="email"
           placeholder="nama@email.com"
-          className="border border-ink bg-paper px-3 py-2.5 text-sm placeholder:text-mute focus-visible:outline-none"
+          className="h-12 w-full bg-paper px-4 text-base placeholder:text-mute focus-visible:outline-none"
         />
       </div>
 
@@ -133,14 +132,14 @@ export default function LoginForm() {
           required
           autoComplete="current-password"
           placeholder="••••••••"
-          className="border border-ink bg-paper px-3 py-2.5 text-sm placeholder:text-mute focus-visible:outline-none"
+          className="h-12 w-full bg-paper px-4 text-base placeholder:text-mute focus-visible:outline-none"
         />
       </div>
 
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="mt-1 bg-blue-500 px-3 py-3 font-mono text-xs uppercase tracking-widest2 text-white transition-colors hover:bg-blue-600 disabled:opacity-60"
+        className="mt-1 min-h-12 bg-ink px-4 py-3 font-mono text-xs uppercase tracking-widest2 text-white transition-colors hover:bg-gray-700 disabled:opacity-60"
       >
         {status === "submitting"
           ? "Memproses…"

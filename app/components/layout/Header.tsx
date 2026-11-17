@@ -51,9 +51,6 @@ export default async function Header() {
           >
             Terpopuler
           </Link>
-          <Link href="/cari" className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 font-mono text-xs leading-none uppercase tracking-widest2 text-gray-800 outline outline-1 outline-gray-300 transition-colors hover:bg-gray-800/5">
-            <i className="bx bx-search inline-flex shrink-0 items-center justify-center text-lg leading-none" aria-hidden="true" />
-          </Link>
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-3 lg:gap-5">
@@ -77,7 +74,7 @@ export default async function Header() {
             {!actor && (
               <Link
                 href="/masuk"
-                className="bg-blue-500 px-4 py-2 font-mono text-xs uppercase tracking-widest2 text-white transition-colors hover:bg-blue-600"
+                className="bg-ink px-4 py-2 font-mono text-xs uppercase tracking-widest2 text-white transition-colors hover:bg-gray-700"
               >
                 Masuk
               </Link>
@@ -86,13 +83,14 @@ export default async function Header() {
           {!actor && (
             <Link
               href="/masuk"
-              className="bg-blue-500 px-3 py-2 font-mono text-xs uppercase tracking-widest2 text-white lg:hidden"
+              className="bg-ink px-3 py-2 font-mono text-xs uppercase tracking-widest2 text-white lg:hidden"
             >
               Masuk
             </Link>
           )}
           <MobileNav
             authenticated={Boolean(actor)}
+            role={actor?.role}
             articleCategories={articleCategories}
           />
         </div>

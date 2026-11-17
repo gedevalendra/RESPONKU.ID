@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { getMongoDb } from "@/lib/mongodb";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { commentNeedsReview } from "@/lib/comment-moderation";
 import type {
   Article,
   ArticleBlock,
@@ -274,7 +275,7 @@ export async function createComment(input: {
       article_slug: input.articleSlug,
       display_name: input.displayName,
       body: input.body,
-      status: env.commentsRequireModeration ? "pending" : "published",
+      status: (await commentNeedsReview(input.body)) ? "pending" : "published",
     })
     .select("*")
     .single();
