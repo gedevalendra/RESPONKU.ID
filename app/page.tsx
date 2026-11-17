@@ -11,7 +11,6 @@ export default async function HomePage() {
     getByCategory("Ekonomi", 1), getByCategory("Politik", 1), getByCategory("Teknologi", 2),
     getByCategory("Olahraga", 4), getByCategory("Budaya", 4),
   ]);
-// s
   return (
     <>
       <HeroSection stories={featured} />
