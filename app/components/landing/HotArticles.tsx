@@ -34,7 +34,7 @@ export default function HotArticles({ stories, ad }: { stories: RankedArticle[];
 
 
   return (
-    <section className="border-t border-rule" aria-labelledby="hot-articles-title">
+    <section id="berita-hangat" className="scroll-mt-40 border-t border-rule" aria-labelledby="hot-articles-title">
       <div className="wrap grid gap-8 py-8 sm:py-10 xl:grid-cols-12 xl:gap-10">
         <div className="min-w-0 xl:col-span-8">
           <h2 id="hot-articles-title" className="mb-4 border-l-2 border-blue-500 pl-3 font-display text-2xl">Berita Hangat</h2>

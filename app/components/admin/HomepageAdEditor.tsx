@@ -60,7 +60,7 @@ export default function HomepageAdEditor({ initial, slot }: { initial: HomepageA
       {ad.imageUrl.startsWith("https://") && ad.destination.startsWith("https://") && (
         <aside className="min-w-0">
           <h2 className="mb-3 font-display text-xl">Pratinjau</h2>
-          <HomepageAdBanner ad={ad} />
+          <HomepageAdBanner ad={ad} compact={slot === "gallery"} />
         </aside>
       )}
       <PopupStatus message={message} />

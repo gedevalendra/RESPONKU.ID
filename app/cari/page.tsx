@@ -1,29 +1,33 @@
 import Link from "next/link";
-import { getPublishedArticles } from "@/lib/data";
+import { compareArticlePopularity, getPublishedArticles } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string; kategori?: string };
+  searchParams: { q?: string; kategori?: string; sort?: string };
 }) {
   const query = (searchParams.q || "").trim();
   const category = searchParams.kategori || "";
   const articles = await getPublishedArticles();
   const categories = [...new Set(articles.map((article) => article.category))];
+  const sort = searchParams.sort;
+  const popular = sort === "popular";
   const searching = Boolean(query || category);
   const results = articles.filter((article) =>
     (!category || article.category === category) &&
     (!query || [article.title, article.dek, article.category, article.author]
       .join(" ").toLocaleLowerCase("id").includes(query.toLocaleLowerCase("id"))),
   );
+  if (popular) results.sort(compareArticlePopularity);
   const visible = searching ? results : results.slice(0, 6);
 
   function categoryUrl(value: string) {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
     if (value) params.set("kategori", value);
+    if (popular) params.set("sort", "popular");
     return `/cari${params.size ? `?${params}` : ""}`;
   }
 
@@ -32,6 +36,7 @@ export default async function SearchPage({
       <div className="mx-auto max-w-4xl">
 
         <form action="/cari" role="search" className="flex items-center gap-2">
+          {popular && <input type="hidden" name="sort" value="popular" />}
           {category && <input type="hidden" name="kategori" value={category} />}
           <div className="relative min-w-0 flex-1">
             <svg className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-mute" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5" /></svg>
@@ -53,7 +58,7 @@ export default async function SearchPage({
         <section className="mt-8" aria-labelledby="search-results-title">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-4">
             <div>
-              <h2 id="search-results-title" className="text-lg font-semibold">{searching ? "Hasil pencarian" : "Berita terbaru"}</h2>
+              <h2 id="search-results-title" className="text-lg font-semibold">{searching ? "Hasil pencarian" : popular ? "Berita terpopuler" : "Berita terbaru"}</h2>
               {searching && <p className="mt-1 break-words text-sm text-mute">{results.length} artikel{query ? ` untuk “${query}”` : ""}{category ? ` di ${category}` : ""}</p>}
             </div>
             {searching && <Link href="/cari" className="text-sm text-blue-500 hover:underline">Hapus filter</Link>}
@@ -80,7 +85,7 @@ export default async function SearchPage({
               {searching && <Link href="/cari" className="mt-4 inline-block text-sm font-medium text-blue-500">Lihat berita terbaru</Link>}
             </div>
           )}
-          {!searching && articles.length > 6 && <Link href="/artikel" className="mt-4 block py-3 text-center text-sm font-medium text-blue-500 hover:bg-gray-800/5">Jelajahi semua artikel →</Link>}
+          {!searching && articles.length > 6 && <Link href={popular ? "/artikel?sort=popular" : "/artikel"} className="mt-4 block py-3 text-center text-sm font-medium text-blue-500 hover:bg-gray-800/5">Jelajahi semua artikel →</Link>}
         </section>
       </div>
     </div>

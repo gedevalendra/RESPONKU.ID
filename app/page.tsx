@@ -53,7 +53,7 @@ export default async function HomePage() {
 
       <div className="wrap grid grid-cols-1 gap-12 border-t border-rule py-10 lg:grid-cols-12 lg:gap-16">
         <div className="min-w-0 lg:col-span-8">
-        <section aria-labelledby="latest-title">
+        <section id="terbaru" aria-labelledby="latest-title" className="scroll-mt-40">
           <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule pb-3">
             <h2 id="latest-title" className="font-display text-2xl">Terbaru</h2>
             <Link href="/artikel" className="inline-flex items-center gap-1 text-sm font-medium text-mute hover:text-ink">
@@ -77,7 +77,7 @@ export default async function HomePage() {
               ))}
             </ArticleGallery>
             {galleryAd?.enabled && (
-              <div className="mt-5"><HomepageAdBanner ad={galleryAd} /></div>
+              <div className="mt-5"><HomepageAdBanner ad={galleryAd} compact /></div>
             )}
           </section>
         )}
