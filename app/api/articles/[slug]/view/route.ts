@@ -1,11 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { cookiePreferenceName } from "@/lib/cookie-preferences";
 import crypto from "node:crypto";
 import { recordArticleView } from "@/lib/db";
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { slug: string } },
 ) {
+  if (request.cookies.get(cookiePreferenceName)?.value !== "accept") {
+    return new NextResponse(null, { status: 204 });
+  }
   const forwarded =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     "anonymous";

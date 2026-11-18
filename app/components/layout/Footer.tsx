@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CookieSettingsButton } from "./CookieConsent";
 import { categories } from "@/lib/content";
 
 const categorySlug: Record<string, string> = {
@@ -49,6 +50,7 @@ export default function Footer() {
           <p className="mt-3 max-w-[22ch] text-sm text-mute">
             Kabar hari ini, ditulis dengan jelas.
           </p>
+          <CookieSettingsButton />
         </div>
         {columns.map((col) => (
           <div key={col.title}>

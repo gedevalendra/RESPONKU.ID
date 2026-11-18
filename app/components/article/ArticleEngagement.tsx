@@ -4,6 +4,7 @@ import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
 import type { Comment, ReactionSummary } from "@/lib/types";
+import { cookiePreferenceChange, getCookiePreference } from "@/lib/cookie-preferences";
 
 const initialReactions: ReactionSummary = {
   like: 0,
@@ -126,10 +127,19 @@ export default function ArticleEngagement({
   }, [comments]);
 
   useEffect(() => {
+    let recorded = false;
+    function recordView() {
+      if (recorded || getCookiePreference() !== "accept") return;
+      recorded = true;
+      void fetch(`/api/articles/${encodeURIComponent(articleSlug)}/view`, { method: "POST" }).catch(() => undefined);
+    }
+    recordView();
+    window.addEventListener(cookiePreferenceChange, recordView);
+    return () => window.removeEventListener(cookiePreferenceChange, recordView);
+  }, [articleSlug]);
+
+  useEffect(() => {
     void fetch("/api/auth/me").then((response) => response.json()).then((data) => setAccountName(data.user?.displayName || "")).catch(() => undefined);
-    void fetch(`/api/articles/${encodeURIComponent(articleSlug)}/view`, {
-      method: "POST",
-    });
     fetch(`/api/comments?articleSlug=${encodeURIComponent(articleSlug)}&visitorId=${encodeURIComponent(visitorId)}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => data && setComments(data.comments || []));

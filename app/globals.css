@@ -213,3 +213,13 @@ details[open] > .sidebar-dropdown {
 @media (prefers-reduced-motion: reduce) {
   .action-popup:not(dialog), dialog.action-popup[open] { animation: none; }
 }
+.cookie-consent {
+  animation: cookie-consent-in 260ms ease-out both;
+}
+@keyframes cookie-consent-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cookie-consent { animation: none; }
+}

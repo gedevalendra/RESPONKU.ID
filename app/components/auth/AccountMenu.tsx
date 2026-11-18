@@ -22,42 +22,42 @@ export default function AccountMenu({ actor }: { actor: Profile }) {
         <nav className="flex flex-col py-1 font-mono text-xs uppercase tracking-widest2">
           <Link
             href="/akun"
-            className="px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
+            className="flex items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
           >
-            Profile Kamu
+            <i className="bx bx-user text-base" aria-hidden="true" /> Profile Kamu
           </Link>
           <Link
             href="/akun#riwayat"
-            className="px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
+            className="flex items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
           >
-            Riwayat Publish
+            <i className="bx bx-history text-base" aria-hidden="true" /> Riwayat Publish
           </Link>
           <Link
             href="/notifikasi"
-            className="px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
+            className="flex items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
           >
-            Notifikasi
+            <i className="bx bx-bell text-base" aria-hidden="true" /> Notifikasi
           </Link>
           <Link
             href="/akun/artikel"
-            className="px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
+            className="flex items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
           >
-            Buat Artikel
+            <i className="bx bx-edit text-base" aria-hidden="true" /> Buat Artikel
           </Link>
           {actor.role === "admin" && (
             <Link
               href="/admin"
-              className="px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
+              className="flex items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
             >
-              Dashboard Admin
+              <i className="bx bx-grid-alt text-base" aria-hidden="true" /> Dashboard Admin
             </Link>
           )}
           {actor.role === "superadmin" && (
             <Link
               href="/superadmin"
-              className="px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
+              className="flex items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-blue-50 hover:text-blue-600"
             >
-              Dashboard Superadmin
+              <i className="bx bx-shield text-base" aria-hidden="true" /> Dashboard Superadmin
             </Link>
           )}
         </nav>

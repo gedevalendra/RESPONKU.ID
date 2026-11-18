@@ -4,6 +4,7 @@ import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import WelcomePopup from "./components/layout/WelcomePopup";
 import ActionConfirmation from "./components/layout/ActionFeedback";
+import CookieConsent from "./components/layout/CookieConsent";
 
 export const metadata: Metadata = {
   title: "ResponKu. — Kabar Hari Ini, Ditulis dengan Jelas",
@@ -27,6 +28,7 @@ export default function RootLayout({
         <Footer />
         <WelcomePopup />
         <ActionConfirmation />
+        <CookieConsent />
       </body>
     </html>
   );

@@ -1,7 +1,8 @@
 "use client";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { Article, ArticleBlock, Category } from "@/lib/types";
 import ArticleBody from "./ArticleBody";
 
@@ -76,6 +77,12 @@ export default function ArticleComposer({
     initial(article, authorName),
   );
   const [busy, setBusy] = useState(false);
+  const [submission, setSubmission] = useState<Pick<Article, "status" | "slug"> | null>(null);
+  const progressPanel = useRef<HTMLElement>(null);
+  const showProgress = busy || submission !== null;
+  useEffect(() => {
+    if (showProgress) progressPanel.current?.scrollIntoView({ block: "start" });
+  }, [showProgress]);
   const [imageBusy, setImageBusy] = useState<string | null>(null);
   const [thumbnailBusy, setThumbnailBusy] = useState(false);
   const [error, setError] = useState("");
@@ -255,6 +262,7 @@ export default function ArticleComposer({
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError("");
     if (
       draft.blocks.length === 0 ||
@@ -288,6 +296,7 @@ export default function ArticleComposer({
       contentBlocks: draft.blocks,
       content: textContent,
     };
+    try {
     const response = await fetch(
       article ? `/api/user/articles/${article.id}` : "/api/user/articles",
       {
@@ -297,19 +306,51 @@ export default function ArticleComposer({
       },
     );
     const data = await response.json();
-    setBusy(false);
     if (!response.ok) {
       setError(data.error || "Artikel gagal disimpan.");
       return;
     }
-    onSaved(
-      article
-        ? "Perubahan dikirim ulang untuk review admin."
-        : data.aiReview?.decision === "approve"
-          ? "Artikel sudah diperiksa AI dan langsung diterbitkan."
-          : data.aiReview?.decision === "reject"
-            ? "Artikel ditolak oleh review AI."
-            : "Artikel ditahan untuk review admin.",
+    setSubmission({ status: data.article.status, slug: data.article.slug });
+    } catch {
+      setError("Status kiriman tidak dapat dikonfirmasi. Periksa Kiriman saya sebelum mencoba lagi.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (showProgress) {
+    const published = submission?.status === "published";
+    const rejected = submission?.status === "rejected";
+    const headline = busy ? "Artikel sedang dikirim…" : published ? "Artikel diterbitkan" : rejected ? "Artikel tidak disetujui" : "Artikel dikirim untuk ditinjau";
+    return (
+      <section ref={progressPanel} className="action-popup scroll-mt-40 border-y border-rule bg-paper px-5 py-12 sm:py-20">
+        <div role="status" className="mx-auto grid max-w-md justify-items-center gap-4 text-center">
+          <div className="grid size-16 place-items-center border border-rule text-3xl text-ink" aria-hidden="true">
+            <i className={`bx ${busy ? "bx-loader-alt motion-safe:animate-spin" : published ? "bx-check" : rejected ? "bx-info-circle" : "bx-paper-plane"}`} />
+          </div>
+          <h2 className="font-display text-3xl">{headline}</h2>
+          <p className="text-sm leading-6 text-mute">
+            {busy ? "Artikel sedang diproses. Hasilnya akan tampil di sini."
+              : published ? "Artikelmu sudah bisa dibaca di ResponKu."
+              : rejected ? "Lihat riwayat pengajuan untuk memeriksa status artikel."
+              : "Pantau hasil review di Kiriman saya."}
+          </p>
+        </div>
+        {!busy && (
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button type="button" className="min-h-11 border border-rule px-4 text-sm hover:bg-gray-100" onClick={() => {
+              setDraft(initial(null, authorName));
+              setSubmission(null);
+              onSaved(headline);
+            }}>Kembali ke kiriman</button>
+            {published && submission?.slug && (
+              <Link className="inline-flex min-h-11 items-center bg-ink px-4 text-sm text-paper" href={`/artikel/${encodeURIComponent(submission.slug)}`}>
+                Lihat artikel
+              </Link>
+            )}
+          </div>
+        )}
+      </section>
     );
   }
   return (
