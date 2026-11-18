@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { cookiePreferenceChange, cookiePreferenceName, getCookiePreference, openCookiePreferences } from "@/lib/cookie-preferences";
 
-export function CookieSettingsButton() {
+export function CookieSettingsButton({ className = "mt-4" }: { className?: string }) {
   return (
     <button type="button" onClick={() => window.dispatchEvent(new Event(openCookiePreferences))}
-      className="mt-4 text-left text-sm text-mute underline-offset-4 hover:text-ink hover:underline">
+      className={`${className} text-left text-sm text-mute underline-offset-4 hover:text-ink hover:underline`}>
       Pengaturan cookie
     </button>
   );

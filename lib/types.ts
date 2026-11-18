@@ -40,6 +40,7 @@ export type ArticleBlock =
   | { id: string; type: "divider" };
 
 export type Comment = {
+  role?: UserRole;
   id: string;
   articleSlug: string;
   parentId?: string | null;

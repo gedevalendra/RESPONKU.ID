@@ -1,12 +1,28 @@
 import type { HomepageAd } from "@/lib/homepage-ad";
 
 function youtubeEmbedUrl(value: string) {
+  const playerParams = (id: string) => new URLSearchParams({
+    autoplay: "1",
+    mute: "1",
+    playsinline: "1",
+    loop: "1",
+    playlist: id,
+    controls: "0",
+    disablekb: "1",
+    fs: "0",
+    iv_load_policy: "3",
+    rel: "0",
+    modestbranding: "1",
+  }).toString();
   try {
     const url = new URL(value);
-    if (url.hostname === "youtu.be") return `https://www.youtube.com/embed/${url.pathname.slice(1).split("/")[0]}?autoplay=1&mute=1&playsinline=1`;
+    if (url.hostname === "youtu.be") {
+      const id = url.pathname.slice(1).split("/")[0];
+      return `https://www.youtube.com/embed/${encodeURIComponent(id)}?${playerParams(id)}`;
+    }
     if (url.hostname.endsWith("youtube.com")) {
       const id = url.searchParams.get("v") || url.pathname.match(/^\/(?:embed\/|shorts\/)([^/]+)/)?.[1];
-      if (id) return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&playsinline=1`;
+      if (id) return `https://www.youtube.com/embed/${encodeURIComponent(id)}?${playerParams(id)}`;
     }
   } catch {
     return null;
@@ -22,7 +38,7 @@ export default function HomepageAdBanner({ ad, fitRow = false, compact = false }
       <a href={ad.destination} target="_blank" rel="sponsored noopener noreferrer" className={`block focus-visible:outline-2 focus-visible:outline-offset-2 ${fitRow ? "md:flex md:min-h-0 md:flex-1 md:flex-col" : ""}`}>
         {ad.mediaType === "video" ? (
           embedUrl ? (
-            <iframe src={embedUrl} title={ad.title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className={`w-full border-0 bg-black ${compact ? "aspect-[6/1] max-h-28" : "aspect-[3/1]"} ${fitRow ? "md:aspect-auto md:min-h-0 md:flex-1" : ""}`} />
+            <iframe src={embedUrl} title={ad.title} loading="lazy" tabIndex={-1} allow="autoplay; encrypted-media" className={`pointer-events-none w-full border-0 bg-black ${compact ? "aspect-[6/1] max-h-28" : "aspect-[3/1]"} ${fitRow ? "md:aspect-auto md:min-h-0 md:flex-1" : ""}`} />
           ) : (
             <video src={ad.videoUrl} autoPlay muted loop playsInline preload="metadata" onClick={(event) => { event.preventDefault(); event.stopPropagation(); }} className={`w-full bg-black object-contain ${compact ? "aspect-[6/1] max-h-28" : "aspect-[3/1]"} ${fitRow ? "md:aspect-auto md:min-h-0 md:flex-1" : ""}`} />
           )

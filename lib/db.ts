@@ -326,7 +326,7 @@ export async function listComments(articleSlug: string, visitorId?: string): Pro
   if (!supabase) return [];
   let result = await supabase
     .from("comments")
-    .select("*, profiles:author_id(avatar_url)")
+    .select("*, profiles:author_id(avatar_url,role)")
     .eq("article_slug", articleSlug)
     .eq("status", "published")
     .order("created_at", { ascending: false })
@@ -346,7 +346,7 @@ export async function listComments(articleSlug: string, visitorId?: string): Pro
   const mongo = oauthIds.length ? await getMongoDb() : null;
   const oauthProfiles = mongo
     ? await mongo.collection("oauth_users").find({ id: { $in: oauthIds } })
-        .project({ id: 1, avatarUrl: 1 }).toArray()
+        .project({ id: 1, avatarUrl: 1, role: 1 }).toArray()
     : [];
   const oauthAvatars = new Map(oauthProfiles.map((profile) => [profile.id, profile.avatarUrl]));
   const authorIds = [...new Set(data
@@ -357,7 +357,7 @@ export async function listComments(articleSlug: string, visitorId?: string): Pro
     .filter(Boolean))];
   const [profilesByIdResult, profilesByNameResult] = await Promise.all([
     authorIds.length
-      ? supabase.from("profiles").select("id,display_name,avatar_url").in("id", authorIds)
+      ? supabase.from("profiles").select("id,display_name,avatar_url,role").in("id", authorIds)
       : Promise.resolve({ data: [] }),
     displayNames.length
       ? supabase.from("profiles").select("id,display_name,avatar_url").in("display_name", displayNames)
@@ -392,6 +392,7 @@ export async function listComments(articleSlug: string, visitorId?: string): Pro
       || profilesByName.get(String(row.display_name || ""));
     return {
       ...mapComment({ ...row, profiles: profile }),
+      role: (oauthProfiles.find((item) => item.id === row.oauth_author_id)?.role || profilesById.get(String(row.author_id || ""))?.role || "reader") as Profile["role"],
       ...(oauthAvatars.get(row.oauth_author_id)
         ? { avatarUrl: oauthAvatars.get(row.oauth_author_id) }
         : {}),
@@ -514,6 +515,7 @@ export async function listPublishedArticleIndex() {
     .project<Pick<Article, "slug" | "title" | "publishedAt" | "date">>({
       _id: 0, slug: 1, title: 1, publishedAt: 1, date: 1,
     })
+    .sort({ publishedAt: -1, date: -1 })
     .toArray();
 }
 

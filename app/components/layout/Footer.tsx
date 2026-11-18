@@ -4,48 +4,44 @@ import { CookieSettingsButton } from "./CookieConsent";
 
 const columns = [
   {
-    title: "Redaksi",
+    title: "Jelajahi",
     links: [
-      { label: "Tentang Kami", href: "/tentang" },
-      { label: "Pedoman Media Siber", href: "/pedoman" },
-      { label: "Karier", href: "/karier" },
-      { label: "Hubungi Redaksi", href: "/kontak" },
+      { label: "Artikel terbaru", href: "/artikel" },
+      { label: "Tentang ResponKu", href: "/tentang" },
     ],
   },
   {
-    title: "Layanan",
+    title: "Bantuan",
     links: [
-      { label: "Panduan menulis artikel", href: "/buat-artikel-gratis" },
+      { label: "Tulis artikel", href: "/buat-artikel-gratis" },
       { label: "FAQ & Bantuan", href: "/faq" },
       { label: "Dukungan", href: "/dukungan" },
-      { label: "Berlangganan", href: "/berlangganan" },
-      { label: "Iklan", href: "/iklan" },
-      { label: "Indeks Berita", href: "/indeks" },
-      { label: "Koreksi", href: "/koreksi" },
     ],
   },
 ];
 
 export default function Footer() {
   return (
-    <footer className="rule-thick border-t border-rule">
-      <div className="wrap grid grid-cols-2 gap-y-10 py-14 sm:grid-cols-3">
-        <div className="col-span-2 sm:col-span-1">
-          <BrandLogo className="h-9" />
-          <p className="mt-3 max-w-[22ch] text-sm text-mute">
+    <footer className="border-t border-rule bg-gray-50/50">
+      <div className="wrap py-10 sm:py-12">
+        <div className="grid gap-8 sm:grid-cols-[minmax(0,1.4fr)_1fr_1fr] sm:gap-12">
+        <div>
+          <Link href="/" aria-label="ResponKu — Beranda" className="inline-block">
+            <BrandLogo className="h-8" />
+          </Link>
+          <p className="mt-4 max-w-[28ch] text-sm leading-6 text-mute">
             Kabar hari ini, ditulis dengan jelas.
           </p>
-          <CookieSettingsButton />
         </div>
         {columns.map((col) => (
           <div key={col.title}>
             <p className="eyebrow">{col.title}</p>
-            <ul className="mt-4 flex flex-col gap-2.5">
+            <ul className="mt-4 flex flex-col gap-3">
               {col.links.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm hover:underline underline-offset-4"
+                    className="text-sm text-mute transition-colors hover:text-ink"
                   >
                     {link.label}
                   </Link>
@@ -54,6 +50,11 @@ export default function Footer() {
             </ul>
           </div>
         ))}
+        </div>
+        <div className="mt-9 flex flex-col gap-3 border-t border-rule pt-5 text-sm text-mute sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} ResponKu</p>
+          <CookieSettingsButton className="m-0" />
+        </div>
       </div>
     </footer>
   );

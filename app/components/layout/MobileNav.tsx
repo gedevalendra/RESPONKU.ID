@@ -107,7 +107,8 @@ export default function MobileNav({
       ? pathname === "/"
       : pathname.startsWith(item.href.split("?")[0]),
   );
-  const pillIndex = hoveredIndex ?? (activeIndex >= 0 ? activeIndex : 0);
+  const pillIndex = hoveredIndex ?? activeIndex;
+  const moreMenuActive = activeIndex < 0;
 
   return (
     <nav
@@ -122,7 +123,8 @@ export default function MobileNav({
           style={{
             left: "0.5rem",
             width: "calc((100% - 1rem) / 5)",
-            transform: `translateX(${(pillIndex >= 2 ? pillIndex + 1 : pillIndex) * 100}%)`,
+            opacity: pillIndex >= 0 ? 1 : 0,
+            transform: `translateX(${(pillIndex >= 2 ? pillIndex + 1 : Math.max(0, pillIndex)) * 100}%)`,
           }}
         />
         {items.map((item, index) => {
@@ -130,7 +132,7 @@ export default function MobileNav({
           return (
             <Fragment key={item.label}>
             {index === 2 && <div className="relative z-10 flex min-w-0 flex-1 justify-center self-stretch">
-              <button type="button" aria-label="Buka menu lainnya" aria-haspopup="dialog" aria-expanded={menuOpen} onClick={openMenu} className="absolute -top-5 flex h-14 w-14 items-center justify-center rounded-full bg-gray-800 text-white shadow-lg ring-4 ring-white motion-safe:transition-transform motion-safe:hover:scale-110">
+              <button type="button" aria-label={moreMenuActive ? "Menu lainnya, halaman aktif berada di menu ini" : "Buka menu lainnya"} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={openMenu} className={`absolute -top-5 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg ring-4 ring-white motion-safe:transition-transform motion-safe:hover:scale-110 ${moreMenuActive ? "mobile-more-attention" : "bg-gray-800"}`}>
                 <i className="bx bx-grid-alt text-2xl" aria-hidden="true" />
               </button>
             </div>}

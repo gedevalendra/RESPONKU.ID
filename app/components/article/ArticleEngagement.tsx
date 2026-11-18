@@ -1,7 +1,7 @@
 "use client";
 import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 
-import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
 import type { Comment, ReactionSummary } from "@/lib/types";
 import { cookiePreferenceChange, getCookiePreference } from "@/lib/cookie-preferences";
@@ -79,6 +79,9 @@ export default function ArticleEngagement({
   articleSlug: string;
 }) {
   const [comments, setComments] = useState<Comment[]>([]);
+  const pendingVotes = useRef(new Set<string>());
+  const [visibleCount, setVisibleCount] = useState(4);
+  const [replyCounts, setReplyCounts] = useState<Record<string, number>>({});
   const [reactions, setReactions] = useState(initialReactions);
   const [articleReaction, setArticleReaction] = useState<keyof ReactionSummary | null>(null);
   const [reactionBusy, setReactionBusy] = useState(false);
@@ -227,6 +230,17 @@ export default function ArticleEngagement({
   }
 
   async function reactComment(commentId: string, reaction: "like" | "dislike") {
+    if (pendingVotes.current.has(commentId)) return;
+    const previous = comments.find((comment) => comment.id === commentId);
+    if (!previous) return;
+    pendingVotes.current.add(commentId);
+    const next = previous.viewerReaction === reaction ? null : reaction;
+    setComments((current) => current.map((comment) => comment.id === commentId ? {
+      ...comment,
+      viewerReaction: next,
+      likes: Math.max(0, comment.likes - Number(previous.viewerReaction === "like") + Number(next === "like")),
+      dislikes: Math.max(0, comment.dislikes - Number(previous.viewerReaction === "dislike") + Number(next === "dislike")),
+    } : comment));
     setReactionError("");
     try {
     const response = await fetch("/api/comment-reactions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ commentId, reaction, visitorId }) });
@@ -234,8 +248,37 @@ export default function ArticleEngagement({
     const result = await response.json();
     setComments((current) => current.map((comment) => comment.id === commentId ? { ...comment, likes: result.likes, dislikes: result.dislikes, viewerReaction: result.reaction } : comment));
     } catch {
+      setComments((current) => current.map((comment) => comment.id === commentId ? { ...comment, likes: previous.likes, dislikes: previous.dislikes, viewerReaction: previous.viewerReaction } : comment));
       setReactionError("Reaksi belum dapat diproses. Coba lagi.");
+    } finally {
+      pendingVotes.current.delete(commentId);
     }
+  }
+
+  function renderComment(comment: Comment, depth = 0): ReactNode {
+    const replies = comments.filter((item) => item.parentId === comment.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const limit = replyCounts[comment.id] || 4;
+    const roles = { reader: "Pembaca", author: "Penulis", admin: "Admin", superadmin: "Superadmin" };
+    return <article key={comment.id} className="comment-node relative pt-5">
+      <div className="flex gap-3">
+        <div className="relative z-10 grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-gray-100 ring-4 ring-white">
+          {comment.avatarUrl ? <img src={comment.avatarUrl} alt="" className="size-full object-cover" /> : <i className="bx bxs-user text-xl text-mute" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold">{comment.displayName}</h3><span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">{roles[comment.role || "reader"]}</span><time className="text-xs text-mute">{commentTime(comment.createdAt)}</time></div>
+          {depth > 0 && <p className="mt-1 text-xs text-mute">Membalas {comments.find((item) => item.id === comment.parentId)?.displayName}</p>}
+          <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-6">{comment.body}</p>
+          <div className="mt-2 flex gap-2 text-xs">
+            {(["like", "dislike"] as const).map((vote) => <button key={vote} type="button" aria-label={vote === "like" ? "Sukai komentar" : "Tidak menyukai komentar"} aria-pressed={comment.viewerReaction === vote} onClick={(event) => { if (comment.viewerReaction !== vote) { animateVote(event, vote === "dislike"); if (vote === "like") burstLike(event); } void reactComment(comment.id, vote); }} className={`inline-flex min-h-10 items-center gap-2 rounded-full px-3 transition-colors ${comment.viewerReaction === vote ? "text-blue-700" : "text-mute hover:text-ink"}`}>{vote === "like" ? <LikeEffect><VoteArrow active={comment.viewerReaction === vote} /></LikeEffect> : <VoteArrow down active={comment.viewerReaction === vote} />}{vote === "like" ? comment.likes : comment.dislikes}</button>)}
+            <button type="button" onClick={() => { setReplyTo(comment.id); setBody(""); }} className="rounded-full px-3 text-mute hover:bg-gray-100">Balas</button>
+          </div>
+        </div>
+      </div>
+      {replies.length > 0 && <div className={`comment-children ${depth === 0 ? "comment-indent" : depth === 1 ? "comment-indent-desktop" : ""}`}>
+        {replies.slice(0, limit).map((reply) => renderComment(reply, depth + 1))}
+        {replies.length > limit && <button type="button" onClick={() => setReplyCounts((counts) => ({ ...counts, [comment.id]: limit + 4 }))} className="relative z-10 my-3 ml-12 rounded-lg bg-white px-3 py-2 text-xs font-medium text-blue-700">Lihat balasan lain ({replies.length - limit})</button>}
+      </div>}
+    </article>;
   }
 
   function commentTime(value: string) {
@@ -318,31 +361,10 @@ export default function ArticleEngagement({
             Belum ada komentar. Jadilah yang pertama berdiskusi.
           </p>
         ) : (
-          commentThreads.map(({ comment, replies }) => (
-            <article key={comment.id} className="py-5">
-              <div className="flex gap-3">
-                <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-50 font-display text-lg text-blue-600">
-                  {comment.avatarUrl ? <img src={comment.avatarUrl} alt={comment.displayName} className="h-full w-full object-cover" /> : <i className="bx bxs-user text-xl" aria-hidden="true" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-4"><h3 className="font-display text-lg">{comment.displayName}</h3><time className="font-mono text-[11px] text-mute">{commentTime(comment.createdAt)}</time></div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-mute">{comment.body}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-1 text-xs text-mute">
-                    <button type="button" aria-label="Sukai komentar" onClick={(event) => { if (comment.viewerReaction !== "like") { animateVote(event); burstLike(event); } void reactComment(comment.id, "like"); }} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 hover:text-gray-800 ${comment.viewerReaction === "like" ? "text-gray-800" : ""}`}><LikeEffect><VoteArrow active={comment.viewerReaction === "like"} /></LikeEffect> {comment.likes}</button>
-                    <button type="button" aria-label="Tidak menyukai komentar" onClick={(event) => { if (comment.viewerReaction !== "dislike") animateVote(event, true); void reactComment(comment.id, "dislike"); }} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 hover:text-gray-800 ${comment.viewerReaction === "dislike" ? "text-gray-800" : ""}`}><VoteArrow down active={comment.viewerReaction === "dislike"} /> {comment.dislikes}</button>
-                    <button type="button" onClick={() => { setReplyTo(comment.id); setBody(""); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 hover:bg-gray-100 hover:text-ink"><i className="bx bx-reply text-xl" aria-hidden="true" /> Balas</button>
-                  </div>
-                </div>
-              </div>
-              <div className="ml-5 border-l border-rule pl-5 sm:ml-8">
-                {replies.map((reply) => (
-                  <article key={reply.id} className="mt-5">
-                    <div className="flex gap-3"><div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-gray-100 text-mute">{reply.avatarUrl ? <img src={reply.avatarUrl} alt={reply.displayName} className="h-full w-full object-cover" /> : <i className="bx bxs-user text-lg" aria-hidden="true" />}</div><div className="min-w-0 flex-1"><div className="flex items-baseline justify-between gap-4"><h4 className="font-display">{reply.displayName}</h4><time className="font-mono text-[11px] text-mute">{commentTime(reply.createdAt)}</time></div><p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-mute">{reply.body}</p><div className="mt-2 flex flex-wrap gap-1 text-xs text-mute"><button type="button" aria-label="Sukai balasan" onClick={(event) => { if (reply.viewerReaction !== "like") { animateVote(event); burstLike(event); } void reactComment(reply.id, "like"); }} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 hover:text-gray-800 ${reply.viewerReaction === "like" ? "text-gray-800" : ""}`}><LikeEffect><VoteArrow active={reply.viewerReaction === "like"} /></LikeEffect> {reply.likes}</button><button type="button" aria-label="Tidak menyukai balasan" onClick={(event) => { if (reply.viewerReaction !== "dislike") animateVote(event, true); void reactComment(reply.id, "dislike"); }} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 hover:text-gray-800 ${reply.viewerReaction === "dislike" ? "text-gray-800" : ""}`}><VoteArrow down active={reply.viewerReaction === "dislike"} /> {reply.dislikes}</button><button type="button" onClick={() => setReplyTo(comment.id)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 hover:bg-gray-100 hover:text-ink"><i className="bx bx-reply text-xl" aria-hidden="true" /> Balas</button></div></div></div>
-                  </article>
-                ))}
-              </div>
-            </article>
-          ))
+          <>
+            {commentThreads.slice(0, visibleCount).map(({ comment }) => renderComment(comment))}
+            {commentThreads.length > visibleCount && <button type="button" onClick={() => setVisibleCount((count) => count + 4)} className="my-4 rounded-xl bg-gray-100 px-5 py-3 text-sm font-medium">Lihat komentar lain ({commentThreads.length - visibleCount})</button>}
+          </>
         )}
       </div>
     </section>

@@ -1,5 +1,36 @@
 @import "tailwindcss";
 
+@keyframes mobile-more-gradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+.mobile-more-attention {
+  background-image: linear-gradient(110deg, #3b82f6, #0ea5e9, #1f2937, #0ea5e9, #3b82f6);
+  background-size: 300% 300%;
+  animation: mobile-more-gradient 2.8s ease-in-out infinite alternate;
+}
+
+.comment-children { position: relative; }
+.comment-indent { margin-left: 40px; }
+.comment-indent::before, .comment-indent-desktop::before {
+  content: ""; position: absolute; left: -20px; top: -60px; bottom: 20px;
+  border-left: 1px solid #d1d5db;
+}
+.comment-indent > .comment-node::before {
+  content: ""; position: absolute; left: -20px; top: 0; width: 40px; height: 40px;
+  border-left: 1px solid #d1d5db; border-bottom: 1px solid #d1d5db; border-bottom-left-radius: 18px;
+}
+.comment-indent-desktop::before { display: none; }
+@media (min-width: 768px) {
+  .comment-indent-desktop { margin-left: 40px; }
+  .comment-indent-desktop::before { display: block; }
+  .comment-indent-desktop > .comment-node::before {
+    content: ""; position: absolute; left: -20px; top: 0; width: 40px; height: 40px;
+    border-left: 1px solid #d1d5db; border-bottom: 1px solid #d1d5db; border-bottom-left-radius: 18px;
+  }
+}
+
 /* 1. Definisikan warna & font kustom di sini untuk Tailwind v4 */
 @theme {
   --color-rule: #e5e7eb;
