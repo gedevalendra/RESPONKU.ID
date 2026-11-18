@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import PushButton from "@/app/components/notifications/PushButton";
+import MarkReadButton from "@/app/components/notifications/MarkReadButton";
 import { listNotifications } from "@/lib/db";
 import { getActor } from "@/lib/authz";
 
@@ -50,6 +51,7 @@ export default async function NotificationsPage() {
                   Buka informasi <i className="bx bx-right-arrow-alt align-middle text-base" aria-hidden="true" />
                 </Link>
               )}
+              {!notification.readAt && <div><MarkReadButton id={notification.id} /></div>}
               </div>
             </li>
           ))}

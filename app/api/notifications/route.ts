@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  countUnreadNotifications,
   createNotification,
   listNotificationRecipientIds,
   listNotifications,
@@ -17,10 +18,19 @@ const input = z.object({
   userId: z.string().min(1).optional(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   const actor = await getActor();
   if (!actor)
     return NextResponse.json({ error: "Silakan masuk terlebih dahulu" }, { status: 401 });
+  if (new URL(request.url).searchParams.get("summary") === "1") {
+    try {
+      return NextResponse.json({ unreadCount: await countUnreadNotifications(actor.id) }, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    } catch {
+      return NextResponse.json({ error: "Jumlah notifikasi gagal dimuat" }, { status: 503 });
+    }
+  }
   return NextResponse.json({ notifications: await listNotifications(actor.id) });
 }
 
@@ -31,8 +41,12 @@ export async function PATCH(request: Request) {
   const body = (await request.json().catch(() => null)) as { id?: string } | null;
   if (!body?.id)
     return NextResponse.json({ error: "ID notifikasi wajib diisi" }, { status: 422 });
-  await markNotificationRead(body.id, actor.id);
-  return NextResponse.json({ ok: true });
+  try {
+    await markNotificationRead(body.id, actor.id);
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "Status notifikasi gagal diperbarui" }, { status: 503 });
+  }
 }
 
 export async function POST(request: Request) {

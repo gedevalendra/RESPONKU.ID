@@ -14,8 +14,6 @@ export default async function AdminArticlesPage() {
       role="admin"
       breadcrumb="Artikel & approval"
       title="Artikel & approval"
-      description="Kelola naskah redaksi dan periksa kiriman pengguna sebelum diterbitkan."
-      hideIntro
     >
       <ArticleManager />
     </DashboardShell>

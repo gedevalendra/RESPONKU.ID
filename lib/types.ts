@@ -16,6 +16,8 @@ export interface Article {
   readTime: number;
   views: number;
   promoted?: boolean;
+  publishedAt?: string;
+  takenDownAt?: string;
   shares?: number;
   thumbnailUrl: string;
   breaking?: boolean;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { deleteArticle, updateArticle } from "@/lib/db";
 import { getActor } from "@/lib/authz";
-import { analyzeArticle } from "@/lib/article-analysis";
+import { prepareArticleSubmission } from "@/lib/article-analysis";
 
 const block = z.discriminatedUnion("type", [
   z.object({
@@ -61,19 +61,22 @@ export async function PATCH(
         { error: "Artikel tidak ditemukan" },
         { status: 404 },
       );
-    const analysis = await analyzeArticle(parsed.data);
+    const { article, status, review } = await prepareArticleSubmission(parsed.data);
+    // Artikel yang diturunkan redaksi perlu diperiksa manual sebelum terbit kembali.
+    const nextStatus = current.takenDownAt && current.status !== "published" && status === "published"
+      ? "pending"
+      : status;
     return NextResponse.json({
       article: await updateArticle(
         params.id,
         {
-          ...parsed.data,
-          ...analysis,
+          ...article,
           author: actor.displayName,
-          status: "pending",
-          rejectionReason: undefined,
+          status: nextStatus,
         },
         actor,
       ),
+      aiReview: review,
     });
   } catch (error) {
     return NextResponse.json(

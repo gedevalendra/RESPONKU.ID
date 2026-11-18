@@ -12,7 +12,7 @@ export default function DashboardSidebar({ role, open = false, onClose }: {
   const base = role === "superadmin" ? "/superadmin" : "/admin";
   const pathname = usePathname();
   const groups = [
-    { label: "Editorial", items: [[`${base}/artikel`, "Approval artikel"], ...(role === "admin" ? [["/admin/artikel/terbit", "Artikel terbit"]] : []), [`${base}/komentar`, "Moderasi komentar"]] },
+    { label: "Editorial", items: [[`${base}/artikel`, "Approval artikel"], ["/admin/riwayat-penerbitan", "Riwayat penerbitan"], ...(role === "admin" ? [["/admin/artikel/terbit", "Artikel terbit"]] : []), [`${base}/komentar`, "Moderasi komentar"]] },
     { label: "Pengguna & organisasi", items: [[`${base}/pengguna`, "Daftar pengguna"], [`${base}/organisasi`, "Organisasi & verifikasi"]] },
     { label: "Konten & informasi", items: [["/admin/tentang", "Halaman Tentang"], [`${base}/ticker`, "Ticker berita"], [`${base}/popup`, "Popup informasi"]] },
     { label: "Komunikasi", items: [[role === "superadmin" ? "/admin/notifikasi" : `${base}/notifikasi`, "Kirim notifikasi"], [`${base}/faq`, "Pertanyaan pengguna"]] },

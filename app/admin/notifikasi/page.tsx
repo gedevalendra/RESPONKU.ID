@@ -14,7 +14,6 @@ export default async function AdminNotificationsPage() {
       role={actor.role === "superadmin" ? "superadmin" : "admin"}
       breadcrumb="Kirim notifikasi"
       title="Kirim notifikasi"
-      description="Sampaikan informasi penting kepada pengguna dan kirimkan ke perangkat yang sudah mengaktifkan web push."
     >
       <NotificationComposer />
     </DashboardShell>

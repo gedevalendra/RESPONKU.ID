@@ -13,7 +13,6 @@ export default async function SuperadminUsersPage() {
       role="superadmin"
       breadcrumb="Manajemen pengguna"
       title="Manajemen pengguna"
-      description="Atur role dan hak akses akun yang terdaftar di ResponKu."
     >
       <UserRoleManager />
     </DashboardShell>

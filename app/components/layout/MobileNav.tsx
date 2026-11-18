@@ -12,10 +12,12 @@ function Icon({ name }: { name: "home" | "search" | "bell" | "user" }) {
 
 export default function MobileNav({
   authenticated = false,
+  unreadCount = 0,
   articleCategories = [],
   role,
 }: {
   authenticated?: boolean;
+  unreadCount?: number;
   articleCategories?: string[];
   role?: string;
 }) {
@@ -134,12 +136,19 @@ export default function MobileNav({
             <Link
               key={item.label}
               href={item.href}
-              aria-label={item.label}
+              aria-label={item.icon === "bell" && unreadCount > 0 ? `${item.label}, ${unreadCount} belum dibaca` : item.label}
               onMouseEnter={() => setHoveredIndex(index)}
               onFocus={() => setHoveredIndex(index)}
               className={`relative z-10 flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[10px] leading-tight font-medium transition-colors ${highlighted ? "text-paper" : "text-ink"}`}
             >
-              <Icon name={item.icon} />
+              <span className="relative inline-flex">
+                <Icon name={item.icon} />
+                {item.icon === "bell" && unreadCount > 0 && (
+                  <span aria-hidden="true" className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-blue-600 px-1 text-[10px] leading-none tabular-nums text-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </span>
             </Link>
             </Fragment>
           );

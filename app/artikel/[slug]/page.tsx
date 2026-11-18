@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getArticleBySlug, getRelated, formatDate } from "@/lib/data";
+import { cache } from "react";
+import { articleImageUrl, articleUrl, publicationDate, siteOrigin } from "@/lib/seo";
+import { getRelated, formatDate } from "@/lib/data";
 import CategoryBadge from "../../components/landing/CategoryBadge";
 import ArticleCard from "../../components/landing/ArticleCard";
 import Sidebar from "../../components/layout/Sidebar";
@@ -14,6 +16,8 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const getPublicArticle = cache(getArticleFromDatabase);
+
 export function generateStaticParams() {
   return [];
 }
@@ -23,11 +27,24 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const article = await getArticleBySlug(params.slug);
-  if (!article) return { title: "Artikel Tidak Ditemukan — WARTA." };
+  const article = await getPublicArticle(params.slug);
+  if (!article) return { title: "Artikel Tidak Ditemukan — ResponKu", robots: { index: false } };
+  const url = articleUrl(article.slug);
+  const image = articleImageUrl(article.thumbnailUrl);
   return {
-    title: `${article.title} — WARTA.`,
+    title: `${article.title} — ResponKu`,
     description: article.dek,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      url,
+      siteName: "ResponKu",
+      locale: "id_ID",
+      title: article.title,
+      description: article.dek,
+      publishedTime: publicationDate(article)?.toISOString(),
+      images: image ? [image] : undefined,
+    },
   };
 }
 
@@ -36,7 +53,7 @@ export default async function ArticlePage({
 }: {
   params: { slug: string };
 }) {
-  const article = await getArticleFromDatabase(params.slug);
+  const article = await getPublicArticle(params.slug);
   if (!article) notFound();
 
   const [related, reactions] = await Promise.all([
@@ -87,8 +104,31 @@ export default async function ArticlePage({
   const authorAvatar = authorProfile?.avatar_url || linkedProfile?.avatarUrl;
   const authorProfileHref = article.authorId || authorProfile?.id;
 
+  const url = articleUrl(article.slug);
+  const image = articleImageUrl(article.thumbnailUrl);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    mainEntityOfPage: url,
+    headline: article.title,
+    description: article.dek,
+    image: image ? [image] : undefined,
+    datePublished: publicationDate(article)?.toISOString(),
+    author: {
+      "@type": "Person",
+      name: article.author,
+      url: authorProfileHref ? `${siteOrigin}/akun/${encodeURIComponent(authorProfileHref)}` : undefined,
+    },
+    publisher: { "@type": "Organization", name: "ResponKu", url: siteOrigin },
+    articleSection: article.category,
+    inLanguage: "id",
+  };
   return (
     <article className="wrap py-8 sm:py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
+      />
       <Link href="/" className="eyebrow hover:text-ink">
         <i className="bx bx-arrow-back mr-1" aria-hidden="true" /> Kembali ke Beranda
       </Link>

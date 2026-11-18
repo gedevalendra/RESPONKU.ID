@@ -14,7 +14,7 @@ export default async function PublishedArticlesPage() {
 
   return (
     <DashboardShell role="admin" breadcrumb="Artikel terbit" title="Artikel terbit"
-      description="Kelola artikel yang tampil di situs dan prioritaskan artikel di daftar Terpopuler.">
+    >
       <PublishedArticleManager articles={articles.map(({ id, slug, title, author, views, promoted }) => ({
         id, slug, title, author, views, promoted,
       }))} />

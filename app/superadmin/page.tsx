@@ -14,7 +14,6 @@ export default async function SuperadminDashboardPage() {
       role="superadmin"
       breadcrumb="Dashboard"
       title="Dashboard superadmin"
-      description="Pantau penerbitan dan antrean artikel ResponKu."
     >
       <EditorialOverview role="superadmin" />
     </DashboardShell>

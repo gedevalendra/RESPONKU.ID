@@ -50,6 +50,15 @@ export async function PATCH(
       : parsed.data;
   try {
     const article = await updateArticle(params.id, update, actor);
+    if (parsed.data.status === "rejected" && article.authorId) {
+      const reason = article.rejectionReason?.trim() || "Naskah perlu diperbaiki.";
+      await notifyActivity({
+        userId: article.authorId,
+        title: "Artikel ditolak oleh redaksi",
+        body: `Artikel “${article.title}”. Alasan: ${reason}`.slice(0, 500),
+        href: "/akun#riwayat",
+      }).catch((error) => console.error("Gagal mengirim notifikasi penolakan", error.code ?? error.name));
+    }
     if (parsed.data.status === "published" && article.authorId) {
       const notification = {
         userId: article.authorId,

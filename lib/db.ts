@@ -48,6 +48,16 @@ function mapNotification(row: Record<string, unknown>): Notification {
   };
 }
 
+export async function countUnreadNotifications(userId: string) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return 0;
+  const { count, error } = await supabase.from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId).is("read_at", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function listNotifications(userId: string) {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
@@ -157,11 +167,12 @@ export async function saveManualTickerHeadlines(headlines: string[]) {
 export async function markNotificationRead(id: string, userId: string) {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error("Supabase belum dikonfigurasi");
-  await supabase
+  const { error } = await supabase
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("id", id)
     .eq("user_id", userId);
+  if (error) throw error;
 }
 
 export async function createNotification(input: {
@@ -435,6 +446,17 @@ export async function listArticlesFromDatabase(
     .toArray();
 }
 
+export async function listPublishedArticleIndex() {
+  const db = await getMongoDb();
+  if (!db) return [];
+  return db.collection<Article>("articles")
+    .find({ status: "published", slug: { $type: "string", $ne: "" } })
+    .project<Pick<Article, "slug" | "title" | "publishedAt" | "date">>({
+      _id: 0, slug: 1, title: 1, publishedAt: 1, date: 1,
+    })
+    .toArray();
+}
+
 export async function listArticleCategories(): Promise<string[]> {
   const db = await getMongoDb();
   if (!db) return [];
@@ -677,6 +699,7 @@ export async function createArticle(
     views: 0,
     status,
     authorId: actor.id,
+    ...(status === "published" ? { publishedAt: now.toISOString() } : {}),
     authorEmail: actor.email,
     submittedAt: now.toISOString(),
     updatedAt: now.toISOString(),
@@ -694,7 +717,13 @@ export async function updateArticle(
   if (!db || !isObjectId(id)) throw new Error("Artikel tidak valid");
   const existing = await db.collection<Article>("articles").findOne({ id });
   if (!existing) throw new Error("Artikel tidak ditemukan");
-  const update = { ...patch, updatedAt: new Date().toISOString() };
+  const now = new Date().toISOString();
+  const update = {
+    ...patch,
+    ...(patch.status === "published" && existing.status !== "published" ? { publishedAt: now } : {}),
+    ...(patch.status && patch.status !== "published" && existing.status === "published" ? { takenDownAt: now } : {}),
+    updatedAt: now,
+  };
   await db.collection<Article>("articles").updateOne({ id }, { $set: update });
   return { ...existing, ...update };
 }

@@ -11,7 +11,7 @@ export default async function AdminTickerPage() {
   if (!actor) redirect("/masuk?next=/admin/ticker");
   if (!isStaff(actor.role)) redirect("/?error=forbidden");
   return (
-    <DashboardShell role={actor.role === "superadmin" ? "superadmin" : "admin"} breadcrumb="Ticker berita" title="Ticker berita" description="Atur informasi singkat yang berjalan di bar Terkini pada header ResponKu.">
+    <DashboardShell role={actor.role === "superadmin" ? "superadmin" : "admin"} breadcrumb="Ticker berita" title="Ticker berita">
       <TickerManager initial={await getManualTickerHeadlines()} />
     </DashboardShell>
   );

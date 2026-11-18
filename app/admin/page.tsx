@@ -15,7 +15,6 @@ export default async function AdminPage() {
       role="admin"
       breadcrumb="Dashboard"
       title="Dashboard admin"
-      description="Pantau penerbitan dan antrean artikel ResponKu."
     >
       <EditorialOverview role="admin" />
     </DashboardShell>

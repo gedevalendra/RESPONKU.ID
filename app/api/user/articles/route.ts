@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createArticle, listArticlesFromDatabase } from "@/lib/db";
 import { getActor } from "@/lib/authz";
-import { analyzeArticle, reviewArticle } from "@/lib/article-analysis";
+import { prepareArticleSubmission } from "@/lib/article-analysis";
 
 const block = z.discriminatedUnion("type", [
   z.object({
@@ -61,12 +61,10 @@ export async function POST(request: Request) {
       { status: 422 },
     );
   try {
-    const analysis = await analyzeArticle(parsed.data);
-    const review = await reviewArticle(parsed.data);
-    const revised = { ...parsed.data, ...analysis, title: review.title, dek: review.dek, author: actor.displayName };
+    const { article, status, review } = await prepareArticleSubmission(parsed.data);
     return NextResponse.json(
       {
-        article: await createArticle(revised, actor, review.decision === "approve" ? "published" : review.decision === "reject" ? "rejected" : "pending"),
+        article: await createArticle({ ...article, author: actor.displayName }, actor, status),
         aiReview: review,
       },
       { status: 201 },

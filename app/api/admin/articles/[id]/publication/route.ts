@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getActor } from "@/lib/authz";
+import { getActor, isStaff } from "@/lib/authz";
 import { communityDb } from "@/lib/community";
 import { notifyActivity } from "@/lib/activity-notifications";
 import type { Article } from "@/lib/types";
@@ -12,7 +12,7 @@ const schema = z.discriminatedUnion("action", [
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const actor = await getActor();
-  if (actor?.role !== "admin") return NextResponse.json({ error: "Tidak berwenang" }, { status: 403 });
+  if (!isStaff(actor?.role)) return NextResponse.json({ error: "Tidak berwenang" }, { status: 403 });
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Data tindakan tidak valid." }, { status: 422 });
   const action = parsed.data;
@@ -24,7 +24,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       { $set: {
         updatedAt: new Date().toISOString(),
         ...(action.action === "takedown"
-          ? { status: "rejected", rejectionReason: action.note, promoted: false, featured: false }
+          ? { status: "rejected", rejectionReason: action.note, promoted: false, featured: false, takenDownAt: new Date().toISOString() }
           : { promoted: action.promoted }),
       } },
       { returnDocument: "after" },

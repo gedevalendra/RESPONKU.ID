@@ -9,5 +9,5 @@ export default async function Page() {
   const actor = await getActor();
   if (!actor) redirect("/masuk?next=/admin/pengguna");
   if (!isStaff(actor.role)) redirect("/akun");
-  return <DashboardShell role={actor.role === "superadmin" ? "superadmin" : "admin"} title="Daftar pengguna" breadcrumb="Pengguna" description="Kelola akun, peran, verifikasi, dan keanggotaan organisasi."><UserRoleManager /></DashboardShell>;
+  return <DashboardShell role={actor.role === "superadmin" ? "superadmin" : "admin"} title="Daftar pengguna" breadcrumb="Pengguna"><UserRoleManager /></DashboardShell>;
 }

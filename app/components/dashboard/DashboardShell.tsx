@@ -9,8 +9,6 @@ type DashboardShellProps = {
   role: "admin" | "superadmin";
   breadcrumb: string;
   title: string;
-  description: string;
-  hideIntro?: boolean;
   children: React.ReactNode;
 };
 
@@ -18,8 +16,6 @@ export default function DashboardShell({
   role,
   breadcrumb,
   title,
-  description,
-  hideIntro = false,
   children,
 }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,23 +58,8 @@ export default function DashboardShell({
           </div>
         </header>
 
-        <main className="px-5 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12">
-          {!hideIntro && (
-            <div className="mb-8 border-b border-rule pb-8 sm:mb-10 sm:pb-10">
-              <p className="eyebrow mb-3 text-accent">
-                {role === "superadmin"
-                  ? "Superadmin workspace"
-                  : "Admin workspace"}
-              </p>
-              <h1 className="font-display text-display-lg font-normal tracking-tight text-ink">
-                {title}
-              </h1>
-              <p className="mt-3 max-w-3xl text-base leading-7 text-mute sm:text-lg">
-                {description}
-              </p>
-            </div>
-          )}
-
+        <main className="px-5 py-5 sm:px-8 sm:py-6 lg:px-12">
+          <h1 className="sr-only">{title}</h1>
           {children}
         </main>
 

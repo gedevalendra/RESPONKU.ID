@@ -13,7 +13,6 @@ export default async function SuperadminArticlesPage() {
       role="superadmin"
       breadcrumb="Approval artikel"
       title="Approval artikel"
-      description="Tinjau artikel yang masuk dan tentukan status publikasinya."
     >
       <ArticleManager superadminView />
     </DashboardShell>

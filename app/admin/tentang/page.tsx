@@ -13,7 +13,6 @@ export default async function AdminAboutPage() {
       role="admin"
       breadcrumb="Halaman Tentang"
       title="Halaman Tentang"
-      description="Kelola sejarah, prinsip, ketentuan kontribusi, dan urutan bagian halaman Tentang ResponKu."
     >
       <AboutManager />
     </DashboardShell>

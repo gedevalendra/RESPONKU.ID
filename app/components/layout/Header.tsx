@@ -3,6 +3,8 @@ import TickerBar from "../../components/landing/TickerBar";
 import MobileNav from "./MobileNav";
 import { getActor } from "@/lib/authz";
 import AccountMenu from "@/app/components/auth/AccountMenu";
+import { countUnreadNotifications } from "@/lib/db";
+import NotificationSync from "@/app/components/notifications/NotificationSync";
 import ArticleNavMenu from "./ArticleNavMenu";
 import { listArticleCategories, listTickerHeadlines } from "@/lib/db";
 
@@ -21,8 +23,10 @@ export default async function Header() {
     listArticleCategories(),
     listTickerHeadlines(),
   ]);
+  const unreadCount = actor ? await countUnreadNotifications(actor.id).catch(() => 0) : 0;
   return (
     <header className="sticky top-0 bg-white z-100">
+      {actor && <NotificationSync key={actor.id} unreadCount={unreadCount} />}
       <div className="wrap flex items-center gap-5 border-b border-gray-100 py-4 sm:py-5 lg:gap-8">
         <Link
           href="/"
@@ -62,7 +66,7 @@ export default async function Header() {
               Tentang
             </Link>
             {actor ? (
-              <AccountMenu actor={actor} />
+              <AccountMenu actor={actor} unreadCount={unreadCount} />
             ) : (
               <Link
                 href="/akun"
@@ -89,6 +93,7 @@ export default async function Header() {
             </Link>
           )}
           <MobileNav
+            unreadCount={unreadCount}
             authenticated={Boolean(actor)}
             role={actor?.role}
             articleCategories={articleCategories}

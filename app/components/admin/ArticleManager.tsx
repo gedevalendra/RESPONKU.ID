@@ -32,6 +32,7 @@ export default function ArticleManager({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [reason, setReason] = useState("");
+  const [rejectionTargets, setRejectionTargets] = useState<Article[]>([]);
   const rejectionDialog = useRef<HTMLDialogElement>(null);
 
   async function load() {
@@ -105,18 +106,10 @@ export default function ArticleManager({
     );
     await load();
   }
-  async function reject(article: Article) {
-    const reason = window.prompt(
-      "Alasan penolakan artikel:",
-      article.rejectionReason ||
-        "Mohon perbaiki naskah sesuai catatan redaksi.",
-    );
-    if (reason !== null)
-      await updateStatus(
-        article,
-        "rejected",
-        reason.trim() || "Perlu perbaikan editorial.",
-      );
+  function openRejection(targets: Article[]) {
+    setRejectionTargets(targets);
+    setReason(targets.length === 1 ? targets[0].rejectionReason ?? "" : "");
+    rejectionDialog.current?.showModal();
   }
   async function remove(id: string) {
     if (!await confirmAction("Hapus artikel ini secara permanen?", "Hapus")) return;
@@ -141,7 +134,9 @@ export default function ArticleManager({
             onClick={() => { setFilter(item); setSelectedIds([]); }}
             className={`p-4 text-left shadow-sm transition-colors ${filter === item ? "bg-blue-500 text-white" : "bg-white text-gray-800 hover:bg-blue-50"}`}
           >
-            <span className="eyebrow">{filters[item]}</span>
+            <span className={`font-mono text-xs uppercase tracking-widest ${filter === item ? "font-semibold" : "text-mute"}`}>
+              {filters[item]}
+            </span>
             <strong className="mt-2 block font-display text-3xl">
               {articles.filter((article) => matchesFilter(article, item)).length}
             </strong>
@@ -177,7 +172,7 @@ export default function ArticleManager({
               }}>Terbitkan terpilih</button>}
             {!!canReject.length && <button type="button" disabled={bulkBusy}
               className="rounded-lg border border-rule px-3 py-2 disabled:opacity-50"
-              onClick={() => { setReason(""); rejectionDialog.current?.showModal(); }}>Tolak terpilih</button>}
+              onClick={() => openRejection(canReject)}>Tolak terpilih</button>}
             {bulkBusy && <span role="status" className="text-mute">Memproses artikel…</span>}
           </div>
         )}
@@ -248,7 +243,7 @@ export default function ArticleManager({
                       <button
                         type="button"
                         disabled={bulkBusy}
-                        onClick={() => void reject(article)}
+                        onClick={() => openRejection([article])}
                         className="px-3 py-2 text-blue-500 hover:text-blue-700"
                       >
                         Reject
@@ -263,16 +258,17 @@ export default function ArticleManager({
       </section>
       <dialog ref={rejectionDialog} aria-labelledby="reject-selected-title"
         className="action-popup fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-xl bg-white p-5 text-ink shadow-xl backdrop:bg-black/40">
-        <h2 id="reject-selected-title" className="text-lg font-semibold">Tolak {canReject.length} artikel?</h2>
+        <h2 id="reject-selected-title" className="text-lg font-semibold">Tolak {rejectionTargets.length} artikel?</h2>
+        {rejectionTargets.length === 1 && <p className="mt-2 break-words text-sm text-mute">{rejectionTargets[0].title}</p>}
         <form className="mt-4 grid gap-4" onSubmit={(event) => {
           event.preventDefault();
-          if (!reason.trim() || bulkBusy) return;
+          if (!reason.trim() || bulkBusy || !rejectionTargets.length) return;
           rejectionDialog.current?.close();
-          void applyBulk(canReject, "rejected", reason.trim());
+          void applyBulk(rejectionTargets, "rejected", reason.trim());
         }}>
           <label className="grid gap-2 text-sm">
-            Catatan penolakan untuk semua artikel terpilih
-            <textarea required maxLength={500} rows={4} value={reason} onChange={(event) => setReason(event.target.value)} className="rounded border border-rule p-3" />
+            {rejectionTargets.length === 1 ? "Alasan penolakan" : "Catatan penolakan untuk semua artikel terpilih"}
+            <textarea required maxLength={500} rows={4} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Tulis catatan untuk penulis…" className="rounded border border-rule p-3" />
           </label>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => rejectionDialog.current?.close()} className="rounded border border-rule px-4 py-2">Batal</button>
