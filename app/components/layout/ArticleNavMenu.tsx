@@ -15,7 +15,7 @@ export default function ArticleNavMenu({
         aria-haspopup="menu"
         className="flex items-center gap-1 whitespace-nowrap font-mono text-xs uppercase tracking-widest2 text-gray-800 transition-colors hover:text-blue-500 group-hover:text-blue-500"
       >
-        Artikel <span aria-hidden="true">⌄</span>
+        Artikel <i className="bx bx-chevron-down text-base" aria-hidden="true" />
       </button>
       <div className="invisible absolute left-1/2 top-full z-50 w-56 -translate-x-1/2 translate-y-2 bg-white p-2 opacity-0 shadow-xl ring-1 ring-gray-100 transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
         <Link

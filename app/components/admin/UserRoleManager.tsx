@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useState } from "react";
 
@@ -66,7 +67,7 @@ export default function UserRoleManager() {
         <h2 className="text-xl font-semibold">Daftar pengguna ({users.length})</h2>
         <input aria-label="Cari pengguna" className="w-full p-3 sm:w-80" placeholder="Cari nama atau email…" value={query} onChange={(event) => setQuery(event.target.value)} />
       </div>
-      <p role="status" className="text-sm text-mute">{message}</p>
+      <PopupStatus message={message} />
       <div className="divide-y divide-rule bg-white">
         {filtered.map((user) => {
           const protectedUser = user.role === "superadmin" && actorRole !== "superadmin";

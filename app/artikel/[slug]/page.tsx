@@ -6,8 +6,11 @@ import CategoryBadge from "../../components/landing/CategoryBadge";
 import ArticleCard from "../../components/landing/ArticleCard";
 import Sidebar from "../../components/layout/Sidebar";
 import ArticleEngagement from "../../components/article/ArticleEngagement";
-import { getArticleFromDatabase } from "@/lib/db";
+import { getArticleFromDatabase, getReactionSummary } from "@/lib/db";
 import ArticleBody from "@/app/components/article/ArticleBody";
+import ShareArticleButton from "@/app/components/article/ShareArticleButton";
+import { publicProfile } from "@/lib/community";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -36,12 +39,58 @@ export default async function ArticlePage({
   const article = await getArticleFromDatabase(params.slug);
   if (!article) notFound();
 
-  const related = await getRelated(article, 3);
+  const [related, reactions] = await Promise.all([
+    getRelated(article, 3),
+    getReactionSummary(article.slug).catch(() => null),
+  ]);
+  const profileDb = getSupabaseAdmin();
+  type AuthorProfile = {
+    id: string;
+    display_name: string;
+    username: string | null;
+    avatar_url: string | null;
+    role: string;
+    bio: string | null;
+  };
+  const profileFields = "id,display_name,username,avatar_url,role,bio";
+  let authorProfile: AuthorProfile | null = null;
+  if (profileDb && article.authorEmail) {
+    const result = await profileDb
+      .from("profiles")
+      .select(profileFields)
+      .eq("email", article.authorEmail)
+      .limit(1)
+      .maybeSingle();
+    authorProfile = result.data as AuthorProfile | null;
+  }
+  if (profileDb && !authorProfile && article.authorId && /^[0-9a-f-]{36}$/i.test(article.authorId)) {
+    const result = await profileDb
+      .from("profiles")
+      .select(profileFields)
+      .eq("id", article.authorId)
+      .maybeSingle();
+    authorProfile = result.data as AuthorProfile | null;
+  }
+  if (profileDb && !authorProfile) {
+    const result = await profileDb
+      .from("profiles")
+      .select(profileFields)
+      .eq("display_name", article.author)
+      .limit(1)
+      .maybeSingle();
+    authorProfile = result.data as AuthorProfile | null;
+  }
+  const roleLabel = authorProfile?.role === "superadmin" ? "Superadmin" : authorProfile?.role === "admin" ? "Redaksi" : "Penulis";
+  const linkedProfile = article.authorId && !authorProfile?.avatar_url
+    ? await publicProfile(article.authorId).catch(() => null)
+    : null;
+  const authorAvatar = authorProfile?.avatar_url || linkedProfile?.avatarUrl;
+  const authorProfileHref = article.authorId || authorProfile?.id;
 
   return (
     <article className="wrap py-8 sm:py-12">
       <Link href="/" className="eyebrow hover:text-ink">
-        ← Kembali ke Beranda
+        <i className="bx bx-arrow-back mr-1" aria-hidden="true" /> Kembali ke Beranda
       </Link>
 
       <div className="mt-6 max-w-3xl">
@@ -55,12 +104,36 @@ export default async function ArticlePage({
           </span>
         )}
         <CategoryBadge category={article.category} />
-        <h1 className="mt-3 font-display text-display-lg">{article.title}</h1>
+        <h1 className="mt-3 max-w-5xl font-display text-3xl font-bold leading-[1.1] sm:text-4xl lg:text-5xl">
+          {article.title}
+        </h1>
         <p className="mt-4 text-lg text-mute">{article.dek}</p>
-        <p className="mt-5 font-mono text-[11px] text-mute">
-          Oleh {article.authorId ? <a href={`/akun/${article.authorId}`} className="hover:text-blue-500">{article.author}</a> : article.author} · {formatDate(article.date)} ·{" "}
-          {article.readTime} menit baca
-        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="group relative flex w-fit flex-wrap items-center gap-x-2.5 gap-y-2">
+          <a href={authorProfileHref ? `/akun/${authorProfileHref}` : "#"} className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-blue-50 font-display text-sm text-blue-600">
+              {authorAvatar ? <img src={authorAvatar} alt="" className="h-full w-full object-cover" /> : <i className="bx bxs-user text-lg" aria-hidden="true" />}
+            </span>
+            <strong className="text-sm font-semibold leading-none text-ink">{article.author}</strong>
+            <i className="bx bxs-badge-check -ml-1 text-lg leading-none text-blue-500" title="Akun terverifikasi" aria-label="Akun terverifikasi" />
+          </a>
+          <span aria-hidden="true" className="text-xs text-mute">·</span>
+          <span className="text-xs leading-none text-mute">{formatDate(article.date)}</span>
+          <span aria-hidden="true" className="text-xs text-mute">·</span>
+          <span className="text-xs leading-none text-mute">{article.readTime} menit baca</span>
+          <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-mute">
+            <i className="bx bx-show text-base" aria-hidden="true" />
+            {new Intl.NumberFormat("id-ID").format(article.views)} tayangan
+          </span>
+          <div className="pointer-events-none absolute left-0 top-full z-20 mt-3 w-72 translate-y-2 rounded-xl border border-rule bg-white p-4 opacity-0 shadow-xl transition-all duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
+            <div className="flex items-center gap-3"><span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-50 text-blue-600">{authorAvatar ? <img src={authorAvatar} alt="" className="h-full w-full object-cover" /> : <i className="bx bxs-user text-2xl" aria-hidden="true" />}</span><div className="min-w-0"><p className="flex items-center gap-1 text-base font-semibold">{article.author} <i className="bx bxs-badge-check text-lg text-blue-500" title="Akun terverifikasi" aria-label="Akun terverifikasi" /></p><p className="mt-0.5 truncate text-xs text-mute">{roleLabel}{authorProfile?.username ? ` · @${authorProfile.username}` : ""}</p></div></div>
+            {authorProfile?.bio && <p className="mt-3 text-sm leading-relaxed text-mute">{authorProfile.bio}</p>}
+            {authorProfileHref && <a href={`/akun/${authorProfileHref}`} className="mt-3 inline-flex items-center text-sm font-medium text-blue-500">Lihat profil <i className="bx bx-right-arrow-alt ml-1 text-base" aria-hidden="true" /></a>}
+          </div>
+        </div>
+          <ShareArticleButton title={article.title} slug={article.slug} author={article.author}
+            views={article.views} likes={reactions?.like ?? null} shares={article.shares ?? 0} />
+        </div>
       </div>
 
       {article.thumbnailUrl ? (

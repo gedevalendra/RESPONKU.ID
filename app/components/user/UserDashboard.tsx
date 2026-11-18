@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useState } from "react";
 import type { Article } from "@/lib/types";
@@ -22,7 +23,7 @@ export default function UserDashboard() {
           <span className="eyebrow">{articles.length} artikel</span>
         </div>
         {message && (
-          <p className="mt-4 font-mono text-xs text-signal">{message}</p>
+          <PopupStatus message={message} />
         )}
         <div className="divide-y divide-rule">
           {articles.length === 0 && !message ? (

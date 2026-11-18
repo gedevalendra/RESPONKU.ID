@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useState } from "react";
 import type { Article } from "@/lib/types";
@@ -29,7 +30,7 @@ export default function UserArticleManager({
     }
   }, [articles]);
   async function remove(id: string) {
-    if (!window.confirm("Hapus artikel ini?")) return;
+    if (!await confirmAction("Hapus artikel ini?", "Hapus")) return;
     const response = await fetch(`/api/user/articles/${id}`, {
       method: "DELETE",
     });
@@ -54,7 +55,7 @@ export default function UserArticleManager({
         onSaved={saved}
         onCancel={() => setEditing(null)}
       />
-      {message && <p className="font-mono text-xs text-blue-600">{message}</p>}
+      {message && <PopupStatus message={message} />}
       <section>
         <div className="flex items-baseline justify-between border-b border-ink pb-3">
           <div>

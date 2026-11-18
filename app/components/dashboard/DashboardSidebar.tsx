@@ -12,7 +12,7 @@ export default function DashboardSidebar({ role, open = false, onClose }: {
   const base = role === "superadmin" ? "/superadmin" : "/admin";
   const pathname = usePathname();
   const groups = [
-    { label: "Editorial", items: [[`${base}/artikel`, "Approval artikel"], [`${base}/komentar`, "Moderasi komentar"]] },
+    { label: "Editorial", items: [[`${base}/artikel`, "Approval artikel"], ...(role === "admin" ? [["/admin/artikel/terbit", "Artikel terbit"]] : []), [`${base}/komentar`, "Moderasi komentar"]] },
     { label: "Pengguna & organisasi", items: [[`${base}/pengguna`, "Daftar pengguna"], [`${base}/organisasi`, "Organisasi & verifikasi"]] },
     { label: "Konten & informasi", items: [["/admin/tentang", "Halaman Tentang"], [`${base}/ticker`, "Ticker berita"], [`${base}/popup`, "Popup informasi"]] },
     { label: "Komunikasi", items: [[role === "superadmin" ? "/admin/notifikasi" : `${base}/notifikasi`, "Kirim notifikasi"], [`${base}/faq`, "Pertanyaan pengguna"]] },
@@ -46,10 +46,12 @@ export default function DashboardSidebar({ role, open = false, onClose }: {
               className="group border-b border-rule pb-2"
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-mono text-xs uppercase tracking-widest2 text-mute hover:text-ink [&::-webkit-details-marker]:hidden">
-                {group.label}<span className="transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+                {group.label}<i className="bx bx-chevron-down text-base transition-transform group-open:rotate-180" aria-hidden="true" />
               </summary>
-              <div className="ml-3 border-l border-rule">
-                {group.items.map(([href, label]) => <Link key={href} href={href} onClick={onClose} aria-current={pathname === href ? "page" : undefined} className={`${linkStyle} ${pathname === href ? "bg-gray-800/5 text-ink" : "text-mute"}`}>{label}</Link>)}
+              <div className="sidebar-dropdown ml-3 border-l border-rule">
+                <div>
+                  {group.items.map(([href, label]) => <Link key={href} href={href} onClick={onClose} aria-current={pathname === href ? "page" : undefined} className={`${linkStyle} ${pathname === href ? "bg-gray-800/5 text-ink" : "text-mute"}`}>{label}</Link>)}
+                </div>
               </div>
             </details>
           ))}

@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useState } from "react";
 
@@ -82,7 +83,7 @@ export default function NotificationComposer() {
       <label className="grid gap-2 text-sm"><span className="eyebrow">Tautan (opsional)</span><input name="href" placeholder="/artikel/judul-berita atau https://..." /></label>
       <div className="flex flex-wrap items-center gap-4">
         <button disabled={busy || (audience === "selected" && !selected)} className="bg-blue-500 px-5 py-3 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-blue-600 disabled:opacity-50">{busy ? "Mengirim..." : "Kirim notifikasi"}</button>
-        {message && <span className="font-mono text-xs text-mute">{message}</span>}
+        {message && <PopupStatus message={message} />}
       </div>
     </form>
   );

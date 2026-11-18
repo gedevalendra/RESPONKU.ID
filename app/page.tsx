@@ -2,11 +2,12 @@ import HeroSection from "./components/landing/HeroSection";
 import SectionGrid from "./components/landing/SectionGrid";
 import Sidebar from "./components/layout/Sidebar";
 import ArticleCard from "./components/landing/ArticleCard";
-import { getFeatured, getByCategory } from "@/lib/data";
+import { getFeatured, getByCategory, getPublishedArticles } from "@/lib/data";
 import { Article } from "@/lib/types";
 
 export default async function HomePage() {
   const featured = await getFeatured();
+  const heroStories = featured.length ? featured : (await getPublishedArticles()).slice(0, 4);
   const [economy, politics, technology, sports, culture] = await Promise.all([
     getByCategory("Ekonomi", 1),
     getByCategory("Politik", 1),
@@ -16,7 +17,7 @@ export default async function HomePage() {
   ]);
   return (
     <>
-      <HeroSection stories={featured} />
+      <HeroSection stories={heroStories} />
 
       <div className="wrap grid grid-cols-1 gap-12 border-t border-rule py-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-8">

@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useState } from "react";
 import type { AboutPage, AboutSection, AboutSectionType } from "@/lib/about";
@@ -84,6 +85,7 @@ export default function AboutManager() {
     });
   }
   async function save() {
+    if (!(await confirmAction("Simpan perubahan halaman Tentang?", "Simpan"))) return;
     if (!page) return;
     setBusy(true);
     setMessage("");
@@ -129,7 +131,7 @@ export default function AboutManager() {
         </button>
       </div>
       {message && (
-        <p className="mt-4 font-mono text-xs text-blue-600">{message}</p>
+        <PopupStatus message={message} />
       )}
       <div className="mt-6 grid gap-3 bg-white p-5 shadow-sm">
         <label className="grid gap-2 text-sm">

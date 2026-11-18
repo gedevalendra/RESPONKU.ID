@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useState } from "react";
 
@@ -9,6 +10,7 @@ export default function TickerManager({ initial }: { initial: string[] }) {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!(await confirmAction("Simpan perubahan?", "Simpan"))) return;
     setBusy(true);
     setMessage("");
     const headlines = value.split("\n").map((item) => item.trim()).filter(Boolean);
@@ -44,7 +46,7 @@ export default function TickerManager({ initial }: { initial: string[] }) {
           {busy ? "Menyimpan..." : "Simpan ticker"}
         </button>
         <span className="text-xs text-mute">Kosongkan semua baris untuk mode otomatis.</span>
-        {message && <span className="font-mono text-xs text-mute">{message}</span>}
+        {message && <PopupStatus message={message} />}
       </div>
     </form>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useMemo, useState } from "react";
 import type { Article, ArticleBlock, Category } from "@/lib/types";
@@ -275,6 +276,7 @@ export default function ArticleComposer({
       setError("Lengkapi URL atau upload foto pada setiap blok foto.");
       return;
     }
+    if (!(await confirmAction("Kirim artikel untuk diperiksa?", "Kirim"))) return;
     setBusy(true);
     const payload = {
       title: draft.title,
@@ -303,7 +305,11 @@ export default function ArticleComposer({
     onSaved(
       article
         ? "Perubahan dikirim ulang untuk review admin."
-        : "Artikel dikirim untuk review admin.",
+        : data.aiReview?.decision === "approve"
+          ? "Artikel sudah diperiksa AI dan langsung diterbitkan."
+          : data.aiReview?.decision === "reject"
+            ? "Artikel ditolak oleh review AI."
+            : "Artikel ditahan untuk review admin.",
     );
   }
   return (
@@ -534,7 +540,7 @@ export default function ArticleComposer({
             </button>
           ))}
         </div>
-        {error && <p className="font-mono text-xs text-blue-600">{error}</p>}
+        <PopupStatus message={error} />
         <div className="flex flex-wrap gap-3">
           <button
             disabled={busy}
@@ -549,7 +555,9 @@ export default function ArticleComposer({
           {article && onCancel && (
             <button
               type="button"
-              onClick={onCancel}
+              onClick={async () => {
+                if (await confirmAction("Batalkan pengeditan artikel?", "Batalkan edit")) onCancel();
+              }}
               className="px-5 py-3 font-mono text-xs text-gray-800 hover:text-blue-500"
             >
               Batal edit

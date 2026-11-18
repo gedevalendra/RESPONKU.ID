@@ -6,44 +6,8 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import LogoutButton from "@/app/components/auth/LogoutButton";
 
 function Icon({ name }: { name: "home" | "search" | "bell" | "user" }) {
-  const common = {
-    width: 21,
-    height: 21,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.8,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-  };
-  if (name === "home")
-    return (
-      <svg {...common}>
-        <path d="m3 10 9-7 9 7" />
-        <path d="M5 9v11h14V9M9 20v-6h6v6" />
-      </svg>
-    );
-  if (name === "search")
-    return (
-      <svg {...common}>
-        <circle cx="10.8" cy="10.8" r="6.8" />
-        <path d="m16 16 5 5" />
-      </svg>
-    );
-  if (name === "bell")
-    return (
-      <svg {...common}>
-        <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-        <path d="M10 21h4" />
-      </svg>
-    );
-  return (
-    <svg {...common}>
-      <circle cx="12" cy="8" r="3.5" />
-      <path d="M4 21c.7-4 3.4-6 8-6s7.3 2 8 6" />
-    </svg>
-  );
+  const icons = { home: "bx-home-alt-2", search: "bx-search", bell: "bx-bell", user: "bx-user" };
+  return <i className={`bx ${icons[name]} text-2xl`} aria-hidden="true" />;
 }
 
 export default function MobileNav({
@@ -148,7 +112,7 @@ export default function MobileNav({
       aria-label="Navigasi utama mobile"
       onMouseLeave={() => setHoveredIndex(null)}
     >
-      <div className="relative mx-auto flex w-full max-w-xl items-center justify-around rounded-t-4xl bg-paper px-2 py-2 shadow-sm">
+      <div className="relative mx-auto grid w-full max-w-xl grid-cols-5 items-center rounded-t-4xl bg-paper px-2 py-2 shadow-sm">
         <span
           aria-hidden="true"
           className="pointer-events-none absolute bottom-2 top-2 rounded-full bg-ink transition-transform duration-300 ease-out"
@@ -163,13 +127,8 @@ export default function MobileNav({
           return (
             <Fragment key={item.label}>
             {index === 2 && <div className="relative z-10 flex min-w-0 flex-1 justify-center self-stretch">
-              <button type="button" aria-label="Buka menu lainnya" aria-haspopup="dialog" aria-expanded={menuOpen} onClick={openMenu} className="absolute -top-5 flex h-14 w-14 items-center justify-center rounded-full bg-gray-800 text-white shadow-lg ring-4 ring-white transition-transform hover:-translate-y-1">
-                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="3" y="3" width="6" height="6" rx="1" />
-                  <rect x="15" y="3" width="6" height="6" rx="1" />
-                  <rect x="3" y="15" width="6" height="6" rx="1" />
-                  <path d="M18 14v8M14 18h8" />
-                </svg>
+              <button type="button" aria-label="Buka menu lainnya" aria-haspopup="dialog" aria-expanded={menuOpen} onClick={openMenu} className="absolute -top-5 flex h-14 w-14 items-center justify-center rounded-full bg-gray-800 text-white shadow-lg ring-4 ring-white motion-safe:transition-transform motion-safe:hover:scale-110">
+                <i className="bx bx-grid-alt text-2xl" aria-hidden="true" />
               </button>
             </div>}
             <Link

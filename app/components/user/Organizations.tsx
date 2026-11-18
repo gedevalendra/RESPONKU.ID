@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 import { useEffect, useState } from "react";
 import UserPicker from "@/app/components/admin/UserPicker";
 
@@ -97,7 +98,7 @@ export default function Organizations({ admin = false }: { admin?: boolean }) {
     </form>
     <div className="space-y-3">{members.map((member) => <div key={`${member.userId}-${member.organizationId}`} className="flex flex-wrap gap-3 text-sm"><span>{member.displayName} · {member.status}</span>{member.status === "pending" && <><button className="text-blue-500" onClick={() => void action({ action: "reviewMember", id: member.organizationId, userId: member.userId, approved: true })}>Setujui anggota</button><button onClick={() => void action({ action: "reviewMember", id: member.organizationId, userId: member.userId, approved: false })}>Tolak</button></>}</div>)}</div>
     {admin && <form className="grid max-w-2xl gap-4 border-t pt-5" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); void action({ action: "badge", userId: form.get("userId"), approved: form.get("verified") === "on" }); }}><h3 className="font-semibold">Verifikasi akun</h3><UserPicker name="userId" required /><label className="flex items-center gap-2 text-sm"><input type="checkbox" name="verified" />Berikan centang biru</label><button className="justify-self-start bg-blue-500 px-4 py-2 text-white">Simpan verifikasi akun</button></form>}
-    <p role="status" className="text-sm text-mute">{message}</p>
+    <PopupStatus message={message} />
     {admin && <form className="grid max-w-2xl gap-4 border-t pt-5" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); void action({ action: "reviewOrganization", id: form.get("id"), ownerId: form.get("ownerId"), approved: true }); }}><h3 className="font-semibold">Tetapkan admin organisasi</h3><label className="grid gap-2 text-sm">Organisasi<select name="id" required className="p-3"><option value="">Pilih organisasi</option>{organizations.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label><div className="grid gap-2 text-sm"><span>Pemilik / admin baru</span><UserPicker name="ownerId" required /></div><button className="justify-self-start bg-blue-500 px-4 py-2 text-white">Tetapkan admin organisasi</button></form>}
   </section>;
 }

@@ -18,8 +18,11 @@ export async function getFeatured(): Promise<Article[]> {
 }
 export async function getTrending(limit = 5): Promise<Article[]> {
   return (await getPublishedArticles())
-    .sort((a, b) => b.views - a.views)
+    .sort(compareArticlePopularity)
     .slice(0, limit);
+}
+export function compareArticlePopularity(a: Article, b: Article) {
+  return Number(Boolean(b.promoted)) - Number(Boolean(a.promoted)) || b.views - a.views;
 }
 export async function getByCategory(
   category: Category,

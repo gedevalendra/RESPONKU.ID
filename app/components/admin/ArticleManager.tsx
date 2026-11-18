@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useMemo, useState } from "react";
 import ArticleBody from "@/app/components/article/ArticleBody";
@@ -75,7 +76,7 @@ export default function ArticleManager({
       );
   }
   async function remove(id: string) {
-    if (!window.confirm("Hapus artikel ini secara permanen?")) return;
+    if (!await confirmAction("Hapus artikel ini secara permanen?", "Hapus")) return;
     const response = await fetch(`/api/admin/articles/${id}`, {
       method: "DELETE",
     });
@@ -102,7 +103,7 @@ export default function ArticleManager({
           </button>
         ))}
       </div>
-      {message && <p className="font-mono text-xs text-mute">{message}</p>}
+      {message && <PopupStatus message={message} />}
       <section>
         <div className="flex items-baseline justify-between border-b border-ink pb-3">
           <div>

@@ -1,5 +1,5 @@
 import ArticleCard from "@/app/components/landing/ArticleCard";
-import { getPublishedArticles } from "@/lib/data";
+import { compareArticlePopularity, getPublishedArticles } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export default async function ArticlesPage({
   const articles = await getPublishedArticles();
   const sorted =
     searchParams.sort === "popular"
-      ? [...articles].sort((a, b) => b.views - a.views)
+      ? [...articles].sort(compareArticlePopularity)
       : articles;
   return (
     <div className="wrap py-10 sm:py-14">

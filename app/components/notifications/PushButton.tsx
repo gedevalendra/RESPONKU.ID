@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 
 import { useState } from "react";
 
@@ -43,16 +44,23 @@ export default function PushButton() {
   }
 
   return (
-    <div className="mt-8 flex flex-wrap items-center gap-4 border-t border-rule pt-5">
+    <div className="mt-4 rounded-2xl border border-rule bg-white p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 className="text-sm font-semibold">Notifikasi browser</h2>
+        <p className="mt-1 text-sm text-mute">Terima pemberitahuan di perangkat ini.</p>
+      </div>
       <button
         type="button"
         onClick={() => void enable()}
         disabled={busy}
-        className="bg-blue-500 px-4 py-3 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-blue-600 disabled:opacity-50"
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-ink px-4 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
       >
-        {busy ? "Mengaktifkan..." : "Aktifkan web push"}
+        <i className="bx bx-bell text-base" aria-hidden="true" />
+        {busy ? "Mengaktifkan…" : "Aktifkan"}
       </button>
-      {message && <span className="font-mono text-xs text-mute">{message}</span>}
+      </div>
+      {message && <PopupStatus message={message} />}
     </div>
   );
 }

@@ -47,13 +47,21 @@ export async function POST(request: Request) {
       { error: "Foto gagal disimpan. Pastikan bucket Storage sudah dibuat." },
       { status: 503 },
     );
-  const avatarUrl = new URL(
-    `/api/media/${path
-      .split("/")
-      .map((part) => encodeURIComponent(part))
-      .join("/")}`,
-    request.url,
-  ).toString();
+  // Simpan URL langsung dari Supabase, bukan URL relatif ke server aplikasi.
+  // URL relatif dapat menunjuk ke localhost atau host proxy yang berbeda saat
+  // aplikasi dijalankan di production.
+  const { data: publicUrlData } = supabase.storage
+    .from(env.supabaseStorageBucket)
+    .getPublicUrl(path);
+  const avatarUrl = publicUrlData.publicUrl;
+  const publicImage = await fetch(avatarUrl, { method: "HEAD", cache: "no-store" }).catch(() => null);
+  if (!publicImage?.ok || !publicImage.headers.get("content-type")?.startsWith("image/")) {
+    await supabase.storage.from(env.supabaseStorageBucket).remove([path]);
+    return NextResponse.json(
+      { error: "URL foto tidak dapat diakses. Periksa akses publik bucket Storage." },
+      { status: 503 },
+    );
+  }
   if (kind === "avatars" || kind === "backgrounds") {
     try {
       if (actor.provider) {
@@ -66,7 +74,9 @@ export async function POST(request: Request) {
             ...(kind === "avatars" ? { avatar_url: avatarUrl } : { background_url: avatarUrl }),
             updated_at: new Date().toISOString(),
           })
-          .eq("id", actor.id);
+          .eq("id", actor.id)
+          .select("id")
+          .single();
         if (profileError) throw profileError;
       }
     } catch {

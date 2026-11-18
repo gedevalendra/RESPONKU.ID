@@ -30,7 +30,7 @@ export default async function Sidebar() {
             >
               {category}
               <span className="font-mono text-mute" aria-hidden="true">
-                →
+                <i className="bx bx-right-arrow-alt text-lg" aria-hidden="true" />
               </span>
             </Link>
           ))}

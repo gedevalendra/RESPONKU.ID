@@ -3,6 +3,7 @@ import "./globals.css";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import WelcomePopup from "./components/layout/WelcomePopup";
+import ActionConfirmation from "./components/layout/ActionFeedback";
 
 export const metadata: Metadata = {
   title: "ResponKu. — Kabar Hari Ini, Ditulis dengan Jelas",
@@ -25,6 +26,7 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer />
         <WelcomePopup />
+        <ActionConfirmation />
       </body>
     </html>
   );

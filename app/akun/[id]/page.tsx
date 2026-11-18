@@ -40,7 +40,7 @@ export default async function Page({
               <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-50 text-xl text-blue-500 shadow-sm">
                 {profile.avatarUrl ? (
                   <img src={profile.avatarUrl} alt={profile.displayName} className="h-full w-full object-cover" />
-                ) : profile.displayName.slice(0, 1).toUpperCase()}
+                ) : <i className="bx bxs-user text-3xl" aria-hidden="true" />}
               </div>
               <div className="min-w-0 pb-1 pt-10">
                 <h1 className="break-words text-xl font-semibold leading-tight text-ink">

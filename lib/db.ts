@@ -20,13 +20,19 @@ import {
 } from "@/lib/about";
 
 function mapComment(row: Record<string, unknown>): Comment {
+  const profile = row.profiles as Record<string, unknown> | null | undefined;
   return {
     id: String(row.id),
     articleSlug: String(row.article_slug),
+    parentId: row.parent_id ? String(row.parent_id) : null,
+    avatarUrl: profile?.avatar_url ? String(profile.avatar_url) : null,
     displayName: String(row.display_name),
     body: String(row.body),
     createdAt: String(row.created_at),
     status: (row.status as Comment["status"]) || "published",
+    likes: Number(row.likes || 0),
+    dislikes: Number(row.dislikes || 0),
+    viewerReaction: (row.viewer_reaction as Comment["viewerReaction"]) || null,
   };
 }
 
@@ -248,39 +254,126 @@ export async function listPushSubscriptions(userId: string) {
     .toArray();
 }
 
-export async function listComments(articleSlug: string): Promise<Comment[]> {
+export async function listComments(articleSlug: string, visitorId?: string): Promise<Comment[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
-  const { data, error } = await supabase
+  let result = await supabase
     .from("comments")
-    .select("*")
+    .select("*, profiles:author_id(avatar_url)")
     .eq("article_slug", articleSlug)
     .eq("status", "published")
     .order("created_at", { ascending: false })
     .limit(100);
-  if (error) throw error;
-  return (data || []).map(mapComment);
+  if (result.error) {
+    result = await supabase
+      .from("comments")
+      .select("*")
+      .eq("article_slug", articleSlug)
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(100);
+  }
+  if (result.error) throw result.error;
+  const data = result.data || [];
+  const oauthIds = [...new Set(data.map((row) => row.oauth_author_id).filter(Boolean))];
+  const mongo = oauthIds.length ? await getMongoDb() : null;
+  const oauthProfiles = mongo
+    ? await mongo.collection("oauth_users").find({ id: { $in: oauthIds } })
+        .project({ id: 1, avatarUrl: 1 }).toArray()
+    : [];
+  const oauthAvatars = new Map(oauthProfiles.map((profile) => [profile.id, profile.avatarUrl]));
+  const authorIds = [...new Set(data
+    .map((row) => row.author_id ? String(row.author_id) : "")
+    .filter((id) => /^[0-9a-f-]{36}$/i.test(id)))];
+  const displayNames = [...new Set(data
+    .map((row) => String(row.display_name || ""))
+    .filter(Boolean))];
+  const [profilesByIdResult, profilesByNameResult] = await Promise.all([
+    authorIds.length
+      ? supabase.from("profiles").select("id,display_name,avatar_url").in("id", authorIds)
+      : Promise.resolve({ data: [] }),
+    displayNames.length
+      ? supabase.from("profiles").select("id,display_name,avatar_url").in("display_name", displayNames)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const profilesById = new Map(
+    (profilesByIdResult.data || []).map((profile) => [String(profile.id), profile]),
+  );
+  const profilesByName = new Map(
+    (profilesByNameResult.data || []).map((profile) => [String(profile.display_name), profile]),
+  );
+  const ids = (data || []).map((row) => row.id);
+  const reactionResult = ids.length
+    ? await supabase
+        .from("comment_reactions")
+        .select("comment_id,reaction")
+        .in("comment_id", ids)
+    : { data: [] };
+  const reactions = reactionResult.data || [];
+  const viewerResult = visitorId && ids.length
+    ? await supabase.from("comment_reactions").select("comment_id,reaction")
+        .in("comment_id", ids).eq("visitor_id", visitorId)
+    : { data: [] };
+  const viewerReactions = new Map((viewerResult.data || []).map((row) => [row.comment_id, row.reaction]));
+  const counts = new Map<string, { like: number; dislike: number }>();
+  (reactions || []).forEach((reaction) => { const current = counts.get(String(reaction.comment_id)) || { like: 0, dislike: 0 }; current[reaction.reaction as "like" | "dislike"] += 1; counts.set(String(reaction.comment_id), current); });
+  return data.map((row) => {
+    const count = counts.get(String(row.id)) || { like: 0, dislike: 0 };
+    const joinedProfile = row.profiles as Record<string, unknown> | null;
+    const profile = joinedProfile
+      || profilesById.get(String(row.author_id || ""))
+      || profilesByName.get(String(row.display_name || ""));
+    return {
+      ...mapComment({ ...row, profiles: profile }),
+      ...(oauthAvatars.get(row.oauth_author_id)
+        ? { avatarUrl: oauthAvatars.get(row.oauth_author_id) }
+        : {}),
+      likes: count.like,
+      dislikes: count.dislike,
+      viewerReaction: viewerReactions.get(row.id) ?? null,
+    };
+  });
 }
 
 export async function createComment(input: {
   articleSlug: string;
   displayName: string;
   body: string;
+  parentId?: string;
+  authorId?: string;
+  oauthAuthorId?: string;
 }): Promise<Comment> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error("Supabase belum dikonfigurasi");
-  const { data, error } = await supabase
+  let result = await supabase
     .from("comments")
     .insert({
       article_slug: input.articleSlug,
+      parent_id: input.parentId || null,
+      author_id: input.authorId || null,
+      ...(input.oauthAuthorId ? { oauth_author_id: input.oauthAuthorId } : {}),
       display_name: input.displayName,
       body: input.body,
       status: (await commentNeedsReview(input.body)) ? "pending" : "published",
     })
     .select("*")
     .single();
-  if (error) throw error;
-  return mapComment(data);
+  if (result.error && ["PGRST204", "42703", "23503"].includes(result.error.code)
+    && (input.authorId || input.oauthAuthorId)) {
+    result = await supabase
+      .from("comments")
+      .insert({
+        article_slug: input.articleSlug,
+        parent_id: input.parentId || null,
+        display_name: input.displayName,
+        body: input.body,
+        status: (await commentNeedsReview(input.body)) ? "pending" : "published",
+      })
+      .select("*")
+      .single();
+  }
+  if (result.error) throw result.error;
+  return mapComment(result.data);
 }
 
 export async function getReactionSummary(

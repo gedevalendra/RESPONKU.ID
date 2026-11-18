@@ -15,6 +15,8 @@ export interface Article {
   date: string;
   readTime: number;
   views: number;
+  promoted?: boolean;
+  shares?: number;
   thumbnailUrl: string;
   breaking?: boolean;
   featured?: boolean;
@@ -38,10 +40,15 @@ export type ArticleBlock =
 export type Comment = {
   id: string;
   articleSlug: string;
+  parentId?: string | null;
+  avatarUrl?: string | null;
   displayName: string;
   body: string;
   createdAt: string;
   status: "published" | "pending";
+  likes: number;
+  dislikes: number;
+  viewerReaction?: "like" | "dislike" | null;
 };
 
 export type ReactionSummary = {

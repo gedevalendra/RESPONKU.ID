@@ -19,3 +19,4 @@ export const hasSupabase = Boolean(
   env.supabaseUrl && env.supabaseServiceRoleKey,
 );
 export const hasMongo = Boolean(env.mongodbUri);
+export const hasGroq = Boolean(env.groqApiKey && env.groqModel);

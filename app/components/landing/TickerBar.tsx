@@ -6,7 +6,7 @@ export default function TickerBar({ headlines }: { headlines: string[] }) {
   return (
     <div className="hairline-y border-ink bg-ink text-paper">
       <div className="wrap flex items-stretch">
-        <span className="eyebrow shrink-0 border-r border-paper/25 py-2.5 pr-4 text-paper/70">
+        <span className="eyebrow hidden shrink-0 border-r border-paper/25 py-2.5 pr-4 text-paper/70 sm:block">
           Terkini
         </span>
         <div className="relative flex-1 overflow-hidden">

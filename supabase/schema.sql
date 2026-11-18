@@ -2,6 +2,12 @@
 create extension if not exists pgcrypto;
 create extension if not exists citext;
 
+-- Upload gambar memakai URL publik Supabase Storage agar URL tetap valid
+-- setelah aplikasi dipindahkan dari local ke production.
+insert into storage.buckets (id, name, public)
+values ('articles', 'articles', true)
+on conflict (id) do update set public = true;
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email citext not null unique,
@@ -31,13 +37,31 @@ create trigger on_auth_user_created after insert on auth.users for each row exec
 create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
   article_slug text not null,
+  parent_id uuid references public.comments(id) on delete cascade,
+  author_id uuid references public.profiles(id) on delete set null,
   display_name varchar(60) not null,
   body varchar(2000) not null,
   status text not null default 'pending' check (status in ('pending', 'published', 'rejected')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table public.comments add column if not exists parent_id uuid references public.comments(id) on delete cascade;
+alter table public.comments add column if not exists author_id uuid references public.profiles(id) on delete set null;
+alter table public.comments add column if not exists oauth_author_id text;
 create index if not exists comments_article_status_idx on public.comments(article_slug, status, created_at desc);
+create index if not exists comments_parent_idx on public.comments(parent_id, created_at asc);
+
+create table if not exists public.comment_reactions (
+  id uuid primary key default gen_random_uuid(),
+  comment_id uuid not null references public.comments(id) on delete cascade,
+  visitor_id text not null,
+  reaction text not null check (reaction in ('like', 'dislike')),
+  created_at timestamptz not null default now(),
+  unique(comment_id, visitor_id)
+);
+create index if not exists comment_reactions_comment_idx on public.comment_reactions(comment_id);
+alter table public.comment_reactions enable row level security;
+grant select, insert, update, delete on public.comment_reactions to service_role;
 
 create table if not exists public.article_reactions (
   id uuid primary key default gen_random_uuid(),

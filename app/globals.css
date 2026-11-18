@@ -91,6 +91,33 @@ body:has(.dashboard-shell) > footer {
   border-bottom-width: 1px;
 }
 
+/* Dropdown sidebar membuka isi dari atas dengan tinggi yang ikut mengembang. */
+.sidebar-dropdown {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-0.5rem);
+  transition: grid-template-rows 240ms ease, opacity 180ms ease, transform 240ms ease;
+}
+
+.sidebar-dropdown > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+details[open] > .sidebar-dropdown {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-dropdown {
+    transition: none;
+    transform: none;
+  }
+}
+
 /* Berita berjalan dari kanan ke kiri, lalu mengulang tanpa jeda. */
 @keyframes ticker-scroll {
   from {
@@ -173,4 +200,16 @@ body:has(.dashboard-shell) > footer {
     radial-gradient(ellipse at 66% 58%, #475569 0 24%, transparent 25%),
     linear-gradient(160deg, #cbd5e1 0%, #94a3b8 42%, #475569 43%, #1f2937 100%);
   background-size: cover;
+}
+.action-popup:not(dialog), dialog.action-popup[open] {
+  animation: action-popup-in 180ms ease-out both;
+}
+
+@keyframes action-popup-in {
+  from { opacity: 0; transform: translateY(-8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-popup:not(dialog), dialog.action-popup[open] { animation: none; }
 }

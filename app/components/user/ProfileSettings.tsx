@@ -1,4 +1,5 @@
 "use client";
+import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useState } from "react";
 import type { Profile } from "@/lib/types";
@@ -104,6 +105,7 @@ export default function ProfileSettings({
   }
   async function save(event: React.FormEvent) {
     event.preventDefault();
+    if (!(await confirmAction("Simpan perubahan?", "Simpan"))) return;
     setMessage("");
     if (password && password !== confirmPassword) {
       setMessage("Konfirmasi sandi tidak sama.");
@@ -157,7 +159,7 @@ export default function ProfileSettings({
         <div className="-mt-8 flex flex-wrap items-end justify-between gap-4">
           <div className="flex min-w-0 flex-1 items-end gap-3">
             <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-50 text-xl text-blue-500 shadow-sm">
-              {profile.avatarUrl ? <img src={profile.avatarUrl} alt={profile.displayName} className="h-full w-full object-cover" /> : profile.displayName.slice(0, 1).toUpperCase()}
+              {profile.avatarUrl ? <img src={profile.avatarUrl} alt={profile.displayName} className="h-full w-full object-cover" /> : <i className="bx bxs-user text-3xl" aria-hidden="true" />}
               {editing && <ImageUpload kind="avatar" busy={uploading} onUpload={uploadImage} />}
             </div>
             <div className="min-w-0 pb-1 pt-10">
@@ -301,7 +303,7 @@ export default function ProfileSettings({
             {busy ? "Menyimpan..." : "Simpan profil"}
           </button>
           {message && (
-            <span className="font-mono text-xs text-mute">{message}</span>
+            <PopupStatus message={message} />
           )}
         </div>
       </form>}
