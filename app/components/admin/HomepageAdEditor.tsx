@@ -12,6 +12,7 @@ export default function HomepageAdEditor({ initial, slot }: { initial: HomepageA
   const [ad, setAd] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const mediaUrl = ad.mediaType === "video" ? ad.videoUrl : ad.imageUrl;
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,16 +49,29 @@ export default function HomepageAdEditor({ initial, slot }: { initial: HomepageA
           <label className="grid gap-2">Judul iklan
             <input value={ad.title} maxLength={100} required={ad.enabled} className={inputClass} onChange={(event) => setAd({ ...ad, title: event.target.value })} />
           </label>
-          <label className="grid gap-2">URL gambar banner
-            <input type="url" value={ad.imageUrl} placeholder="https://…" required={ad.enabled} className={inputClass} onChange={(event) => setAd({ ...ad, imageUrl: event.target.value })} />
+          <label className="grid gap-2">Jenis media
+            <select value={ad.mediaType} className={inputClass} onChange={(event) => setAd({ ...ad, mediaType: event.target.value as HomepageAd["mediaType"] })}>
+              <option value="image">Gambar</option>
+              <option value="video">Video</option>
+            </select>
           </label>
+          {ad.mediaType === "video" ? (
+            <label className="grid gap-2">URL video
+              <input type="url" value={ad.videoUrl} placeholder="YouTube atau https://…/video.mp4" required={ad.enabled} className={inputClass} onChange={(event) => setAd({ ...ad, videoUrl: event.target.value })} />
+              <span className="text-xs text-mute">Bisa memakai link YouTube atau URL video langsung seperti MP4.</span>
+            </label>
+          ) : (
+            <label className="grid gap-2">URL gambar banner
+              <input type="url" value={ad.imageUrl} placeholder="https://…" required={ad.enabled} className={inputClass} onChange={(event) => setAd({ ...ad, imageUrl: event.target.value })} />
+            </label>
+          )}
           <label className="grid gap-2">Tautan tujuan
             <input type="url" value={ad.destination} placeholder="https://…" required={ad.enabled} className={inputClass} onChange={(event) => setAd({ ...ad, destination: event.target.value })} />
           </label>
           <button type="submit" className="justify-self-start bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50">{busy ? "Menyimpan…" : "Simpan"}</button>
         </fieldset>
       </form>
-      {ad.imageUrl.startsWith("https://") && ad.destination.startsWith("https://") && (
+      {mediaUrl.startsWith("https://") && ad.destination.startsWith("https://") && (
         <aside className="min-w-0">
           <h2 className="mb-3 font-display text-xl">Pratinjau</h2>
           <HomepageAdBanner ad={ad} compact={slot === "gallery"} />

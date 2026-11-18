@@ -9,6 +9,7 @@ const block = z.discriminatedUnion("type", [
     id: z.string().min(1).max(80),
     type: z.literal("text"),
     text: z.string().min(1).max(20000),
+    html: z.string().max(30000).optional(),
   }),
   z.object({
     id: z.string().min(1).max(80),

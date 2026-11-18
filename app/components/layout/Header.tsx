@@ -62,13 +62,13 @@ export default async function Header() {
           <div className="hidden items-center gap-5 lg:flex">
             <Link
               href="/tentang"
-              className="font-mono text-xs uppercase tracking-widest2 text-gray-500 hover:text-blue-500"
+              className="flex h-7 items-center font-mono text-xs uppercase leading-none tracking-widest2 text-gray-500 hover:text-blue-500"
             >
               Tentang
             </Link>
             <Link
               href="/dukungan"
-              className="whitespace-nowrap font-mono text-xs uppercase tracking-widest2 text-gray-500 hover:text-blue-500"
+              className="flex h-7 items-center whitespace-nowrap font-mono text-xs uppercase leading-none tracking-widest2 text-gray-500 hover:text-blue-500"
             >
               Dukungan
             </Link>
@@ -77,7 +77,7 @@ export default async function Header() {
             ) : (
               <Link
                 href="/akun"
-                className="font-mono text-xs uppercase tracking-widest2 text-gray-500 hover:text-blue-500"
+                className="flex h-7 items-center font-mono text-xs uppercase leading-none tracking-widest2 text-gray-500 hover:text-blue-500"
               >
                 Akun
               </Link>
@@ -85,7 +85,7 @@ export default async function Header() {
             {!actor && (
               <Link
                 href="/masuk"
-                className="bg-ink px-4 py-2 font-mono text-xs uppercase tracking-widest2 text-white transition-colors hover:bg-gray-700"
+                className="flex h-7 items-center bg-ink px-4 font-mono text-xs uppercase leading-none tracking-widest2 text-white transition-colors hover:bg-gray-700"
               >
                 Masuk
               </Link>

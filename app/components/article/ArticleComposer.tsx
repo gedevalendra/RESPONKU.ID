@@ -7,10 +7,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Article, ArticleBlock, Category } from "@/lib/types";
 import ArticleBody from "./ArticleBody";
+import RichTextEditor from "./RichTextEditor";
 
 type ArticleDraft = {
   title: string;
   dek: string;
+  location: string;
   thumbnailUrl: string;
   category: Category;
   author: string;
@@ -38,16 +40,37 @@ function legacyBlocks(article?: Article | null): ArticleBlock[] {
     }));
   return [{ id: id(), type: "text", text: "" }];
 }
+function separateLocation(blocks: ArticleBlock[]) {
+  const first = blocks[0];
+  if (!first || first.type !== "text") return { location: "", blocks };
+  const match = first.text.match(/^([A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ\s.'’()/-]{1,40})\s-\s+([\s\S]*)$/);
+  if (!match) return { location: "", blocks };
+  return {
+    location: match[1].trim(),
+    blocks: blocks.map((block, index) => index === 0 ? { ...block, text: match[2] } : block),
+  };
+}
 function initial(article: Article | null | undefined, authorName: string): ArticleDraft {
+  const separated = separateLocation(legacyBlocks(article));
   return {
     title: article?.title || "",
     dek: article?.dek || "",
+    location: separated.location,
     thumbnailUrl: article?.thumbnailUrl || "",
     category: article?.category || "Ekonomi",
     author: authorName,
     readTime: article?.readTime || 5,
-    blocks: legacyBlocks(article),
+    blocks: separated.blocks,
   };
+}
+
+function applyLocation(blocks: ArticleBlock[], location: string) {
+  const label = location.trim().toLocaleUpperCase("id-ID");
+  if (!label) return blocks;
+  const escapedLabel = label.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] || character);
+  return blocks.map((block, index) => index === 0 && block.type === "text"
+    ? { ...block, text: `${label} - ${block.text.replace(/^\s+/, "")}`, html: block.html ? `${escapedLabel} - ${block.html}` : undefined }
+    : block);
 }
 
 export async function convertToWebp(file: File): Promise<Blob> {
@@ -88,8 +111,14 @@ export default function ArticleComposer({
   const [imageBusy, setImageBusy] = useState<string | null>(null);
   const [thumbnailBusy, setThumbnailBusy] = useState(false);
   const [error, setError] = useState("");
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
+  const [freeformSource, setFreeformSource] = useState("");
+  const [formatBusy, setFormatBusy] = useState(false);
+  const [formatMessage, setFormatMessage] = useState("");
   const [analysisMessage, setAnalysisMessage] = useState("Kategori dan durasi baca ditentukan otomatis dari isi artikel.");
-  const analysisText = draft.blocks.map((block) => "text" in block ? block.text : block.type === "image" ? block.caption || "" : "").join("\n");
+  const outputBlocks = useMemo(() => applyLocation(draft.blocks, draft.location), [draft.blocks, draft.location]);
+  const analysisText = outputBlocks.map((block) => "text" in block ? block.text : block.type === "image" ? block.caption || "" : "").join("\n");
   useEffect(() => {
     if (analysisText.trim().length < 80) return;
     const controller = new AbortController();
@@ -119,14 +148,14 @@ export default function ArticleComposer({
   }, [article, authorName]);
   const textContent = useMemo(
     () =>
-      draft.blocks
+      outputBlocks
         .filter(
           (block): block is Extract<ArticleBlock, { type: "text" }> =>
             block.type === "text",
         )
         .map((block) => block.text.trim())
         .filter(Boolean),
-    [draft.blocks],
+    [outputBlocks],
   );
   function update<K extends keyof ArticleDraft>(
     key: K,
@@ -141,6 +170,81 @@ export default function ArticleComposer({
         block.id === blockId ? ({ ...block, ...patch } as ArticleBlock) : block,
       ),
     }));
+  }
+  async function formatFreeformArticle() {
+    if (freeformSource.trim().length < 20 || formatBusy) {
+      setFormatMessage("Tempel naskah minimal 20 karakter terlebih dahulu.");
+      return;
+    }
+    setFormatBusy(true);
+    setFormatMessage("AI sedang menyusun struktur artikel…");
+    try {
+      const response = await fetch("/api/ai/format-article", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: freeformSource }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Format artikel gagal.");
+      const formattedBlocks = Array.isArray(data.blocks) && data.blocks.length
+        ? data.blocks.map((block: { type: ArticleBlock["type"]; text?: string; attribution?: string }, index: number) => ({
+            id: id(),
+            type: block.type,
+            ...(block.type === "divider" ? {} : { text: block.text || "" }),
+            ...(block.type === "quote" ? { attribution: block.attribution || "" } : {}),
+          })) as ArticleBlock[]
+        : undefined;
+      setDraft((current) => ({
+        ...current,
+        ...(data.title ? { title: data.title } : {}),
+        ...(data.dek ? { dek: data.dek } : {}),
+        ...(data.location ? { location: data.location } : {}),
+        ...(data.category ? { category: data.category } : {}),
+        ...(data.readTime ? { readTime: data.readTime } : {}),
+        ...(formattedBlocks ? { blocks: formattedBlocks } : {}),
+      }));
+      setFormatMessage("Struktur artikel sudah diisi AI. Periksa dan lengkapi field yang masih kosong.");
+    } catch (formatError) {
+      setFormatMessage(formatError instanceof Error ? formatError.message : "Format artikel gagal.");
+    } finally {
+      setFormatBusy(false);
+    }
+  }
+  async function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      setLocationMessage("Browser ini tidak mendukung lokasi.");
+      return;
+    }
+    setLocationBusy(true);
+    setLocationMessage("Meminta izin lokasi…");
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 300000,
+        });
+      });
+      const params = new URLSearchParams({
+        format: "jsonv2",
+        lat: String(position.coords.latitude),
+        lon: String(position.coords.longitude),
+        "accept-language": "id",
+      });
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`);
+      if (!response.ok) throw new Error("Lokasi tidak dapat diterjemahkan.");
+      const data = await response.json() as { address?: Record<string, string> };
+      const location = data.address?.state || data.address?.province || data.address?.city || data.address?.town;
+      if (!location) throw new Error("Provinsi atau kota tidak ditemukan.");
+      const label = location.toUpperCase();
+      update("location", label);
+      setLocationMessage(`Awalan lokasi ditambahkan: ${label}.`);
+    } catch (locationError) {
+      const code = locationError instanceof GeolocationPositionError ? locationError.code : 0;
+      setLocationMessage(code === 1 ? "Izin lokasi ditolak. Izinkan lokasi untuk memakai awalan otomatis." : "Lokasi belum dapat digunakan. Coba lagi.");
+    } finally {
+      setLocationBusy(false);
+    }
   }
   function add(type: ArticleBlock["type"]) {
     const next: ArticleBlock =
@@ -295,7 +399,7 @@ export default function ArticleComposer({
       category: draft.category,
       author: draft.author,
       readTime: Number(draft.readTime),
-      contentBlocks: draft.blocks,
+      contentBlocks: outputBlocks,
       content: textContent,
     };
     try {
@@ -370,6 +474,28 @@ export default function ArticleComposer({
             Tambahkan bagian teks, foto, kutipan, dan judul sesuai alur cerita.
           </p>
         </div>
+        <section className="grid gap-3 border border-blue-100 bg-blue-50 p-4">
+          <div>
+            <p className="eyebrow text-blue-600">Format bebas dengan AI</p>
+            <p className="mt-1 text-sm text-gray-600">Tempel naskah apa pun. AI akan memisahkan judul, dek, lokasi, teks, heading, dan kutipan.</p>
+          </div>
+          <textarea
+            value={freeformSource}
+            onChange={(event) => setFreeformSource(event.target.value)}
+            placeholder="Tempel naskah artikel di sini..."
+            className="min-h-28 w-full px-3 py-3 text-sm"
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="cursor-pointer bg-white px-3 py-2 font-mono text-xs text-blue-600 ring-1 ring-blue-200 hover:bg-blue-100">
+              Pilih file teks
+              <input type="file" accept=".txt,.md,text/plain,text/markdown" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then(setFreeformSource); }} />
+            </label>
+            <button type="button" onClick={() => void formatFreeformArticle()} disabled={formatBusy} className="bg-blue-500 px-4 py-2 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-blue-600 disabled:opacity-50">
+              {formatBusy ? "Memformat…" : "Format dengan AI"}
+            </button>
+            {formatMessage && <span role="status" className="text-xs text-mute">{formatMessage}</span>}
+          </div>
+        </section>
         <div className="grid gap-3">
           <input
             required
@@ -459,14 +585,37 @@ export default function ArticleComposer({
                 </div>
               </div>
               {block.type === "text" && (
-                <textarea
-                  value={block.text}
-                  onChange={(event) =>
-                    updateBlock(block.id, { text: event.target.value })
-                  }
-                  placeholder="Tulis paragraf berita..."
-                  className="min-h-28 w-full px-3 py-3 text-sm"
-                />
+                <div className="grid gap-2">
+                  {index === 0 && (
+                    <div className="grid gap-2">
+                      <label className="grid gap-2 text-xs text-mute">
+                        Lokasi pembuka
+                        <input
+                          value={draft.location}
+                          onChange={(event) => update("location", event.target.value)}
+                          placeholder="Contoh: LAMPUNG"
+                          className="w-full px-3 py-2.5 text-sm"
+                        />
+                      </label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void useCurrentLocation()}
+                          disabled={locationBusy}
+                          className="bg-blue-50 px-3 py-2 font-mono text-xs text-blue-600 hover:bg-blue-100 disabled:opacity-50"
+                        >
+                          <i className="bx bx-current-location mr-1" aria-hidden="true" />
+                          {locationBusy ? "Mencari lokasi…" : "Gunakan lokasi saya"}
+                        </button>
+                        {locationMessage && <span role="status" className="text-xs text-mute">{locationMessage}</span>}
+                      </div>
+                    </div>
+                  )}
+                  <RichTextEditor
+                    value={{ text: block.text, html: block.html }}
+                    onChange={(value) => updateBlock(block.id, value)}
+                  />
+                </div>
               )}
               {block.type === "heading" && (
                 <input
@@ -632,7 +781,7 @@ export default function ArticleComposer({
             />
           )}
           <div className="mt-8">
-            <ArticleBody content={textContent} contentBlocks={draft.blocks} />
+            <ArticleBody content={textContent} contentBlocks={outputBlocks} />
           </div>
         </article>
       </aside>

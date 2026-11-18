@@ -1,6 +1,5 @@
 import { getTrending } from "@/lib/data";
 import TrendingList from "../../components/landing/TrendingList";
-import NewsletterForm from "../../components/landing/NewsletterForm";
 
 export default async function Sidebar() {
   const trending = await getTrending(5);
@@ -17,8 +16,6 @@ export default async function Sidebar() {
         </div>
       </form>
       <TrendingList items={trending} />
-
-      <NewsletterForm />
     </aside>
   );
 }

@@ -33,7 +33,7 @@ export interface Article {
 }
 
 export type ArticleBlock =
-  | { id: string; type: "text"; text: string }
+  | { id: string; type: "text"; text: string; html?: string }
   | { id: string; type: "heading"; text: string }
   | { id: string; type: "image"; url: string; alt: string; caption?: string }
   | { id: string; type: "quote"; text: string; attribution?: string }

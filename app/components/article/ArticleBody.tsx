@@ -1,4 +1,5 @@
 import type { ArticleBlock } from "@/lib/types";
+import { sanitizeRichText } from "@/lib/rich-text";
 
 export default function ArticleBody({
   content,
@@ -22,9 +23,11 @@ export default function ArticleBody({
       {contentBlocks.map((block, index) => {
         if (block.type === "text")
           return (
-            <p key={block.id} className={index === 0 ? "drop-cap" : undefined}>
-              {block.text}
-            </p>
+            block.html ? (
+              <div key={block.id} className={`rich-text ${index === 0 ? "drop-cap" : ""}`} dangerouslySetInnerHTML={{ __html: sanitizeRichText(block.html) }} />
+            ) : (
+              <p key={block.id} className={`whitespace-pre-wrap ${index === 0 ? "drop-cap" : ""}`}>{block.text}</p>
+            )
           );
         if (block.type === "heading")
           return (

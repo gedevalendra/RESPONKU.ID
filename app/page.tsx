@@ -6,10 +6,12 @@ import HeroSection from "./components/landing/HeroSection";
 import Sidebar from "./components/layout/Sidebar";
 import ArticleCard from "./components/landing/ArticleCard";
 import ArticleGallery from "./components/landing/ArticleGallery";
+import NewsletterForm from "./components/landing/NewsletterForm";
 import Link from "next/link";
 import { getPinnedArticleId } from "@/lib/homepage-pin";
 import { homepageDescription, homepageTitle, publicPageMetadata, siteOrganization, siteOrigin } from "@/lib/seo";
 import { getPublishedArticles } from "@/lib/data";
+import { publicProfile } from "@/lib/community";
 
 export const metadata = publicPageMetadata("/", homepageTitle, homepageDescription);
 
@@ -43,7 +45,13 @@ export default async function HomePage() {
   const pinned = published.find((article) => article.id === pinnedId);
   const featured = published.filter((article) => article.featured);
   const heroStories = pinned ? [pinned] : featured.length ? featured : published.slice(0, 4);
-  const latest = published.slice(0, 1);
+  const latest = published.slice(0, 2);
+  const latestWithAuthors = await Promise.all(latest.map(async (article) => ({
+    article,
+    authorAvatarUrl: article.authorId
+      ? (await publicProfile(article.authorId).catch(() => null))?.avatarUrl || ""
+      : "",
+  })));
   const otherArticles = published.slice(latest.length, latest.length + 6);
   const gallery = otherArticles.length < 3 ? [...otherArticles, ...latest] : otherArticles;
   return (
@@ -65,8 +73,8 @@ export default async function HomePage() {
           </div>
           {latest.length ? (
             <div className="divide-y divide-rule">
-              {latest.map((article) => (
-                <ArticleCard key={article.id} article={article} variant="row" />
+              {latestWithAuthors.map(({ article, authorAvatarUrl }) => (
+                <ArticleCard key={article.id} article={article} variant="row" authorAvatarUrl={authorAvatarUrl} />
               ))}
             </div>
           ) : <p className="mt-5 text-sm text-mute">Belum ada artikel terbit.</p>}
@@ -79,14 +87,19 @@ export default async function HomePage() {
                 <ArticleCard key={article.id} article={article} variant="gallery" />
               ))}
             </ArticleGallery>
-            {galleryAd?.enabled && (
-              <div className="mt-5"><HomepageAdBanner ad={galleryAd} compact /></div>
-            )}
           </section>
         )}
         </div>
         <div className="lg:col-span-4">
           <Sidebar />
+        </div>
+        {galleryAd?.enabled && (
+          <div className="min-w-0 lg:col-span-8">
+            <HomepageAdBanner ad={galleryAd} compact />
+          </div>
+        )}
+        <div className="min-w-0 lg:col-span-4 lg:col-start-9">
+          <NewsletterForm />
         </div>
       </div>
       <HotArticles stories={hotStories} ad={homepageAd?.enabled ? homepageAd : null} />

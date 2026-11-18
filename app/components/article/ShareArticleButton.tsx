@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 
-export default function ShareArticleButton({ slug, title }: { slug: string; title: string }) {
+export default function ShareArticleButton({ slug, title, imageUrl }: { slug: string; title: string; imageUrl?: string }) {
   const [message, setMessage] = useState("");
   const [manualLink, setManualLink] = useState("");
   const [url, setUrl] = useState("");
@@ -28,13 +28,31 @@ export default function ShareArticleButton({ slug, title }: { slug: string; titl
     dialog.current?.focus({ preventScroll: true });
   }
 
+  async function getShareData(): Promise<ShareData> {
+    const shareData: ShareData = { title, text: title, url };
+
+    if (!imageUrl || typeof navigator.canShare !== "function") return shareData;
+
+    try {
+      const response = await fetch(imageUrl, { mode: "cors" });
+      if (!response.ok) return shareData;
+      const blob = await response.blob();
+      const extension = blob.type.split("/")[1]?.replace(/[^a-z0-9]/gi, "") || "jpg";
+      const file = new File([blob], `responku-${slug}.${extension}`, { type: blob.type || "image/jpeg" });
+      const mediaShareData: ShareData = { title, text: `${title}\n${url}`, files: [file] };
+      return navigator.canShare(mediaShareData) ? mediaShareData : shareData;
+    } catch {
+      return shareData;
+    }
+  }
+
   async function share() {
     setMessage("");
     setManualLink("");
 
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title, url });
+        await navigator.share(await getShareData());
         recordShare();
         dialog.current?.close();
         return;

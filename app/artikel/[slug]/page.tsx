@@ -172,7 +172,7 @@ export default async function ArticlePage({
             {authorProfileHref && <a href={`/akun/${authorProfileHref}`} className="mt-3 inline-flex items-center text-sm font-medium text-blue-500">Lihat profil <i className="bx bx-right-arrow-alt ml-1 text-base" aria-hidden="true" /></a>}
           </div>
         </div>
-          <ShareArticleButton title={article.title} slug={article.slug} />
+          <ShareArticleButton title={article.title} slug={article.slug} imageUrl={image} />
         </div>
       </div>
 

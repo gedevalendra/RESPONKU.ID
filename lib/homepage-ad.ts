@@ -6,9 +6,14 @@ const httpsUrl = z.string().trim().max(2048).url().refine((value) => value.start
 export const homepageAdSchema = z.object({
   enabled: z.boolean(),
   title: z.string().trim().max(100),
+  mediaType: z.enum(["image", "video"]).default("image"),
   imageUrl: z.union([z.literal(""), httpsUrl]),
+  videoUrl: z.union([z.literal(""), httpsUrl]).default(""),
   destination: z.union([z.literal(""), httpsUrl]),
-}).refine(({ enabled, title, imageUrl, destination }) => !enabled || Boolean(title && imageUrl && destination));
+}).refine(({ enabled, title, mediaType, imageUrl, videoUrl, destination }) => {
+  if (!enabled) return true;
+  return Boolean(title && destination && (mediaType === "image" ? imageUrl : videoUrl));
+});
 
 export type HomepageAd = z.infer<typeof homepageAdSchema>;
 
@@ -19,7 +24,7 @@ const settingIds: Record<HomepageAdSlot, string> = {
   hot: "homepage_hot_articles_ad",
   gallery: "homepage_article_gallery_ad",
 };
-const emptyAd: HomepageAd = { enabled: false, title: "", imageUrl: "", destination: "" };
+const emptyAd: HomepageAd = { enabled: false, title: "", mediaType: "image", imageUrl: "", videoUrl: "", destination: "" };
 
 async function adSettings() {
   const db = await getMongoDb();

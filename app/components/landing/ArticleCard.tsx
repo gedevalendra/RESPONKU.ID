@@ -5,15 +5,17 @@ import { formatDate } from "@/lib/content";
 export default function ArticleCard({
   article,
   variant = "row",
+  authorAvatarUrl,
 }: {
   article: Article;
   variant?: "row" | "stacked" | "gallery";
+  authorAvatarUrl?: string;
 }) {
   if (variant === "gallery") {
     return (
       <article className="flex h-full min-w-0 flex-col border border-rule bg-white p-2 shadow-sm transition-shadow hover:shadow-md">
         <Link href={`/artikel/${article.slug}`} className="group flex flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-2">
-          <div className={`relative aspect-[16/10] overflow-hidden ${article.thumbnailUrl ? "bg-gray-100" : "bg-gradient-to-br from-slate-100 to-blue-100"}`}>
+          <div className={`relative aspect-[16/7] overflow-hidden sm:aspect-[16/10] ${article.thumbnailUrl ? "bg-gray-100" : "bg-gradient-to-br from-slate-100 to-blue-100"}`}>
             {article.thumbnailUrl ? (
               <img src={article.thumbnailUrl} alt="" loading="lazy"
                 className="h-full w-full object-cover motion-safe:transition-transform motion-safe:group-hover:scale-105" />
@@ -67,14 +69,14 @@ export default function ArticleCard({
     <article className="group flex gap-5 py-5">
       <Link
         href={`/artikel/${article.slug}`}
-        className="hidden h-24 w-32 shrink-0 overflow-hidden bg-gray-100 sm:block"
+        className="h-20 w-28 shrink-0 overflow-hidden bg-gray-100 sm:h-20 sm:w-32"
         aria-hidden="true"
         tabIndex={-1}
       >
         {article.thumbnailUrl && <img src={article.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
       </Link>
       <div className="flex flex-1 flex-col justify-center">
-        <h3 className="font-display text-lg leading-snug sm:text-xl">
+        <h3 className="line-clamp-2 font-display text-lg leading-snug sm:text-xl">
           <Link
             href={`/artikel/${article.slug}`}
             className="decoration-1 underline-offset-4 group-hover:underline"
@@ -82,9 +84,19 @@ export default function ArticleCard({
             {article.title}
           </Link>
         </h3>
-        <p className="mt-3 font-mono text-[11px] text-mute">
-          {article.author} · {formatDate(article.date)} · {article.readTime}{" "}
-          menit baca
+        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-mute">
+          <span className="inline-flex items-center gap-1.5 font-medium text-ink">
+            <span className="grid size-6 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-50 text-blue-600">
+              {authorAvatarUrl ? <img src={authorAvatarUrl} alt="" className="h-full w-full object-cover" /> : <i className="bx bxs-user text-sm" aria-hidden="true" />}
+            </span>
+            {article.author}
+          </span>
+          <span aria-hidden="true">·</span>
+          <span>{formatDate(article.date)}</span>
+          <span aria-hidden="true">·</span>
+          <span>{article.readTime} menit baca</span>
+          <span aria-hidden="true">·</span>
+          <span>{article.views.toLocaleString("id-ID")} dibaca</span>
         </p>
       </div>
     </article>

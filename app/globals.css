@@ -131,6 +131,40 @@ dialog:focus,
   border-bottom-width: 1px;
 }
 
+.rich-text {
+  white-space: normal;
+}
+
+.rich-text p,
+.rich-text div {
+  margin-bottom: 1rem;
+}
+
+.rich-text ol,
+.rich-text ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.rich-text ol {
+  list-style: decimal;
+}
+
+.rich-text ul {
+  list-style: disc;
+}
+
+.rich-text a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+[contenteditable][data-placeholder]:empty::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
 /* Dropdown sidebar membuka isi dari atas dengan tinggi yang ikut mengembang. */
 .sidebar-dropdown {
   display: grid;
