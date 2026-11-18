@@ -22,7 +22,7 @@ export default function HeroSection({ stories }: { stories: Article[] }) {
             <h1 className="mt-3 max-w-3xl font-display text-xl leading-tight sm:text-3xl lg:text-4xl">
               <Link href={`/artikel/${lead.slug}`} className="underline-offset-4 group-hover:underline">{lead.title}</Link>
             </h1>
-            <p className="mt-3 max-w-2xl text-sm text-white/75 sm:text-base">{lead.dek}</p>
+            <p className="mt-3 line-clamp-2 max-w-2xl text-sm text-white/75 sm:line-clamp-none sm:text-base">{lead.dek}</p>
             <p className="mt-4 font-mono text-[11px] text-white/70">{lead.author} · {formatDate(lead.date)} · {lead.readTime} menit baca</p>
           </div>
         </article>
