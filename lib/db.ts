@@ -221,11 +221,65 @@ export async function searchNotificationRecipients(query = "") {
   return merged.filter((user, index, all) => all.findIndex((item) => item.id === user.id) === index).slice(0, 3);
 }
 
-export async function listNotificationRecipientIds() {
+export type NotificationRecipient = {
+  id: string;
+  email: string;
+  displayName: string;
+  username?: string;
+};
+
+export async function listNotificationRecipients(): Promise<NotificationRecipient[]> {
   const supabase = getSupabaseAdmin();
-  const profileIds = supabase ? (await supabase.from("profiles").select("id")).data?.map((row) => String(row.id)) || [] : [];
-  const oauthIds = (await listOAuthUsers()).filter((user) => !user.accountId).map((user) => String(user.id));
-  return [...new Set([...profileIds, ...oauthIds])];
+  const profiles = supabase
+    ? (await supabase.from("profiles").select("id,email,display_name,username")).data || []
+    : [];
+  const oauthUsers = (await listOAuthUsers()).filter((user) => !user.accountId);
+  const merged: NotificationRecipient[] = [
+    ...profiles.map((profile) => ({
+      id: String(profile.id),
+      email: String(profile.email || ""),
+      displayName: String(profile.display_name || profile.email || "Pengguna"),
+      username: profile.username ? String(profile.username) : undefined,
+    })),
+    ...oauthUsers.map((user) => ({
+      id: String(user.id),
+      email: String(user.email || ""),
+      displayName: String(user.displayName || user.email || "Pengguna"),
+      username: user.username ? String(user.username) : undefined,
+    })),
+  ];
+  return merged.filter((user, index, all) => all.findIndex((item) => item.id === user.id) === index);
+}
+
+export async function listNotificationRecipientIds() {
+  return (await listNotificationRecipients()).map((recipient) => recipient.id);
+}
+
+export async function savePushDeliveryHistory(history: {
+  title: string;
+  body: string;
+  href?: string;
+  audience: "all" | "selected";
+  sentAt: string;
+  recipientCount: number;
+  sent: number;
+  failed: number;
+  subscriptions: number;
+  recipients: Array<NotificationRecipient & { sent: number; failed: number; subscriptions: number; reason?: string }>;
+}) {
+  const db = await getMongoDb();
+  if (!db) throw new Error("MongoDB belum dikonfigurasi");
+  await db.collection("push_delivery_history").insertOne({ ...history, createdAt: new Date() });
+}
+
+export async function listPushDeliveryHistory(limit = 12) {
+  const db = await getMongoDb();
+  if (!db) return [];
+  return db.collection("push_delivery_history")
+    .find({}, { projection: { _id: 0 } })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .toArray();
 }
 
 export async function savePushSubscription(

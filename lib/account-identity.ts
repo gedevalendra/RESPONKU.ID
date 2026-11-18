@@ -42,3 +42,12 @@ export async function linkedAccountIds(id: string): Promise<string[]> {
   const aliases = await db.collection("oauth_users").distinct("id", { accountId: id });
   return [id, ...aliases.filter((alias): alias is string => typeof alias === "string")];
 }
+
+export async function linkedOAuthProviders(id: string): Promise<string[]> {
+  const db = await getMongoDb();
+  if (!db) return [];
+  const accounts = await db.collection<{ provider?: string }>("oauth_users")
+    .find({ $or: [{ id }, { accountId: id }] }, { projection: { provider: 1 } })
+    .toArray();
+  return [...new Set(accounts.map((account) => account.provider).filter((provider): provider is string => Boolean(provider)))];
+}

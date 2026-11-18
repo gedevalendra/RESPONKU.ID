@@ -2,7 +2,7 @@
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 import { useState } from "react";
 import type { Profile } from "@/lib/types";
-export default function AccountSettings({ actor }: { actor: Profile }) {
+export default function AccountSettings({ actor, linkedProviders = [] }: { actor: Profile; linkedProviders?: string[] }) {
   const [open, setOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [message, setMessage] = useState("");
@@ -39,6 +39,19 @@ export default function AccountSettings({ actor }: { actor: Profile }) {
           </div>
         ))}
       </dl>
+      <div className="border-t border-rule px-5 py-4 sm:px-6">
+        <h3 className="text-sm font-semibold">Akun terhubung</h3>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {linkedProviders.length > 0 ? linkedProviders.map((provider) => (
+            <span key={provider} className="inline-flex items-center gap-2 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              <i className={`bx ${provider === "google" ? "bxl-google" : "bx-link"}`} aria-hidden="true" />
+              {provider === "google" ? "Google" : provider === "funikin" ? "FunikIn" : provider}
+              <span className="text-xs text-blue-600">Terhubung</span>
+            </span>
+          )) : <span className="text-sm text-mute">Belum ada akun OAuth yang terhubung.</span>}
+        </div>
+        <p className="mt-3 text-xs text-mute">Akun Google akan otomatis terhubung ke FunikIn jika emailnya sudah diverifikasi dan sama.</p>
+      </div>
       <div className="border-t border-rule px-5 py-4 sm:px-6">
         <button type="button" aria-expanded={open} className="inline-flex min-h-10 items-center gap-2 bg-red-50 px-3 text-sm font-medium text-red-700 hover:bg-red-100"
           onClick={() => setOpen(!open)}>

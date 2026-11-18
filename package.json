@@ -5,6 +5,7 @@
   "scripts": {
     "predev": "rm -rf .next",
     "dev": "next dev",
+    "prebuild": "rm -rf .next",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -34,5 +35,8 @@
     "@types/web-push": "^3.6.4",
     "postcss": "^8.4.31",
     "typescript": "^5.5.4"
+  },
+  "allowScripts": {
+    "node@20.20.2": true
   }
 }
