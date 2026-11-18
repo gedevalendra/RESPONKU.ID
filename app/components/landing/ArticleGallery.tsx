@@ -1,30 +1,65 @@
 "use client";
 
-import { Children, useId, useState, type ReactNode } from "react";
+import { Children, useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 export default function ArticleGallery({ children }: { children: ReactNode }) {
-  const [expanded, setExpanded] = useState(false);
   const id = useId();
+  const viewport = useRef<HTMLDivElement>(null);
   const cards = Children.toArray(children);
-  const collapsed = !expanded && cards.length > 2;
+  const [edges, setEdges] = useState({ start: true, end: true });
+
+  function updateEdges() {
+    const track = viewport.current;
+    if (!track) return;
+    const start = track.scrollLeft <= 1;
+    const end = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+    setEdges((previous) => previous.start === start && previous.end === end ? previous : { start, end });
+  }
+
+  useEffect(() => {
+    const track = viewport.current;
+    if (!track) return;
+    const observer = new ResizeObserver(updateEdges);
+    observer.observe(track);
+    updateEdges();
+    return () => observer.disconnect();
+  }, [cards.length]);
+
+  function move(direction: -1 | 1) {
+    const track = viewport.current;
+    const first = track?.children[0];
+    const second = track?.children[1];
+    if (!track || !first || !second) return;
+    const step = second.getBoundingClientRect().left - first.getBoundingClientRect().left;
+    track.scrollBy({ left: step * direction });
+  }
+
+  const arrowClass = "grid size-11 place-items-center border border-rule text-ink hover:bg-gray-100 disabled:opacity-35 disabled:hover:bg-transparent";
 
   return (
-    <div className="relative mt-5">
-      <div id={id} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
+    <div className="mt-5">
+      <div
+        id={id}
+        ref={viewport}
+        onScroll={updateEdges}
+        tabIndex={edges.start && edges.end ? undefined : 0}
+        role="group"
+        aria-label="Slider Jelajahi Artikel"
+        className="article-gallery-track grid snap-x snap-mandatory auto-cols-[100%] grid-flow-col gap-4 overflow-x-auto pb-2 motion-safe:scroll-smooth lg:auto-cols-[calc((100%_-_1rem)/2)]"
+      >
         {cards.map((card, index) => (
-          <div key={index} className={collapsed && index >= 2
-            ? index < 4 ? "min-w-0 max-h-20 overflow-hidden sm:max-h-none sm:overflow-visible" : "hidden min-w-0 sm:block"
-            : "min-w-0"}>
+          <div key={index} className="min-w-0 snap-start">
             {card}
           </div>
         ))}
       </div>
-      {collapsed && (
-        <div className="absolute inset-x-0 bottom-0 flex h-20 items-end justify-center bg-linear-to-b from-transparent to-paper to-75% pb-1 sm:hidden">
-          <button type="button" aria-controls={id} aria-expanded={expanded} onClick={() => setExpanded(true)}
-            className="inline-flex min-h-11 items-center gap-2 bg-gray-800 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2">
-            Selengkapnya
-            <i className="bx bx-chevron-down text-lg" aria-hidden="true" />
+      {!(edges.start && edges.end) && (
+        <div className="mt-2 flex justify-end gap-2">
+          <button type="button" aria-controls={id} aria-label="Artikel sebelumnya" disabled={edges.start} onClick={() => move(-1)} className={arrowClass}>
+            <i className="bx bx-chevron-left text-2xl" aria-hidden="true" />
+          </button>
+          <button type="button" aria-controls={id} aria-label="Artikel berikutnya" disabled={edges.end} onClick={() => move(1)} className={arrowClass}>
+            <i className="bx bx-chevron-right text-2xl" aria-hidden="true" />
           </button>
         </div>
       )}

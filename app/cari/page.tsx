@@ -65,7 +65,6 @@ export default async function SearchPage({
                 <article key={article.id} className="flex items-start gap-4 py-5 sm:gap-5">
                   {article.thumbnailUrl && <Link href={`/artikel/${article.slug}`} tabIndex={-1} aria-hidden="true" className="shrink-0"><img src={article.thumbnailUrl} alt="" loading="lazy" className="h-20 w-24 object-cover sm:h-28 sm:w-40" /></Link>}
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-blue-500">{article.category}</p>
                     <h3 className="mt-1 text-base font-semibold leading-snug sm:text-lg"><Link href={`/artikel/${article.slug}`} className="hover:text-blue-500">{article.title}</Link></h3>
                     <p className="mt-2 hidden text-sm leading-6 text-mute sm:line-clamp-2">{article.dek}</p>
                     <p className="mt-2 text-xs leading-5 text-mute">{article.author} · {article.readTime} menit baca</p>

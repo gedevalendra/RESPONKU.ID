@@ -1,4 +1,6 @@
 "use client";
+
+import BrandLogo from "@/app/components/layout/BrandLogo";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useState } from "react";
@@ -30,7 +32,7 @@ export default function TickerManager({ initial }: { initial: string[] }) {
         <p className="eyebrow">Ticker terkini</p>
         <h2 className="mt-2 font-display text-2xl text-ink">Informasi di bar hitam</h2>
         <p className="mt-2 text-sm leading-6 text-mute">
-          Isi satu informasi per baris. Jika dikosongkan, ResponKu akan menampilkan berita terpopuler dan dapat merangkum judulnya dengan Groq.
+          Isi satu informasi per baris. Jika dikosongkan, <BrandLogo /> akan menampilkan berita terpopuler dan dapat merangkum judulnya dengan Groq.
         </p>
       </div>
       <textarea

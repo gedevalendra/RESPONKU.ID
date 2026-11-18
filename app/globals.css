@@ -22,6 +22,21 @@
   display: none;
 }
 
+.article-gallery-track {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-mute) transparent;
+}
+
+.article-gallery-track::-webkit-scrollbar {
+  display: block;
+  height: 6px;
+}
+
+.article-gallery-track::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--color-mute);
+}
+
 * {
   border-color: var(--color-rule);
 }

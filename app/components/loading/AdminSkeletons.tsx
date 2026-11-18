@@ -218,3 +218,22 @@ export function PopupAdminContent() {
 export function PopupAdminSkeleton() {
   return <Dashboard><PopupAdminContent /></Dashboard>;
 }
+
+export function AdsSkeleton() {
+  return <Dashboard>
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className="border border-rule bg-paper">
+        <div className="border-b border-rule p-5"><Block className="h-6 w-44" /></div>
+        <div className="space-y-4 p-5">
+          <Block className="h-4 w-48 max-w-full" />
+          <Fields heights={["h-10", "h-10", "h-10"]} />
+          <Block className="h-9 w-24" />
+        </div>
+      </div>
+      <div className="space-y-3">
+        <Block className="h-6 w-32" />
+        <Block className="aspect-[3/1] w-full" />
+      </div>
+    </div>
+  </Dashboard>;
+}

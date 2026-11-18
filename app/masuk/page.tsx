@@ -1,3 +1,4 @@
+import BrandLogo from "@/app/components/layout/BrandLogo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import LoginForm from "../components/auth/LoginForm";
@@ -13,7 +14,7 @@ export default function LoginPage() {
     <div className="wrap flex justify-center py-8 sm:py-14">
       <div className="w-full max-w-2xl border-t-4 border-ink bg-white px-5 py-7 sm:px-9 sm:py-9">
         <h1 className="font-display text-3xl leading-tight sm:text-4xl">
-          Masuk ke ResponKu
+          Masuk ke <BrandLogo />
         </h1>
         <p className="mt-3 text-sm leading-6 text-mute">
           Ikuti kabar terbaru, sampaikan pandangan, dan kelola tulisanmu dalam satu akun.

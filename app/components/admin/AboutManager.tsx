@@ -1,4 +1,6 @@
 "use client";
+
+import BrandLogo from "@/app/components/layout/BrandLogo";
 import { AboutAdminContent } from "@/app/components/loading/AdminSkeletons";
 import { Skeleton } from "@/app/components/loading/PageSkeleton";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
@@ -114,7 +116,7 @@ export default function AboutManager() {
         <div>
           <p className="eyebrow">CMS halaman statis</p>
           <h2 className="mt-2 font-display text-display-md">
-            Edit Tentang ResponKu
+            Edit Tentang <BrandLogo />
           </h2>
           <p className="mt-2 text-sm text-mute">
             Tambah, hapus, dan ubah urutan bagian tanpa menyentuh kode.

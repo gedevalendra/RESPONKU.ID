@@ -501,6 +501,16 @@ export async function saveAboutPage(page: AboutPage): Promise<AboutPage> {
   return value;
 }
 
+export async function countRecentArticleViews(since: Date) {
+  const db = await getMongoDb();
+  if (!db) return new Map<string, number>();
+  const counts = await db.collection("article_events").aggregate<{ _id: string; count: number }>([
+    { $match: { type: "view", createdAt: { $gte: since } } },
+    { $group: { _id: "$articleSlug", count: { $sum: 1 } } },
+  ]).toArray();
+  return new Map(counts.map(({ _id, count }) => [_id, count]));
+}
+
 export async function recordArticleView(
   slug: string,
   metadata: { ipHash?: string; userAgent?: string },

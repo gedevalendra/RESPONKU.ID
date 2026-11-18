@@ -1,3 +1,4 @@
+import BrandLogo from "@/app/components/layout/BrandLogo";
 import ArticleCard from "@/app/components/landing/ArticleCard";
 import { compareArticlePopularity, getPublishedArticles } from "@/lib/data";
 
@@ -15,7 +16,7 @@ export default async function ArticlesPage({
       : articles;
   return (
     <div className="wrap py-10 sm:py-14">
-      <p className="eyebrow">Arsip ResponKu</p>
+      <p className="eyebrow">Arsip <BrandLogo /></p>
       <h1 className="mt-2 font-display text-display-lg">
         {searchParams.sort === "popular"
           ? "Artikel terpopuler"

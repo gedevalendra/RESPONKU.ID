@@ -14,13 +14,40 @@ export function HomeSkeleton() {
         <div className="lg:col-span-8">
           <Block className="h-7 w-32" />
           <Rows count={1} image />
-          <div className="mt-10 grid grid-cols-2 gap-4 border-t border-rule pt-6 lg:grid-cols-3">
-            {[0, 1, 2].map((item) => <Block key={item} className="aspect-[4/3]" />)}
+          <div className="mt-10 border-t border-rule pt-6">
+            <Block className="h-7 w-44" />
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              {[0, 1].map((item) => (
+                <div key={item} className={`space-y-3 border border-rule p-2 ${item === 1 ? "hidden lg:block" : ""}`}>
+                  <Block className="aspect-[16/10]" />
+                  <div className="space-y-3 px-3 py-2">
+                    <Block className="h-5 w-4/5" /><Block className="h-4 w-3/5" /><Block className="mt-4 h-3 w-36" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         <div className="hidden lg:col-span-4 lg:block">
           <Block className="h-11 w-full" />
           <Rows count={3} />
+        </div>
+      </div>
+      <div className="border-t border-rule">
+        <div className="wrap grid gap-8 py-8 sm:py-10 xl:grid-cols-12 xl:gap-10">
+          <div className="xl:col-span-8">
+            <Block className="mb-4 h-7 w-40" />
+            <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+              <Block className="aspect-square self-start rounded-md" />
+              <div className="grid auto-rows-min grid-cols-2 gap-3">
+                {[0, 1, 2, 3, 4, 5].map((item) => <Block key={item} className="aspect-[3/2] rounded-md" />)}
+              </div>
+            </div>
+          </div>
+          <div className="xl:col-span-4">
+            <Block className="h-6 w-40" />
+            <Rows count={3} />
+          </div>
         </div>
       </div>
     </Skeleton>
@@ -181,13 +208,21 @@ export function MyArticlesSkeleton() {
 
 export function SettingsSkeleton() {
   return (
-    <Skeleton className="wrap py-8">
-      <div className="space-y-5 bg-paper p-6">
-        <Block className="h-8 w-44" />
-        <Fields heights={["h-4", "h-4", "h-4", "h-4", "h-4", "h-4"]} />
-        <Block className="h-4 w-24" />
+    <Skeleton className="wrap py-8 sm:py-12">
+      <div className="mb-6 space-y-3 border-b border-rule pb-5 sm:mb-8">
+        <Block className="h-4 w-32" />
+        <Block className="h-9 w-56 max-w-full" />
       </div>
-      <div className="mt-8 bg-paper p-6"><Block className="h-6 w-28" /><Rows count={2} /></div>
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="border border-rule bg-paper">
+          <div className="border-b border-rule px-5 py-4"><Block className="h-6 w-32" /></div>
+          <div className="px-5"><Rows count={4} /></div>
+        </div>
+        <div className="border border-rule bg-paper">
+          <div className="border-b border-rule px-5 py-4"><Block className="h-6 w-28" /></div>
+          <div className="p-5"><Block className="h-11 w-full" /><Rows count={3} actions /></div>
+        </div>
+      </div>
     </Skeleton>
   );
 }

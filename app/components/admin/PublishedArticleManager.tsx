@@ -6,10 +6,11 @@ import { confirmAction, PopupStatus } from "@/app/components/layout/ActionFeedba
 import type { Article } from "@/lib/types";
 
 type PublishedArticle = Pick<Article, "id" | "slug" | "title" | "author" | "views" | "promoted">;
-type PublicationAction = { action: "takedown"; note: string } | { action: "promote"; promoted: boolean };
+type PublicationAction = { action: "takedown"; note: string } | { action: "promote"; promoted: boolean } | { action: "pin"; pinned: boolean };
 
-export default function PublishedArticleManager({ articles }: { articles: PublishedArticle[] }) {
+export default function PublishedArticleManager({ articles, pinnedId, canDelete }: { articles: PublishedArticle[]; pinnedId: string | null; canDelete: boolean }) {
   const [items, setItems] = useState(articles);
+  const [pinnedArticleId, setPinnedArticleId] = useState(pinnedId);
   const [query, setQuery] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -36,7 +37,11 @@ export default function PublishedArticleManager({ articles }: { articles: Publis
         const data = await response.json();
         throw new Error(data.error || "Perubahan gagal disimpan.");
       }
-      if (action?.action === "promote") {
+      if (action?.action === "pin") {
+        const data = await response.json();
+        setPinnedArticleId(data.pinnedId);
+        setMessage(action.pinned ? "Artikel disematkan sebagai berita utama." : "Sematan berita utama dilepas.");
+      } else if (action?.action === "promote") {
         setItems((current) => current.map((item) => item.id === article.id ? { ...item, promoted: action.promoted } : item));
         setMessage(action.promoted ? "Artikel diprioritaskan di Terpopuler." : "Prioritas artikel dihentikan.");
       } else {
@@ -72,16 +77,22 @@ export default function PublishedArticleManager({ articles }: { articles: Publis
           <li key={article.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
             <div className="min-w-0">
               <Link href={`/artikel/${encodeURIComponent(article.slug)}`} className="break-words font-semibold hover:underline">{article.title}</Link>
-              <p className="mt-1 text-sm text-mute">{article.author} · {article.views.toLocaleString("id-ID")} tayangan{article.promoted && " · Diprioritaskan"}</p>
+              <p className="mt-1 text-sm text-mute">{article.author} · {article.views.toLocaleString("id-ID")} tayangan{article.promoted && " · Diprioritaskan"}{pinnedArticleId === article.id && " · Berita utama"}</p>
             </div>
             <div className="flex flex-wrap gap-2 text-sm">
+              <button type="button" disabled={busy} aria-pressed={pinnedArticleId === article.id}
+                onClick={() => void apply(article, { action: "pin", pinned: pinnedArticleId !== article.id })}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-rule px-3 py-2 hover:bg-gray-50 aria-pressed:bg-blue-50 aria-pressed:text-blue-700 disabled:opacity-50">
+                <i className="bx bx-pin" aria-hidden="true" />
+                {pinnedArticleId === article.id ? "Lepas sematan" : "Sematkan di beranda"}
+              </button>
               <button type="button" disabled={busy} onClick={() => void apply(article, { action: "promote", promoted: !article.promoted })}
                 className="rounded-lg border border-rule px-3 py-2 hover:bg-gray-50 disabled:opacity-50">{article.promoted ? "Hentikan promosi" : "Promosikan"}</button>
               <button type="button" disabled={busy} onClick={() => openTakedown(article)}
                 className="rounded-lg border border-rule px-3 py-2 hover:bg-gray-50 disabled:opacity-50">Takedown</button>
-              <button type="button" disabled={busy} onClick={async () => {
+              {canDelete && <button type="button" disabled={busy} onClick={async () => {
                 if (await confirmAction(`Hapus “${article.title}” secara permanen?`, "Hapus")) await apply(article);
-              }} className="rounded-lg px-3 py-2 text-red-700 hover:bg-red-50 disabled:opacity-50">Hapus</button>
+              }} className="rounded-lg px-3 py-2 text-red-700 hover:bg-red-50 disabled:opacity-50">Hapus</button>}
             </div>
           </li>
         ))}

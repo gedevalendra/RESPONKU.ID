@@ -18,7 +18,8 @@ export default function AccountMenu({ actor, unreadCount = 0 }: { actor: Profile
         {unreadCount > 0 && <span className="grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-blue-600 px-1 font-sans text-[10px] leading-none tabular-nums text-white" aria-label={`${unreadCount} notifikasi belum dibaca`}>{unreadCount > 99 ? "99+" : unreadCount}</span>}
         <i className="bx bx-chevron-down shrink-0 text-base" aria-hidden="true" />
       </button>
-      <div className="invisible absolute right-0 top-full z-50 w-60 translate-y-2 bg-white p-2 opacity-0 shadow-xl ring-1 ring-gray-100 transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+      <div className="invisible absolute right-0 top-full z-50 mt-2 w-60 translate-y-2 bg-white p-2 opacity-0 shadow-xl ring-1 ring-gray-100 transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 before:absolute before:inset-x-0 before:-top-2 before:h-2 before:content-['']">
+        <span aria-hidden="true" className="pointer-events-none absolute right-2 top-0 size-2.5 -translate-y-1/2 rotate-45 border-l border-t border-gray-100 bg-white" />
         <p className="border-b border-gray-100 px-3 pb-2 pt-2 font-mono text-[10px] normal-case tracking-normal text-gray-500">
           {actor.email}
         </p>

@@ -83,7 +83,7 @@ export default async function Page({
           {visibleArticles.map((article) => (
             <article key={article.id} className="flex flex-wrap items-center justify-between gap-4 py-5">
               <div>
-                <p className="eyebrow">Terbit · {article.category}</p>
+                <p className="eyebrow">Terbit</p>
                 <h3 className="mt-1 font-display text-xl">
                   <Link href={`/artikel/${article.slug}`} className="hover:text-blue-500">{article.title}</Link>
                 </h3>

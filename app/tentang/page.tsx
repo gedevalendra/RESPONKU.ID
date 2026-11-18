@@ -1,3 +1,4 @@
+import BrandLogo from "@/app/components/layout/BrandLogo";
 import { getAboutPage } from "@/lib/db";
 import type { AboutSection } from "@/lib/about";
 
@@ -63,7 +64,7 @@ export default async function AboutPage() {
         </main>
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <div className="bg-gray-800 p-7 text-white sm:p-8">
-            <p className="eyebrow text-gray-300">ResponKu</p>
+            <BrandLogo light className="h-7" />
             <p className="mt-4 font-display text-3xl leading-tight">
               {page.sidebarTitle}
             </p>
@@ -105,7 +106,7 @@ export default async function AboutPage() {
       </div>
       <footer className="mt-20 border-t border-rule pt-8 text-sm leading-relaxed text-mute">
         <p>
-          ResponKu — bagian dari FunikIn. Didirikan oleh Gede Valendra pada 17
+          <BrandLogo /> — bagian dari FunikIn. Didirikan oleh Gede Valendra pada 17
           November 2026.
         </p>
         <p className="mt-2">

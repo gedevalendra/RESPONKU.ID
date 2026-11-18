@@ -1,23 +1,8 @@
+import BrandLogo from "@/app/components/layout/BrandLogo";
 import Link from "next/link";
 import { CookieSettingsButton } from "./CookieConsent";
-import { categories } from "@/lib/content";
-
-const categorySlug: Record<string, string> = {
-  Ekonomi: "ekonomi",
-  Teknologi: "teknologi",
-  Politik: "politik",
-  Olahraga: "olahraga",
-  Budaya: "budaya",
-};
 
 const columns = [
-  {
-    title: "Kanal",
-    links: categories.map((c) => ({
-      label: c,
-      href: `/kategori/${categorySlug[c]}`,
-    })),
-  },
   {
     title: "Redaksi",
     links: [
@@ -31,6 +16,7 @@ const columns = [
     title: "Layanan",
     links: [
       { label: "FAQ & Bantuan", href: "/faq" },
+      { label: "Dukungan", href: "/dukungan" },
       { label: "Berlangganan", href: "/berlangganan" },
       { label: "Iklan", href: "/iklan" },
       { label: "Indeks Berita", href: "/indeks" },
@@ -42,11 +28,9 @@ const columns = [
 export default function Footer() {
   return (
     <footer className="rule-thick border-t border-rule">
-      <div className="wrap grid grid-cols-2 gap-y-10 py-14 sm:grid-cols-4">
+      <div className="wrap grid grid-cols-2 gap-y-10 py-14 sm:grid-cols-3">
         <div className="col-span-2 sm:col-span-1">
-          <span className="font-display text-3xl">
-            ResponKu<span className="text-mute">.</span>
-          </span>
+          <BrandLogo className="h-9" />
           <p className="mt-3 max-w-[22ch] text-sm text-mute">
             Kabar hari ini, ditulis dengan jelas.
           </p>

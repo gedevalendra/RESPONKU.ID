@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Article } from "@/lib/types";
 import { formatDate } from "@/lib/content";
-import CategoryBadge from "./CategoryBadge";
 
 export default function ArticleCard({
   article,
@@ -21,7 +20,6 @@ export default function ArticleCard({
             ) : (
               <i className="bx bx-news absolute bottom-3 right-3 text-5xl text-slate-400" aria-hidden="true" />
             )}
-            <span className="absolute left-3 top-3 bg-white px-2.5 py-1 text-xs font-medium text-ink">{article.category}</span>
           </div>
           <div className="flex flex-1 flex-col px-3 pb-3 pt-3">
             <h3 className="line-clamp-4 break-words font-display text-base leading-snug group-hover:underline lg:text-xl group-hover:underline-offset-4">{article.title}</h3>
@@ -48,8 +46,7 @@ export default function ArticleCard({
           {article.thumbnailUrl && <img src={article.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
         </Link>
         <div className="flex flex-1 flex-col pt-4">
-          <CategoryBadge category={article.category} />
-          <h3 className="mt-2 font-display text-lg leading-snug">
+          <h3 className="font-display text-lg leading-snug">
             <Link
               href={`/artikel/${article.slug}`}
               className="decoration-1 underline-offset-4 group-hover:underline"
@@ -77,8 +74,7 @@ export default function ArticleCard({
         {article.thumbnailUrl && <img src={article.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
       </Link>
       <div className="flex flex-1 flex-col justify-center">
-        <CategoryBadge category={article.category} />
-        <h3 className="mt-1.5 font-display text-lg leading-snug sm:text-xl">
+        <h3 className="font-display text-lg leading-snug sm:text-xl">
           <Link
             href={`/artikel/${article.slug}`}
             className="decoration-1 underline-offset-4 group-hover:underline"

@@ -1,4 +1,6 @@
 "use client";
+
+import BrandLogo from "@/app/components/layout/BrandLogo";
 import { PopupAdminContent } from "@/app/components/loading/AdminSkeletons";
 import { Skeleton } from "@/app/components/loading/PageSkeleton";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
@@ -31,7 +33,7 @@ function PopupContent({ popup, onClose }: { popup: Popup; onClose?: () => void }
     <>
       <div className="flex items-start justify-between gap-3">
         <h2 id={onClose ? "welcome-popup-title" : undefined} className="min-w-0 break-words text-xl font-semibold">
-          {popup.title || (onClose ? "Informasi ResponKu" : "Judul popup")}
+          {popup.title || (onClose ? <>Informasi <BrandLogo /></> : "Judul popup")}
         </h2>
         <button type="button" onClick={onClose} disabled={!onClose} aria-label="Tutup"
           className="grid size-10 shrink-0 place-items-center rounded-full border-0 outline-none enabled:hover:bg-gray-100 focus-visible:bg-gray-200">

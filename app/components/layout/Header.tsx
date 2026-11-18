@@ -1,3 +1,4 @@
+import BrandLogo from "@/app/components/layout/BrandLogo";
 import Link from "next/link";
 import TickerBar from "../../components/landing/TickerBar";
 import MobileNav from "./MobileNav";
@@ -30,9 +31,9 @@ export default async function Header() {
       <div className="wrap flex items-center gap-5 border-b border-gray-100 py-4 sm:py-5 lg:gap-8">
         <Link
           href="/"
-          className="font-display text-4xl tracking-tight sm:text-5xl"
+          className="shrink-0"
         >
-          ResponKu
+          <BrandLogo className="block h-10 sm:h-12" />
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-5 xl:gap-8 lg:flex">
@@ -65,6 +66,12 @@ export default async function Header() {
             >
               Tentang
             </Link>
+            <Link
+              href="/dukungan"
+              className="whitespace-nowrap font-mono text-xs uppercase tracking-widest2 text-gray-500 hover:text-blue-500"
+            >
+              Dukungan
+            </Link>
             {actor ? (
               <AccountMenu actor={actor} unreadCount={unreadCount} />
             ) : (
@@ -96,7 +103,6 @@ export default async function Header() {
             unreadCount={unreadCount}
             authenticated={Boolean(actor)}
             role={actor?.role}
-            articleCategories={articleCategories}
           />
         </div>
       </div>

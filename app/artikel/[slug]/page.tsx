@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { articleImageUrl, articleUrl, publicationDate, siteOrigin } from "@/lib/seo";
+import { articleImageUrl, articleUrl, publicationDate, siteOrganization, siteOrigin, websiteCover } from "@/lib/seo";
 import { getRelated, formatDate } from "@/lib/data";
-import CategoryBadge from "../../components/landing/CategoryBadge";
 import ArticleCard from "../../components/landing/ArticleCard";
 import Sidebar from "../../components/layout/Sidebar";
 import ArticleEngagement from "../../components/article/ArticleEngagement";
-import { getArticleFromDatabase, getReactionSummary } from "@/lib/db";
+import { getArticleFromDatabase } from "@/lib/db";
 import ArticleBody from "@/app/components/article/ArticleBody";
 import ShareArticleButton from "@/app/components/article/ShareArticleButton";
 import { publicProfile } from "@/lib/community";
@@ -43,7 +42,13 @@ export async function generateMetadata({
       title: article.title,
       description: article.dek,
       publishedTime: publicationDate(article)?.toISOString(),
-      images: image ? [image] : undefined,
+      images: image ? [image] : [websiteCover],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.dek,
+      images: image ? [image] : [websiteCover],
     },
   };
 }
@@ -56,10 +61,7 @@ export default async function ArticlePage({
   const article = await getPublicArticle(params.slug);
   if (!article) notFound();
 
-  const [related, reactions] = await Promise.all([
-    getRelated(article, 3),
-    getReactionSummary(article.slug).catch(() => null),
-  ]);
+  const related = await getRelated(article, 3);
   const profileDb = getSupabaseAdmin();
   type AuthorProfile = {
     id: string;
@@ -119,7 +121,7 @@ export default async function ArticlePage({
       name: article.author,
       url: authorProfileHref ? `${siteOrigin}/akun/${encodeURIComponent(authorProfileHref)}` : undefined,
     },
-    publisher: { "@type": "Organization", name: "ResponKu", url: siteOrigin },
+    publisher: siteOrganization,
     articleSection: article.category,
     inLanguage: "id",
   };
@@ -143,7 +145,6 @@ export default async function ArticlePage({
             Breaking
           </span>
         )}
-        <CategoryBadge category={article.category} />
         <h1 className="mt-3 max-w-5xl font-display text-3xl font-bold leading-[1.1] sm:text-4xl lg:text-5xl">
           {article.title}
         </h1>
@@ -171,8 +172,7 @@ export default async function ArticlePage({
             {authorProfileHref && <a href={`/akun/${authorProfileHref}`} className="mt-3 inline-flex items-center text-sm font-medium text-blue-500">Lihat profil <i className="bx bx-right-arrow-alt ml-1 text-base" aria-hidden="true" /></a>}
           </div>
         </div>
-          <ShareArticleButton title={article.title} slug={article.slug} author={article.author}
-            views={article.views} likes={reactions?.like ?? null} shares={article.shares ?? 0} />
+          <ShareArticleButton title={article.title} slug={article.slug} />
         </div>
       </div>
 

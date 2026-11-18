@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActor, isStaff } from "@/lib/authz";
 import { communityDb } from "@/lib/community";
 import { z } from "zod";
+import { linkedAccountIds } from "@/lib/account-identity";
 import { findManagedUser } from "@/lib/admin-users";
 
 export async function GET(request: Request) {
@@ -10,11 +11,16 @@ export async function GET(request: Request) {
     const actor = await getActor();
     const q = (new URL(request.url).searchParams.get("q") || "").slice(0, 100).toLowerCase();
     const all = await db.collection("organizations").find({}).toArray();
-    const organizations = all.filter((org) => isStaff(actor?.role) || org.verified || org.ownerId === actor?.id)
+    const accountIds = actor ? await linkedAccountIds(actor.id) : [];
+    const organizations = all.filter((org) => isStaff(actor?.role) || org.verified || accountIds.includes(org.ownerId))
       .filter((org) => String(org.name).toLowerCase().includes(q));
-    const managed = all.filter((org) => org.ownerId === actor?.id && org.verified).map((org) => org.id);
-    const members = actor ? await db.collection("organization_members").find(isStaff(actor.role) ? {} : { $or: [{ userId: actor.id }, { organizationId: { $in: managed } }] }).toArray() : [];
-    return NextResponse.json({ organizations, members });
+    const ownedOrganizationIds = all.filter((org) => accountIds.includes(org.ownerId)).map((org) => org.id);
+    const managedOrganizationIds = all.filter((org) => org.verified && (isStaff(actor?.role) || accountIds.includes(org.ownerId))).map((org) => org.id);
+    const members = actor ? await db.collection("organization_members")
+      .find({ $or: [{ userId: { $in: accountIds } }, { organizationId: { $in: managedOrganizationIds } }] }).toArray() : [];
+    const memberships = members.filter((member) => accountIds.includes(member.userId))
+      .map(({ organizationId, status }) => ({ organizationId, status }));
+    return NextResponse.json({ organizations, members, memberships, ownedOrganizationIds, managedOrganizationIds });
   } catch { return NextResponse.json({ error: "Organisasi gagal dimuat" }, { status: 503 }); }
 }
 
@@ -56,10 +62,25 @@ export async function POST(request: Request) {
     } else if (value.action === "join" && value.id) {
       const org = await db.collection("organizations").findOne({ id: value.id, verified: true });
       if (!org) return NextResponse.json({ error: "Organisasi belum diverifikasi" }, { status: 422 });
-      await db.collection("organization_members").updateOne({ userId: actor.id, organizationId: value.id }, { $set: { displayName: actor.displayName, status: "pending" } }, { upsert: true });
+      const accountIds = await linkedAccountIds(actor.id);
+      const members = db.collection("organization_members");
+      if (accountIds.includes(org.ownerId) || await members.findOne({
+        organizationId: value.id,
+        userId: { $in: accountIds },
+        status: { $in: ["approved", "pending"] },
+      })) return NextResponse.json({ ok: true });
+
+      await members.updateOne(
+        { userId: actor.id, organizationId: value.id },
+        [{ $set: {
+          status: { $cond: [{ $in: ["$status", ["approved", "pending"]] }, "$status", "pending"] },
+          displayName: { $ifNull: ["$displayName", { $literal: actor.displayName }] },
+        } }],
+        { upsert: true },
+      );
     } else if (value.action === "reviewMember" && value.id && value.userId) {
       const org = await db.collection("organizations").findOne({ id: value.id, verified: true });
-      if (!org || (!isStaff(actor.role) && org.ownerId !== actor.id)) return NextResponse.json({ error: "Tidak berwenang" }, { status: 403 });
+      if (!org || (!isStaff(actor.role) && !(await linkedAccountIds(actor.id)).includes(org.ownerId))) return NextResponse.json({ error: "Tidak berwenang" }, { status: 403 });
       await db.collection("organization_members").updateOne({ organizationId: value.id, userId: value.userId }, { $set: { status: value.approved ? "approved" : "rejected" } });
     } else if (value.action === "reviewOrganization" && value.id && isStaff(actor.role)) {
       await db.collection("organizations").updateOne({ id: value.id }, { $set: { verified: Boolean(value.approved), ...(value.ownerId ? { ownerId: value.ownerId } : {}) } });

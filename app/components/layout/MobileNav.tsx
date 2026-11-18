@@ -1,5 +1,7 @@
 "use client";
 
+import BrandLogo from "@/app/components/layout/BrandLogo";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
@@ -13,12 +15,10 @@ function Icon({ name }: { name: "home" | "search" | "bell" | "user" }) {
 export default function MobileNav({
   authenticated = false,
   unreadCount = 0,
-  articleCategories = [],
   role,
 }: {
   authenticated?: boolean;
   unreadCount?: number;
-  articleCategories?: string[];
   role?: string;
 }) {
   const pathname = usePathname();
@@ -79,14 +79,15 @@ export default function MobileNav({
     ["/artikel?sort=popular", "Terpopuler", "bx-trending-up"],
     ["/tentang", "Tentang ResponKu", "bx-info-circle"],
     ["/faq", "FAQ & bantuan", "bx-help-circle"],
+    ["/dukungan", "Dukungan", "bx-coin"],
   ];
   const accountItems = [
     [authenticated ? "/akun/artikel" : "/masuk?next=/akun/artikel", "Buat artikel", "bx-edit"],
     ...(authenticated ? [["/akun#riwayat", "Riwayat publish", "bx-history"], ["/akun/pengaturan", "Pengaturan akun", "bx-cog"]] : []),
+    ...(role === "admin" || role === "superadmin"
+      ? [[role === "superadmin" ? "/superadmin" : "/admin", "Panel admin", "bx-grid-alt"]]
+      : []),
   ];
-  const managementItems = role === "admin" || role === "superadmin"
-    ? [[role === "superadmin" ? "/superadmin" : "/admin", "Panel admin", "bx-grid-alt"]]
-    : [];
   const items = [
     { href: "/", label: "Beranda", icon: "home" as const },
     { href: "/cari", label: "Cari", icon: "search" as const },
@@ -163,24 +164,7 @@ export default function MobileNav({
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
             <MenuGroup title="Jelajahi" items={exploreItems} onNavigate={closeMenu} />
-            <MenuGroup title="Akun & tulisan" items={accountItems} onNavigate={closeMenu} />
-            {managementItems.length > 0 && (
-              <MenuGroup title="Pengelolaan" items={managementItems} onNavigate={closeMenu} />
-            )}
-
-            {articleCategories.length > 0 && (
-              <div className="border-t border-gray-200 py-4">
-                <h3 className="mb-3 font-mono text-[11px] uppercase tracking-widest text-mute">Kategori artikel</h3>
-                <div className="flex flex-wrap gap-2">
-                  {articleCategories.map((category) => (
-                    <Link key={category} href={`/kategori/${encodeURIComponent(category.toLowerCase())}`} onClick={closeMenu} className="bg-gray-800/5 px-3 py-2 text-sm transition-colors hover:bg-gray-800/10">
-                      {category}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
+            <MenuGroup title="Akun" items={accountItems} onNavigate={closeMenu} />
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-white px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 text-center">
@@ -212,7 +196,7 @@ function MenuGroup({
         {items.map(([href, label, icon]) => (
           <Link key={href} href={href} onClick={onNavigate} className="flex min-h-14 items-center gap-3 px-3 py-3 text-sm transition-colors hover:bg-gray-800/5">
             <i className={`bx ${icon} text-xl text-gray-800`} aria-hidden="true" />
-            <span>{label}</span>
+            <span>{href === "/tentang" ? <>Tentang <BrandLogo /></> : label}</span>
           </Link>
         ))}
       </div>

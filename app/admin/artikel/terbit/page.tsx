@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import DashboardShell from "@/app/components/dashboard/DashboardShell";
 import PublishedArticleManager from "@/app/components/admin/PublishedArticleManager";
-import { getActor } from "@/lib/authz";
+import { getPinnedArticleId } from "@/lib/homepage-pin";
+import { getActor, isStaff } from "@/lib/authz";
 import { listArticlesFromDatabase } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -9,13 +10,13 @@ export const dynamic = "force-dynamic";
 export default async function PublishedArticlesPage() {
   const actor = await getActor();
   if (!actor) redirect("/masuk?next=/admin/artikel/terbit");
-  if (actor.role !== "admin") redirect("/?error=forbidden");
-  const articles = await listArticlesFromDatabase({ status: "published" });
+  if (!isStaff(actor.role)) redirect("/?error=forbidden");
+  const [articles, pinnedId] = await Promise.all([listArticlesFromDatabase({ status: "published" }), getPinnedArticleId()]);
 
   return (
-    <DashboardShell role="admin" breadcrumb="Artikel terbit" title="Artikel terbit"
+    <DashboardShell role={actor.role === "superadmin" ? "superadmin" : "admin"} breadcrumb="Artikel terbit" title="Artikel terbit"
     >
-      <PublishedArticleManager articles={articles.map(({ id, slug, title, author, views, promoted }) => ({
+      <PublishedArticleManager pinnedId={pinnedId} canDelete={actor.role === "admin"} articles={articles.map(({ id, slug, title, author, views, promoted }) => ({
         id, slug, title, author, views, promoted,
       }))} />
     </DashboardShell>

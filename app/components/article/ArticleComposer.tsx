@@ -1,4 +1,6 @@
 "use client";
+
+import BrandLogo from "@/app/components/layout/BrandLogo";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -331,7 +333,7 @@ export default function ArticleComposer({
           <h2 className="font-display text-3xl">{headline}</h2>
           <p className="text-sm leading-6 text-mute">
             {busy ? "Artikel sedang diproses. Hasilnya akan tampil di sini."
-              : published ? "Artikelmu sudah bisa dibaca di ResponKu."
+              : published ? <>Artikelmu sudah bisa dibaca di <BrandLogo />.</>
               : rejected ? "Lihat riwayat pengajuan untuk memeriksa status artikel."
               : "Pantau hasil review di Kiriman saya."}
           </p>

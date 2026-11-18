@@ -1,5 +1,6 @@
+import BrandLogo from "@/app/components/layout/BrandLogo";
 export default function TickerBar({ headlines }: { headlines: string[] }) {
-  const items = headlines.length > 0 ? headlines : ["ResponKu — berita terbaru dan suara publik"];
+  const items = headlines.length > 0 ? headlines : ["berita terbaru dan suara publik"];
   // duplicate once so the marquee loops seamlessly at -50%
   const loop = [...items, ...items];
 
@@ -17,7 +18,7 @@ export default function TickerBar({ headlines }: { headlines: string[] }) {
                 className="flex items-center whitespace-nowrap font-mono text-xs"
               >
                 <span className="mx-4 text-paper/40">·</span>
-                {headline}
+                {headlines.length === 0 && <><BrandLogo light /> <span className="mx-2">—</span></>}{headline}
               </span>
             ))}
           </div>
