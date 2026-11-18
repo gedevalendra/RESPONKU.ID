@@ -81,7 +81,7 @@ export default function ArticleEngagement({
   const [comments, setComments] = useState<Comment[]>([]);
   const pendingVotes = useRef(new Set<string>());
   const [visibleCount, setVisibleCount] = useState(4);
-  const [replyCounts, setReplyCounts] = useState<Record<string, number>>({});
+  const [expandedThreads, setExpandedThreads] = useState<Record<string, boolean>>({});
   const [reactions, setReactions] = useState(initialReactions);
   const [articleReaction, setArticleReaction] = useState<keyof ReactionSummary | null>(null);
   const [reactionBusy, setReactionBusy] = useState(false);
@@ -255,9 +255,25 @@ export default function ArticleEngagement({
     }
   }
 
-  function renderComment(comment: Comment, depth = 0): ReactNode {
-    const replies = comments.filter((item) => item.parentId === comment.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    const limit = replyCounts[comment.id] || 4;
+  function descendantReplies(parentId: string): Comment[] {
+    const result: Comment[] = [];
+    const append = (id: string) => {
+      comments
+        .filter((item) => item.parentId === id)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .forEach((reply) => {
+          result.push(reply);
+          append(reply.id);
+        });
+    };
+    append(parentId);
+    return result;
+  }
+
+  function renderComment(comment: Comment, depth = 0, visibleReplies?: Set<string>): ReactNode {
+    const replies = comments
+      .filter((item) => item.parentId === comment.id && (!visibleReplies || visibleReplies.has(item.id)))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const roles = { reader: "Pembaca", author: "Penulis", admin: "Admin", superadmin: "Superadmin" };
     return <article key={comment.id} className="comment-node relative pt-5">
       <div className="flex gap-3">
@@ -275,8 +291,7 @@ export default function ArticleEngagement({
         </div>
       </div>
       {replies.length > 0 && <div className={`comment-children ${depth === 0 ? "comment-indent" : depth === 1 ? "comment-indent-desktop" : ""}`}>
-        {replies.slice(0, limit).map((reply) => renderComment(reply, depth + 1))}
-        {replies.length > limit && <button type="button" onClick={() => setReplyCounts((counts) => ({ ...counts, [comment.id]: limit + 4 }))} className="relative z-10 my-3 ml-12 rounded-lg bg-white px-3 py-2 text-xs font-medium text-blue-700">Lihat balasan lain ({replies.length - limit})</button>}
+        {replies.map((reply) => renderComment(reply, depth + 1, visibleReplies))}
       </div>}
     </article>;
   }
@@ -362,7 +377,15 @@ export default function ArticleEngagement({
           </p>
         ) : (
           <>
-            {commentThreads.slice(0, visibleCount).map(({ comment }) => renderComment(comment))}
+            {commentThreads.slice(0, visibleCount).map(({ comment }) => {
+              const allReplies = descendantReplies(comment.id);
+              const expanded = Boolean(expandedThreads[comment.id]);
+              const visibleReplies = new Set((expanded ? allReplies : allReplies.slice(0, 3)).map((reply) => reply.id));
+              return <div key={comment.id}>
+                {renderComment(comment, 0, visibleReplies)}
+                {!expanded && allReplies.length > 3 && <button type="button" onClick={() => setExpandedThreads((threads) => ({ ...threads, [comment.id]: true }))} className="mb-5 ml-12 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-gray-800 hover:bg-gray-100"><i className="bx bx-message-rounded-dots text-lg" aria-hidden="true" />Lihat semua balasan ({allReplies.length})</button>}
+              </div>;
+            })}
             {commentThreads.length > visibleCount && <button type="button" onClick={() => setVisibleCount((count) => count + 4)} className="my-4 rounded-xl bg-gray-100 px-5 py-3 text-sm font-medium">Lihat komentar lain ({commentThreads.length - visibleCount})</button>}
           </>
         )}
