@@ -10,7 +10,17 @@ export async function communityDb() {
 
 export async function publicProfile(id: string) {
   const db = await communityDb();
-  const oauth = await db.collection("oauth_users").findOne({ $or: [{ id }, { username: id }] });
+  let oauth = await db.collection("oauth_users").findOne({ $or: [{ id }, { username: id }] });
+  const linkedId = oauth?.accountId;
+  if (linkedId) {
+    if (/^[0-9a-f-]{36}$/i.test(linkedId)) {
+      id = linkedId;
+      oauth = null;
+    } else {
+      const canonical = await db.collection("oauth_users").findOne({ id: linkedId, verifiedEmail: oauth?.verifiedEmail });
+      if (canonical) oauth = canonical;
+    }
+  }
   let profile = oauth ? {
     id: String(oauth.id), displayName: String(oauth.displayName),
     username: String(oauth.username || ""), avatarUrl: String(oauth.avatarUrl || ""),

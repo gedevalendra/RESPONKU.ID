@@ -36,17 +36,18 @@ export async function GET() {
     organizations: organizations.map((org) => ({ id: org.id, name: org.name })),
     users: [
       ...profiles.map((user) => ({ id: String(user.id), email: String(user.email), display_name: String(user.display_name), role: String(user.role), created_at: user.created_at, source: "supabase" })),
-      ...oauthUsers.map((user) => ({
+      ...oauthUsers.filter((user) => !user.accountId).map((user) => ({
         id: user.id,
         email: user.email,
         display_name: user.displayName,
         role: user.role,
         created_at: user.createdAt,
         source: "oauth",
+        verifiedEmail: user.verifiedEmail,
       })),
     ].map((user) => ({
       ...user,
-      role: overrides.find((override) => override.userId === user.id)?.role || (roleForEmail(String(user.email)) === "superadmin" ? "superadmin" : user.role),
+      role: overrides.find((override) => override.userId === user.id)?.role || ((user.source === "supabase" || "verifiedEmail" in user && user.verifiedEmail) && roleForEmail(String(user.email)) === "superadmin" ? "superadmin" : user.role),
       verified: badges.some((badge) => badge.userId === user.id && badge.verified),
       organizationId: members.find((member) => member.userId === user.id)?.organizationId || "",
     })),

@@ -44,7 +44,7 @@ export async function GET() {
         backgroundUrl: user?.backgroundUrl || actor.backgroundUrl,
         bio: user?.bio || "",
         provider: actor.provider,
-        emailConfirmed: true,
+        emailConfirmed: Boolean(actor.emailConfirmed),
       },
       canChangePassword: false,
       canChangeEmail: false,
@@ -73,10 +73,10 @@ export async function GET() {
       backgroundUrl: data?.background_url || "",
       bio: data?.bio || "",
       provider: "supabase",
-      emailConfirmed: Boolean(user?.email_confirmed_at),
+      emailConfirmed: actor.linkedOAuth || Boolean(user?.email_confirmed_at),
     },
-    canChangePassword: true,
-    canChangeEmail: true,
+    canChangePassword: !actor.linkedOAuth,
+    canChangeEmail: !actor.linkedOAuth,
   });
 }
 
@@ -123,7 +123,7 @@ export async function PATCH(request: Request) {
           avatarUrl: user?.avatarUrl || parsed.data.avatarUrl,
           backgroundUrl: user?.backgroundUrl || parsed.data.backgroundUrl,
           bio: user?.bio || "",
-          emailConfirmed: true,
+          emailConfirmed: Boolean(actor.emailConfirmed),
         },
       });
     } catch {
@@ -140,7 +140,10 @@ export async function PATCH(request: Request) {
       { status: 503 },
     );
   const { data: userData } = await getSupabaseAuthServer().auth.getUser();
-  if (!userData.user)
+  if (actor.linkedOAuth && (parsed.data.password || (parsed.data.email && parsed.data.email !== actor.email))) {
+    return NextResponse.json({ error: "Masuk dengan sandi untuk mengubah email atau sandi." }, { status: 409 });
+  }
+  if (!actor.linkedOAuth && userData.user?.id !== actor.id)
     return NextResponse.json(
       { error: "Sesi tidak ditemukan" },
       { status: 401 },
@@ -167,10 +170,7 @@ export async function PATCH(request: Request) {
     authPatch.email = parsed.data.email;
   if (parsed.data.password) authPatch.password = parsed.data.password;
   if (Object.keys(authPatch).length > 0) {
-    const result = await admin.auth.admin.updateUserById(
-      userData.user.id,
-      authPatch,
-    );
+    const result = await getSupabaseAuthServer().auth.updateUser(authPatch);
     if (result.error)
       return NextResponse.json(
         { error: result.error.message },
@@ -186,8 +186,8 @@ export async function PATCH(request: Request) {
       avatarUrl: parsed.data.avatarUrl,
       backgroundUrl: parsed.data.backgroundUrl,
       bio: parsed.data.bio,
-      email: parsed.data.email || actor.email,
-      emailConfirmed: Boolean(userData.user.email_confirmed_at),
+      email: actor.email,
+      emailConfirmed: actor.linkedOAuth || Boolean(userData.user?.email_confirmed_at),
     },
   });
 }
@@ -199,7 +199,7 @@ export async function POST() {
       { error: "Silakan masuk terlebih dahulu" },
       { status: 401 },
     );
-  if (actor.provider)
+  if (actor.provider || actor.linkedOAuth)
     return NextResponse.json(
       { error: "Konfirmasi email dikelola oleh provider OAuth." },
       { status: 409 },

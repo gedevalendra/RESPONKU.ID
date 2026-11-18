@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const article = await getArticleFromDatabase(parsed.data.articleSlug);
     if (!article) return NextResponse.json({ error: "Artikel tidak ditemukan" }, { status: 404 });
     if (parsed.data.parentId) {
-      const { data: parent, error: parentError } = await (await import("@/lib/supabase/server")).getSupabaseAdmin()!
+      const { data: parent, error: parentError } = await getSupabaseAdmin()!
         .from("comments")
         .select("id,article_slug,status")
         .eq("id", parsed.data.parentId)
@@ -58,19 +58,10 @@ export async function POST(request: Request) {
         .maybeSingle();
       if (parentError || !parent) return NextResponse.json({ error: "Komentar yang dibalas tidak ditemukan" }, { status: 422 });
     }
-    const profileDb = getSupabaseAdmin();
-    const { data: supabaseProfile } = profileDb
-      ? await profileDb
-          .from("profiles")
-          .select("id")
-          .eq("email", actor.email)
-          .limit(1)
-          .maybeSingle()
-      : { data: null };
     const comment = await createComment({
       ...parsed.data,
       oauthAuthorId: actor.provider && actor.provider !== "supabase" ? actor.id : undefined,
-      authorId: supabaseProfile?.id || (/^[0-9a-f-]{36}$/i.test(actor.id) ? actor.id : undefined),
+      authorId: !actor.provider ? actor.id : undefined,
       displayName: actor.displayName.slice(0, 60),
     });
     if (comment.status === "published" && article.authorId && article.authorId !== actor.id) {

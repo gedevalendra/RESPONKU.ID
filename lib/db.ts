@@ -1,4 +1,5 @@
 import "server-only";
+import { linkedAccountIds } from "@/lib/account-identity";
 import { ObjectId } from "mongodb";
 import { getMongoDb } from "@/lib/mongodb";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -53,7 +54,7 @@ export async function countUnreadNotifications(userId: string) {
   if (!supabase) return 0;
   const { count, error } = await supabase.from("notifications")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", userId).is("read_at", null);
+    .in("user_id", await linkedAccountIds(userId)).is("read_at", null);
   if (error) throw error;
   return count ?? 0;
 }
@@ -64,7 +65,7 @@ export async function listNotifications(userId: string) {
   const { data } = await supabase
     .from("notifications")
     .select("id,user_id,title,body,href,read_at,created_at")
-    .eq("user_id", userId)
+    .in("user_id", await linkedAccountIds(userId))
     .order("created_at", { ascending: false })
     .limit(100);
   return (data || []).map(mapNotification);
@@ -171,7 +172,7 @@ export async function markNotificationRead(id: string, userId: string) {
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("user_id", userId);
+    .in("user_id", await linkedAccountIds(userId));
   if (error) throw error;
 }
 
@@ -209,6 +210,7 @@ export async function searchNotificationRecipients(query = "") {
         .limit(3)
     : { data: [] };
   const oauthMatches = (await listOAuthUsers()).filter((user) => {
+    if (user.accountId) return false;
     if (!normalized) return true;
     return `${user.displayName} ${user.email} ${user.username || ""}`.toLowerCase().includes(normalized.toLowerCase());
   }).slice(0, 3).map((user) => ({ id: user.id, email: user.email, displayName: user.displayName, username: user.username, avatarUrl: user.avatarUrl }));
@@ -222,7 +224,7 @@ export async function searchNotificationRecipients(query = "") {
 export async function listNotificationRecipientIds() {
   const supabase = getSupabaseAdmin();
   const profileIds = supabase ? (await supabase.from("profiles").select("id")).data?.map((row) => String(row.id)) || [] : [];
-  const oauthIds = (await listOAuthUsers()).map((user) => String(user.id));
+  const oauthIds = (await listOAuthUsers()).filter((user) => !user.accountId).map((user) => String(user.id));
   return [...new Set([...profileIds, ...oauthIds])];
 }
 
@@ -439,9 +441,13 @@ export async function listArticlesFromDatabase(
 ): Promise<Article[]> {
   const db = await getMongoDb();
   if (!db) return [];
+  const authorId = filter.authorId;
+  const query = typeof authorId === "string"
+    ? { ...filter, authorId: { $in: await linkedAccountIds(authorId) } }
+    : filter;
   return db
     .collection<Article>("articles")
-    .find(filter)
+    .find(query)
     .sort({ date: -1 })
     .toArray();
 }
@@ -552,6 +558,7 @@ export async function upsertOAuthUser(input: {
   email: string;
   displayName: string;
   avatarUrl?: string;
+  verifiedEmail?: string;
 }): Promise<Profile> {
   const db = await getMongoDb();
   if (!process.env.MONGODB_URI)
@@ -566,25 +573,39 @@ export async function upsertOAuthUser(input: {
       id: string;
       role: string;
     }>({ provider: input.provider, providerUserId: input.providerUserId });
-  const id = existing?.id || new ObjectId().toHexString();
+
   const role =
-    roleForEmail(input.email) === "superadmin"
+    input.verifiedEmail && roleForEmail(input.verifiedEmail) === "superadmin"
       ? "superadmin"
       : existing?.role || "reader";
-  await db
+  const stored = await db
     .collection("oauth_users")
-    .updateOne(
+    .findOneAndUpdate(
       { provider: input.provider, providerUserId: input.providerUserId },
       {
-        $set: { id, ...input, role, updatedAt: new Date().toISOString() },
-        $setOnInsert: { createdAt: new Date().toISOString() },
+        $set: {
+          email: input.email,
+          role,
+          updatedAt: new Date().toISOString(),
+          ...(input.verifiedEmail ? { verifiedEmail: input.verifiedEmail } : {}),
+        },
+        $setOnInsert: {
+          id: new ObjectId().toHexString(),
+          provider: input.provider,
+          providerUserId: input.providerUserId,
+          displayName: input.displayName,
+          avatarUrl: input.avatarUrl,
+          createdAt: new Date().toISOString(),
+        },
+        ...(!input.verifiedEmail ? { $unset: { verifiedEmail: "", accountId: "" } } : {}),
       },
-      { upsert: true },
+      { upsert: true, returnDocument: "after" },
     );
+  if (!stored) throw new Error("Profil OAuth gagal disimpan");
   return {
-    id,
+    id: String(stored.id),
     email: input.email,
-    displayName: input.displayName,
+    displayName: String(stored.displayName),
     role: role as Profile["role"],
   };
 }
@@ -596,6 +617,8 @@ export async function getOAuthUserById(id: string) {
     .collection<{
       id: string;
       email: string;
+      verifiedEmail?: string;
+      accountId?: string;
       displayName: string;
       role: string;
       username?: string;
@@ -665,6 +688,8 @@ export async function listOAuthUsers() {
           username: 1,
           role: 1,
           provider: 1,
+          verifiedEmail: 1,
+          accountId: 1,
           createdAt: 1,
         },
       },

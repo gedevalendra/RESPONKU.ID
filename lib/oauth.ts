@@ -5,7 +5,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getOAuthUserById, upsertOAuthUser } from "@/lib/db";
 import type { Profile, UserRole } from "@/lib/types";
-import { roleForEmail } from "@/lib/roles";
+import { connectOAuthProfiles, findVerifiedPasswordProfile } from "@/lib/account-identity";
+import { getMongoDb } from "@/lib/mongodb";
 
 export type OAuthProvider = "google" | "funikin";
 
@@ -139,35 +140,34 @@ export async function finishOAuth(
     sub?: string;
     id?: string;
     email?: string;
+    email_verified?: boolean;
+    hd?: string;
     name?: string;
     given_name?: string;
     picture?: string;
   };
   if (!userResponse.ok || !(user.sub || user.id) || !user.email)
     throw new Error("Profil OAuth tidak lengkap");
+  const email = user.email.trim().toLowerCase();
+  const verifiedEmail = user.email_verified === true &&
+    (provider === "funikin" || email.endsWith("@gmail.com") || Boolean(user.hd))
+    ? email : undefined;
   const oauthProfile = {
     provider,
     providerUserId: user.sub || user.id!,
-    email: user.email,
+    email,
+    verifiedEmail,
     displayName: user.name || user.given_name || user.email.split("@")[0],
     avatarUrl: user.picture,
   };
-  let actor: Profile;
-  try {
-    actor = await upsertOAuthUser(oauthProfile);
-  } catch (error) {
-    // OAuth authentication must not be lost when the profile database is temporarily unavailable.
-    // The profile is retried/synchronized on the next login or profile operation.
-    console.error(
-      "OAuth profile sync failed:",
-      error instanceof Error ? error.message : error,
-    );
-    actor = {
-      id: `${provider}:${oauthProfile.providerUserId}`,
-      email: oauthProfile.email,
-      displayName: oauthProfile.displayName,
-      role: roleForEmail(oauthProfile.email),
-    };
+  const actor = await upsertOAuthUser(oauthProfile);
+  if (verifiedEmail) {
+    const password = await findVerifiedPasswordProfile(verifiedEmail);
+    const db = await getMongoDb();
+    const firstOAuth = password ? null : await db?.collection("oauth_users")
+      .findOne({ verifiedEmail }, { sort: { createdAt: 1, id: 1 } });
+    const accountId = password?.id || firstOAuth?.id || actor.id;
+    await connectOAuthProfiles(verifiedEmail, accountId);
   }
   const jwt = await new SignJWT({
     email: actor.email,
@@ -201,22 +201,41 @@ export async function getOAuthActor(): Promise<Profile | null> {
     const email = String(payload.email || "");
     if (!email) return null;
     const savedProfile = await getOAuthUserById(userId);
-    if (!savedProfile) return null;
+    if (!savedProfile || savedProfile.email.toLowerCase() !== email.toLowerCase()) return null;
+    if (savedProfile.verifiedEmail && savedProfile.accountId) {
+      const password = await findVerifiedPasswordProfile(savedProfile.verifiedEmail);
+      if (password?.id === savedProfile.accountId) {
+        return {
+          id: password.id,
+          email: password.email,
+          displayName: password.display_name,
+          role: password.role as UserRole,
+          emailConfirmed: true,
+          linkedOAuth: true,
+        };
+      }
+    }
+    const canonical = savedProfile.accountId
+      ? await getOAuthUserById(savedProfile.accountId)
+      : null;
+    const profile = canonical && canonical.verifiedEmail === savedProfile.verifiedEmail
+      ? canonical
+      : savedProfile;
     return {
-      id: userId,
-      email: savedProfile?.email || email,
+      id: profile.id,
+      email: profile.email || email,
       displayName:
-        savedProfile?.displayName || String(payload.name || "Pembaca"),
-      role: (savedProfile?.role || payload.role || "reader") as UserRole,
-      username: savedProfile?.username,
-      organization: savedProfile?.organization,
-      avatarUrl: savedProfile?.avatarUrl,
-      backgroundUrl: savedProfile?.backgroundUrl,
+        profile.displayName || String(payload.name || "Pembaca"),
+      role: (profile.role || payload.role || "reader") as UserRole,
+      username: profile.username,
+      organization: profile.organization,
+      avatarUrl: profile.avatarUrl,
+      backgroundUrl: profile.backgroundUrl,
       provider:
         payload.provider === "google" || payload.provider === "funikin"
           ? payload.provider
           : undefined,
-      emailConfirmed: true,
+      emailConfirmed: Boolean(savedProfile.verifiedEmail),
     };
   } catch {
     return null;

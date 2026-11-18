@@ -83,4 +83,5 @@ export type Profile = {
   bio?: string;
   provider?: "supabase" | "google" | "funikin";
   emailConfirmed?: boolean;
+  linkedOAuth?: boolean;
 };

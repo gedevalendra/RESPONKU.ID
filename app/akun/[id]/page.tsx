@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import ScrollingName from "@/app/components/auth/ScrollingName";
 import { publicProfile } from "@/lib/community";
 import { listArticlesFromDatabase } from "@/lib/db";
 import { getActor } from "@/lib/authz";
@@ -15,8 +16,8 @@ export default async function Page({
 }) {
   const profile = await publicProfile(params.id);
   if (!profile) notFound();
-  if (profile.username && params.id !== profile.username)
-    redirect(`/akun/${encodeURIComponent(profile.username)}`);
+  const canonicalHandle = profile.username || profile.id;
+  if (params.id !== canonicalHandle) redirect(`/akun/${encodeURIComponent(canonicalHandle)}`);
 
   const [articles, actor] = await Promise.all([
     listArticlesFromDatabase({ authorId: profile.id, status: "published" }),
@@ -43,9 +44,9 @@ export default async function Page({
                 ) : <i className="bx bxs-user text-3xl" aria-hidden="true" />}
               </div>
               <div className="min-w-0 pb-1 pt-10">
-                <h1 className="break-words text-xl font-semibold leading-tight text-ink">
-                  {profile.displayName}{" "}
-                  {profile.verified && <i className="bx bxs-badge-check align-middle text-blue-500" role="img" aria-label="Terverifikasi" />}
+                <h1 className="flex min-w-0 items-center gap-2 text-xl font-semibold leading-tight text-ink">
+                  <ScrollingName name={profile.displayName} swipeable className="max-w-40 sm:max-w-56" />
+                  {profile.verified && <i className="bx bxs-badge-check shrink-0 text-blue-500" role="img" aria-label="Terverifikasi" />}
                 </h1>
                 {profile.username && <p className="mt-1 truncate text-sm text-mute">@{profile.username}</p>}
               </div>

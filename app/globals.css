@@ -223,3 +223,12 @@ details[open] > .sidebar-dropdown {
 @media (prefers-reduced-motion: reduce) {
   .cookie-consent { animation: none; }
 }
+
+@keyframes account-name-scroll {
+  0%, 40%, 100% {
+    transform: translateX(0);
+  }
+  70%, 85% {
+    transform: translateX(var(--account-name-offset));
+  }
+}

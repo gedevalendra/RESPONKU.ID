@@ -24,7 +24,7 @@ export default function ArticleCard({
             <span className="absolute left-3 top-3 bg-white px-2.5 py-1 text-xs font-medium text-ink">{article.category}</span>
           </div>
           <div className="flex flex-1 flex-col px-3 pb-3 pt-3">
-            <h3 className="break-words font-display text-xl leading-snug group-hover:underline group-hover:underline-offset-4">{article.title}</h3>
+            <h3 className="line-clamp-4 break-words font-display text-base leading-snug group-hover:underline lg:text-xl group-hover:underline-offset-4">{article.title}</h3>
             {article.dek && <p className="mt-2 line-clamp-2 text-sm leading-6 text-mute">{article.dek}</p>}
             <p className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-4 text-xs text-mute">
               <span className="inline-flex items-center gap-1"><i className="bx bx-calendar text-base" aria-hidden="true" />{formatDate(article.date)}</span>
