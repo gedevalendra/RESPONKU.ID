@@ -1,1 +1,1 @@
-export { DashboardSkeleton as default } from "@/app/components/loading/PageSkeleton";
+export { DashboardSkeleton as default } from "@/app/components/loading/AdminSkeletons";

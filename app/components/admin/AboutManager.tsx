@@ -1,4 +1,6 @@
 "use client";
+import { AboutAdminContent } from "@/app/components/loading/AdminSkeletons";
+import { Skeleton } from "@/app/components/loading/PageSkeleton";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useState } from "react";
@@ -25,7 +27,7 @@ export default function AboutManager() {
     else setMessage(data.error || "Konten gagal dimuat.");
   }
   useEffect(() => {
-    void load();
+    void load().catch(() => setMessage("Konten gagal dimuat."));
   }, []);
   function update<K extends keyof AboutPage>(key: K, value: AboutPage[K]) {
     setPage((current) => (current ? { ...current, [key]: value } : current));
@@ -103,12 +105,9 @@ export default function AboutManager() {
     );
     if (response.ok) setPage(data);
   }
-  if (!page)
-    return (
-      <section className="mt-16">
-        <p className="text-sm text-mute">Memuat editor Tentang...</p>
-      </section>
-    );
+  if (!page) return message
+    ? <p role="alert" className="mt-16 text-sm text-mute">{message}</p>
+    : <Skeleton><AboutAdminContent /></Skeleton>;
   return (
     <section className="mt-16">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink pb-4">

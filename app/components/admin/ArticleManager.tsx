@@ -1,4 +1,6 @@
 "use client";
+import { ApprovalContent } from "@/app/components/loading/AdminSkeletons";
+import { Skeleton } from "@/app/components/loading/PageSkeleton";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -27,6 +29,7 @@ export default function ArticleManager({
 }) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const [initialLoading, setInitialLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -42,7 +45,7 @@ export default function ArticleManager({
     else setMessage(data.error || "Artikel gagal dimuat.");
   }
   useEffect(() => {
-    void load();
+    void load().catch(() => setMessage("Artikel gagal dimuat.")).finally(() => setInitialLoading(false));
   }, []);
   const visible = useMemo(
     () =>
@@ -121,6 +124,8 @@ export default function ArticleManager({
       await load();
     } else setMessage("Artikel gagal dihapus.");
   }
+
+  if (initialLoading) return <Skeleton><ApprovalContent /></Skeleton>;
 
   return (
     <div className="space-y-10">

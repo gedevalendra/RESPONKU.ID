@@ -1,4 +1,6 @@
 "use client";
+import { PopupAdminContent } from "@/app/components/loading/AdminSkeletons";
+import { Skeleton } from "@/app/components/loading/PageSkeleton";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 import { useEffect, useRef, useState } from "react";
 type ButtonAlignment = "left" | "center" | "right";
@@ -144,6 +146,10 @@ export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
   function update<K extends keyof Popup>(key: K, value: Popup[K]) {
     setPopup((current) => ({ ...current, [key]: value }));
   }
+
+  if (admin && !loaded) return message
+    ? <p role="alert" className="text-sm text-mute">{message}</p>
+    : <Skeleton><PopupAdminContent /></Skeleton>;
 
   if (admin) {
     const widthMode = popup.buttonWidth === "full" ? "full" : popup.buttonWidth === undefined ? "auto" : "custom";

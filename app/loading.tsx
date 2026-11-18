@@ -1,1 +1,1 @@
-export { ListSkeleton as default } from "@/app/components/loading/PageSkeleton";
+export { HomeSkeleton as default } from "@/app/components/loading/PublicSkeletons";

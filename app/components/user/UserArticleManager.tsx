@@ -1,4 +1,5 @@
 "use client";
+import { Rows, Skeleton } from "@/app/components/loading/PageSkeleton";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useState } from "react";
@@ -12,6 +13,7 @@ export default function UserArticleManager({
 }) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [editing, setEditing] = useState<Article | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [message, setMessage] = useState("");
   async function load() {
     const response = await fetch("/api/user/articles", { cache: "no-store" });
@@ -20,7 +22,7 @@ export default function UserArticleManager({
     else setMessage(data.error || "Artikel gagal dimuat.");
   }
   useEffect(() => {
-    void load();
+    void load().catch(() => setMessage("Artikel gagal dimuat.")).finally(() => setInitialLoading(false));
   }, []);
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("edit");
@@ -64,7 +66,7 @@ export default function UserArticleManager({
           </div>
           <span className="eyebrow">{articles.length} artikel</span>
         </div>
-        <div className="divide-y divide-rule">
+        {initialLoading ? <Skeleton><Rows actions /></Skeleton> : <div className="divide-y divide-rule">
           {articles.length === 0 ? (
             <p className="py-8 text-sm text-mute">
               Belum ada artikel yang dibuat.
@@ -104,7 +106,7 @@ export default function UserArticleManager({
               </article>
             ))
           )}
-        </div>
+        </div>}
       </section>
     </div>
   );

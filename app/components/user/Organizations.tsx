@@ -1,4 +1,6 @@
 "use client";
+import { OrganizationsContent } from "@/app/components/loading/AdminSkeletons";
+import { Skeleton } from "@/app/components/loading/PageSkeleton";
 import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 import { useEffect, useState } from "react";
 import UserPicker from "@/app/components/admin/UserPicker";
@@ -9,6 +11,7 @@ export default function Organizations({ admin = false }: { admin?: boolean }) {
   const [organizations, setOrganizations] = useState<Org[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [query, setQuery] = useState("");
+  const [initialLoading, setInitialLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -54,15 +57,18 @@ export default function Organizations({ admin = false }: { admin?: boolean }) {
   async function load() {
     const response = await fetch(`/api/community?q=${encodeURIComponent(query)}`);
     const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Organisasi gagal dimuat.");
     setOrganizations(data.organizations || []); setMembers(data.members || []);
   }
-  useEffect(() => { void load(); }, [query]);
+  useEffect(() => { void load().catch((error) => setMessage(error.message)).finally(() => setInitialLoading(false)); }, [query]);
   async function action(data: Record<string, unknown>) {
     const response = await fetch("/api/community", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
     const result = await response.json();
     setMessage(response.ok ? "Perubahan berhasil disimpan." : result.error);
     await load();
   }
+  if (initialLoading) return <Skeleton><OrganizationsContent /></Skeleton>;
+
   return <section className="space-y-5 bg-white p-6">
     <h2 className="text-xl font-semibold">Organisasi</h2>
     <p className="text-sm text-mute">Keanggotaan ditampilkan setelah disetujui oleh pengelola organisasi.</p>

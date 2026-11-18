@@ -1,4 +1,6 @@
 "use client";
+import { UsersContent } from "@/app/components/loading/AdminSkeletons";
+import { Skeleton } from "@/app/components/loading/PageSkeleton";
 import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 
 import { useEffect, useState } from "react";
@@ -16,6 +18,7 @@ export default function UserRoleManager() {
   const [users, setUsers] = useState<User[]>([]);
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([]);
   const [query, setQuery] = useState("");
+  const [initialLoading, setInitialLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [actorId, setActorId] = useState("");
@@ -34,7 +37,7 @@ export default function UserRoleManager() {
   }
 
   useEffect(() => {
-    void load().catch((error) => setMessage(error.message));
+    void load().catch((error) => setMessage(error.message)).finally(() => setInitialLoading(false));
   }, []);
 
   async function mutate(user: User, method: "PATCH" | "DELETE", body: object) {
@@ -60,6 +63,8 @@ export default function UserRoleManager() {
   }
 
   const filtered = users.filter((user) => `${user.display_name} ${user.email}`.toLowerCase().includes(query.toLowerCase()));
+
+  if (initialLoading) return <Skeleton><UsersContent /></Skeleton>;
 
   return (
     <section className="space-y-5">
