@@ -8,8 +8,10 @@ import ArticleCard from "./components/landing/ArticleCard";
 import ArticleGallery from "./components/landing/ArticleGallery";
 import Link from "next/link";
 import { getPinnedArticleId } from "@/lib/homepage-pin";
-import { siteOrganization, siteOrigin } from "@/lib/seo";
+import { homepageDescription, homepageTitle, publicPageMetadata, siteOrganization, siteOrigin } from "@/lib/seo";
 import { getPublishedArticles } from "@/lib/data";
+
+export const metadata = publicPageMetadata("/", homepageTitle, homepageDescription);
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -18,6 +20,7 @@ const structuredData = {
       "@type": "WebSite",
       "@id": `${siteOrigin}/#website`,
       name: siteOrganization.name,
+      alternateName: "ResponKu.id",
       url: siteOrganization.url,
       publisher: { "@id": siteOrganization["@id"] },
     },
@@ -87,6 +90,15 @@ export default async function HomePage() {
         </div>
       </div>
       <HotArticles stories={hotStories} ad={homepageAd?.enabled ? homepageAd : null} />
+      <section className="border-t border-rule">
+        <div className="wrap flex flex-wrap items-center justify-between gap-4 py-7">
+          <div>
+            <h2 className="font-display text-xl">Tulis artikel di ResponKu</h2>
+            <p className="mt-1 text-sm text-mute">Kirim tulisanmu secara gratis untuk ditinjau redaksi.</p>
+          </div>
+          <Link href="/buat-artikel-gratis" className="text-sm font-medium text-blue-700 hover:underline">Panduan menulis artikel →</Link>
+        </div>
+      </section>
     </>
   );
 }

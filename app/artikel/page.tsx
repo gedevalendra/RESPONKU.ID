@@ -2,6 +2,14 @@ import BrandLogo from "@/app/components/layout/BrandLogo";
 import ArticleCard from "@/app/components/landing/ArticleCard";
 import { compareArticlePopularity, getPublishedArticles } from "@/lib/data";
 
+import { publicPageMetadata } from "@/lib/seo";
+
+export const metadata = publicPageMetadata(
+  "/artikel",
+  "Artikel Berita Terbaru — ResponKu",
+  "Baca artikel berita terbaru dari ResponKu, mulai dari teknologi, ekonomi, politik, olahraga, hingga budaya.",
+);
+
 export const dynamic = "force-dynamic";
 
 export default async function ArticlesPage({

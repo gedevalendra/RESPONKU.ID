@@ -116,7 +116,7 @@ export default function UserRoleManager() {
       </div>
       {deleting && (
         <div role="dialog" aria-modal="true" aria-labelledby="delete-account-title" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-5">
-          <div className="w-full max-w-md space-y-4 bg-white p-6">
+          <div className="max-h-[90dvh] w-full max-w-md space-y-4 overflow-y-auto overscroll-contain bg-white p-6">
             <h3 id="delete-account-title" className="text-lg font-semibold">Hapus akun {deleting.display_name}?</h3>
             <p className="text-sm text-mute">Penghapusan permanen. Artikel terbit tetap menjadi arsip redaksi. Ketik nama akun untuk mengonfirmasi.</p>
             <input autoFocus className="w-full p-3" aria-label="Nama akun untuk konfirmasi" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />

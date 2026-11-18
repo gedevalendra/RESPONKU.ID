@@ -36,7 +36,7 @@ function PopupContent({ popup, onClose }: { popup: Popup; onClose?: () => void }
           {popup.title || (onClose ? <>Informasi <BrandLogo /></> : "Judul popup")}
         </h2>
         <button type="button" onClick={onClose} disabled={!onClose} aria-label="Tutup"
-          className="grid size-10 shrink-0 place-items-center rounded-full border-0 outline-none enabled:hover:bg-gray-100 focus-visible:bg-gray-200">
+          className="popup-close grid size-10 shrink-0 place-items-center rounded-full border-0 enabled:hover:bg-gray-100">
           <i className="bx bx-x text-2xl" aria-hidden="true" />
         </button>
       </div>
@@ -94,7 +94,9 @@ export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
   useEffect(() => {
     if (admin || !popup.enabled || /^\/(admin|superadmin)(\/|$)/.test(location.pathname)) return;
     if (localStorage.getItem("responku-popup") !== popup.version && !dialog.current?.open) {
-      dialog.current?.showModal();
+      const modal = dialog.current;
+      modal?.showModal();
+      modal?.focus({ preventScroll: true });
     }
   }, [admin, popup.enabled, popup.version]);
 
@@ -244,7 +246,7 @@ export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
   }
 
   return (
-    <dialog ref={dialog} onCancel={close} aria-labelledby="welcome-popup-title"
+    <dialog ref={dialog} tabIndex={-1} onCancel={close} aria-labelledby="welcome-popup-title"
       className="action-popup fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-xl bg-white p-6 backdrop:bg-black/40">
       <PopupContent popup={popup} onClose={close} />
     </dialog>

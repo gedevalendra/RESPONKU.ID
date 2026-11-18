@@ -25,6 +25,7 @@ export default function ShareArticleButton({ slug, title }: { slug: string; titl
     setMessage("");
     setManualLink("");
     dialog.current?.showModal();
+    dialog.current?.focus({ preventScroll: true });
   }
 
   async function share() {
@@ -74,10 +75,10 @@ export default function ShareArticleButton({ slug, title }: { slug: string; titl
         <i className="bx bx-share-alt text-lg" aria-hidden="true" />
         Bagikan
       </button>
-      <dialog ref={dialog} aria-labelledby={titleId} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl bg-white p-5 text-ink shadow-xl backdrop:bg-black/40">
+      <dialog ref={dialog} tabIndex={-1} aria-labelledby={titleId} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl bg-white p-5 text-ink shadow-xl backdrop:bg-black/40">
         <div className="flex items-center justify-between gap-3">
           <h2 id={titleId} className="text-lg font-semibold">Bagikan artikel</h2>
-          <button type="button" aria-label="Tutup" onClick={() => dialog.current?.close()} className="grid size-10 place-items-center rounded-full hover:bg-gray-100">
+          <button type="button" aria-label="Tutup" onClick={() => dialog.current?.close()} className="popup-close grid size-10 place-items-center rounded-full hover:bg-gray-100">
             <i className="bx bx-x text-2xl" aria-hidden="true" />
           </button>
         </div>

@@ -15,6 +15,7 @@ const columns = [
   {
     title: "Layanan",
     links: [
+      { label: "Panduan menulis artikel", href: "/buat-artikel-gratis" },
       { label: "FAQ & Bantuan", href: "/faq" },
       { label: "Dukungan", href: "/dukungan" },
       { label: "Berlangganan", href: "/berlangganan" },

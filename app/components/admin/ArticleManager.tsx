@@ -299,13 +299,13 @@ export default function ArticleManager({
               <button
                 type="button"
                 onClick={() => setSelectedArticleId(null)}
-                className="font-mono text-xs uppercase tracking-widest2 text-mute hover:text-ink"
+                className="popup-close font-mono text-xs uppercase tracking-widest2 text-mute hover:text-ink"
                 aria-label="Tutup preview"
               >
                 Tutup ×
               </button>
             </div>
-            <article className="overflow-y-auto px-5 py-7 sm:px-10 sm:py-10">
+            <article className="min-h-0 overflow-y-auto overscroll-contain px-5 py-7 sm:px-10 sm:py-10">
               <p className="eyebrow text-accent">
                 {selectedArticle.status} · {selectedArticle.category}
               </p>

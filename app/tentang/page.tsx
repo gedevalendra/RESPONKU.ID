@@ -1,6 +1,9 @@
+import { publicPageMetadata } from "@/lib/seo";
 import BrandLogo from "@/app/components/layout/BrandLogo";
 import { getAboutPage } from "@/lib/db";
 import type { AboutSection } from "@/lib/about";
+
+export const metadata = publicPageMetadata("/tentang", "Tentang ResponKu — Media Digital Terbuka", "Kenali ResponKu, media digital Indonesia yang membuka ruang bagi pembaca untuk membaca, menulis, dan mengirim artikel.");
 
 export const dynamic = "force-dynamic";
 

@@ -5,6 +5,7 @@ import LoginForm from "../components/auth/LoginForm";
 
 export const metadata: Metadata = {
   title: "Masuk — ResponKu",
+  robots: { index: false, follow: true },
   description:
     "Masuk ke ResponKu untuk membaca, menulis, dan mengikuti perkembangan artikel.",
 };

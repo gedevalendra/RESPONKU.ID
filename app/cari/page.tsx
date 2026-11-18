@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { compareArticlePopularity, getPublishedArticles } from "@/lib/data";
 
+export const metadata = {
+  title: "Cari Berita — ResponKu",
+  robots: { index: false, follow: true },
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function SearchPage({

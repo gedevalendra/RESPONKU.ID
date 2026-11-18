@@ -15,7 +15,7 @@ export function PopupStatus({ message }: { message: string }) {
     <div role="status" className="action-popup fixed inset-x-4 top-4 z-[200] mx-auto flex max-w-sm items-center gap-3 rounded-xl border border-rule bg-white p-4 text-sm text-ink shadow-xl">
       <i className="bx bx-info-circle text-xl" aria-hidden="true" />
       <span className="flex-1">{message}</span>
-      <button type="button" aria-label="Tutup notifikasi" onClick={() => setVisible(false)}>
+      <button type="button" className="popup-close rounded-sm" aria-label="Tutup notifikasi" onClick={() => setVisible(false)}>
         <i className="bx bx-x text-xl" aria-hidden="true" />
       </button>
     </div>

@@ -80,6 +80,31 @@ body:has(.dashboard-shell) > footer {
   outline-offset: 3px;
 }
 
+/* Keep scrolling inside the active modal. Toasts remain non-blocking. */
+html:has(dialog[open], [role="dialog"][aria-modal="true"]),
+body:has(dialog[open], [role="dialog"][aria-modal="true"]) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+dialog[open] {
+  overscroll-behavior: contain;
+}
+
+dialog[open]:not([data-embedded-scroll]) {
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+dialog:focus,
+.popup-close:focus-visible {
+  outline: none;
+}
+
+.popup-close:focus-visible {
+  background-color: #e5e7eb;
+}
+
 ::selection {
   background: var(--color-accent);
   color: var(--color-paper);

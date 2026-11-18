@@ -155,7 +155,7 @@ export default function MobileNav({
           );
         })}
       </div>
-      <dialog ref={dialog} tabIndex={-1} autoFocus aria-labelledby="mobile-more-title" onCancel={(event) => { event.preventDefault(); closeMenu(); }} onClick={(event) => { if (event.target === event.currentTarget) closeMenu(); }} className="fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none overflow-hidden bg-transparent p-0 outline-none backdrop:bg-transparent">
+      <dialog ref={dialog} data-embedded-scroll="" tabIndex={-1} autoFocus aria-labelledby="mobile-more-title" onCancel={(event) => { event.preventDefault(); closeMenu(); }} onClick={(event) => { if (event.target === event.currentTarget) closeMenu(); }} className="fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none overflow-hidden bg-transparent p-0 outline-none backdrop:bg-transparent">
         <div ref={backdrop} aria-hidden="true" onClick={closeMenu} className="absolute inset-0 bg-black/40 opacity-0" />
         <section ref={panel} aria-labelledby="mobile-more-title" style={{ transform: "translate3d(0,100%,0)" }} className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[80dvh] max-w-xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl will-change-transform">
           <div className="shrink-0 px-5 pt-4">

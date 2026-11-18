@@ -9,6 +9,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${siteOrigin}/` },
     { url: `${siteOrigin}/artikel` },
+    { url: `${siteOrigin}/buat-artikel-gratis` },
+    { url: `${siteOrigin}/tentang` },
+    { url: `${siteOrigin}/faq` },
     ...articles.map(({ slug }) => ({ url: articleUrl(slug) })),
   ];
 }
