@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import QRCode from "qrcode";
 import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 
 type ShareArticleButtonProps = {
@@ -27,6 +28,7 @@ export default function ShareArticleButton({
   const [message, setMessage] = useState("");
   const [manualLink, setManualLink] = useState("");
   const [url, setUrl] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState("");
   const [shareImageBusy, setShareImageBusy] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const shareFile = useRef<File | null>(null);
@@ -42,11 +44,15 @@ export default function ShareArticleButton({
   function openShare() {
     const articleUrl = new URL(`/artikel/${encodeURIComponent(slug)}`, window.location.origin).href;
     setUrl(articleUrl);
+    setQrDataUrl("");
     setMessage("");
     setManualLink("");
     shareFile.current = null;
     dialog.current?.showModal();
     dialog.current?.focus({ preventScroll: true });
+    void QRCode.toDataURL(articleUrl, { width: 220, margin: 1, color: { dark: "#1f2937", light: "#ffffff" } })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(""));
     void prepareShareImage();
   }
 
@@ -107,10 +113,16 @@ export default function ShareArticleButton({
     context.fillRect(0, 0, width, height);
     let logo: HTMLImageElement | null = null;
     let thumbnail: HTMLImageElement | null = null;
+    let qrImage: HTMLImageElement | null = null;
+    const articleUrl = new URL(`/artikel/${encodeURIComponent(slug)}`, window.location.origin).href;
     try { logo = await loadCanvasImage("/image/icon_black.svg"); } catch { /* fallback teks */ }
     if (imageUrl) {
       try { thumbnail = await loadCanvasImage(imageUrl); } catch { /* poster tetap dibuat tanpa gambar */ }
     }
+    try {
+      const qr = await QRCode.toDataURL(articleUrl, { width: 180, margin: 1, color: { dark: "#1f2937", light: "#ffffff" } });
+      qrImage = await loadCanvasImage(qr);
+    } catch { /* poster tetap dibuat tanpa QR */ }
 
     if (logo) context.drawImage(logo, padding, 42, 210, 56);
     else {
@@ -176,10 +188,18 @@ export default function ShareArticleButton({
     y += 62;
     context.fillStyle = "#1f2937";
     context.font = "700 34px Georgia, serif";
-    context.fillText("Ikut berbagi cerita bersama ResponKu", padding, y);
+    context.fillText("www.responku.id", padding, y);
     context.fillStyle = "#6b7280";
     context.font = "400 23px Arial, sans-serif";
     context.fillText("Baca, tulis, dan terhubung di responku.id", padding, y + 40);
+    if (qrImage) {
+      const qrSize = 142;
+      context.drawImage(qrImage, width - padding - qrSize, y - 28, qrSize, qrSize);
+      context.textAlign = "right";
+      context.font = "400 18px Arial, sans-serif";
+      context.fillText("Pindai untuk membaca artikel", width - padding, y + 136);
+      context.textAlign = "left";
+    }
 
     const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Poster gagal dibuat")), "image/png", 0.95));
     return new File([blob], `responku-${slug}.png`, { type: "image/png" });
@@ -246,8 +266,9 @@ export default function ShareArticleButton({
 
   return (
     <>
-      <button type="button" aria-haspopup="dialog" onClick={openShare} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-rule px-3 text-sm font-medium text-ink hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2">
+      <button type="button" aria-haspopup="dialog" onClick={openShare} className="underline cursor-pointer inline-flex min-h-11 items-center gap-2 rounded-full border border-rule px-3 text-sm font-medium text-ink hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2">
         <i className="bx bx-share-alt text-lg" aria-hidden="true" />
+        Bagikan
       </button>
       <dialog ref={dialog} tabIndex={-1} aria-labelledby={titleId} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 text-ink shadow-xl backdrop:bg-black/40 sm:p-7">
         <div className="flex items-center justify-between gap-3">
@@ -282,12 +303,17 @@ export default function ShareArticleButton({
             </span>
           </div>
 
-          <div className="mt-5 border-t border-rule pt-5">
-            <p className="font-display text-xl font-semibold">Ikut berbagi cerita bersama ResponKu</p>
-            <p className="mt-1 text-sm leading-6 text-mute">Baca, tulis, dan terhubung dalam ruang media digital yang terbuka untuk semua.</p>
-            <a href="/masuk" className="mt-3 inline-flex min-h-10 items-center font-semibold text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink">
-              Bergabung ke ResponKu
-            </a>
+          <div className="mt-5 grid gap-5 border-t border-rule pt-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <div>
+              <p className="font-display text-xl font-semibold">www.responku.id</p>
+              <p className="mt-1 text-sm leading-6 text-mute">Baca, tulis, dan terhubung dalam ruang media digital yang terbuka untuk semua.</p>
+              <a href="/masuk" className="mt-3 inline-flex min-h-10 items-center font-semibold text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink">
+                Bergabung ke ResponKu
+              </a>
+            </div>
+            <div className="justify-self-start text-center sm:justify-self-end">
+              {qrDataUrl ? <img src={qrDataUrl} alt="QR menuju artikel ini" className="size-28 border border-rule bg-white p-1" /> : <span className="grid size-28 place-items-center border border-rule text-xs text-mute">Menyiapkan QR…</span>}
+            </div>
           </div>
         </section>
 

@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import QRCode from "qrcode";
 import { getArticleFromDatabase, getReactionSummary, listComments } from "@/lib/db";
 import { articleImageUrl, siteOrigin } from "@/lib/seo";
 
@@ -15,6 +16,8 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
   ]);
   const thumbnail = articleImageUrl(article.thumbnailUrl);
   const logo = new URL("/image/icon_black.svg", siteOrigin).href;
+  const articleUrl = new URL(`/artikel/${encodeURIComponent(article.slug)}`, siteOrigin).href;
+  const qr = await QRCode.toDataURL(articleUrl, { width: 180, margin: 1, color: { dark: "#1f2937", light: "#ffffff" } }).catch(() => null);
   const published = new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "short",
@@ -47,8 +50,13 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
       </div>
 
       <div style={{ display: "flex", width: "100%", height: 2, background: "#e5e7eb", marginTop: 30 }} />
-      <div style={{ display: "flex", marginTop: 30, fontFamily: "Georgia, serif", fontSize: 34, fontWeight: 700 }}>Ikut berbagi cerita bersama ResponKu</div>
-      <div style={{ display: "flex", marginTop: 10, fontSize: 23, color: "#6b7280" }}>Baca, tulis, dan terhubung di responku.id</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 28 }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 34, fontWeight: 700 }}>www.responku.id</div>
+          <div style={{ display: "flex", marginTop: 10, fontSize: 23, color: "#6b7280" }}>Baca, tulis, dan terhubung di responku.id</div>
+        </div>
+        {qr && <img src={qr} width="138" height="138" alt="QR artikel" style={{ width: 138, height: 138 }} />}
+      </div>
     </div>,
     {
       width: 1200,
