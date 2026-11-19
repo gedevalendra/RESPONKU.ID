@@ -17,12 +17,13 @@ export const homepageAdSchema = z.object({
 
 export type HomepageAd = z.infer<typeof homepageAdSchema>;
 
-export const homepageAdSlotSchema = z.enum(["hot", "gallery"]);
+export const homepageAdSlotSchema = z.enum(["hot", "gallery", "sidebar"]);
 export type HomepageAdSlot = z.infer<typeof homepageAdSlotSchema>;
 
 const settingIds: Record<HomepageAdSlot, string> = {
   hot: "homepage_hot_articles_ad",
   gallery: "homepage_article_gallery_ad",
+  sidebar: "homepage_sidebar_ad",
 };
 const emptyAd: HomepageAd = { enabled: false, title: "", mediaType: "image", imageUrl: "", videoUrl: "", destination: "" };
 

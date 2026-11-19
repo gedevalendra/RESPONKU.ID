@@ -7,6 +7,7 @@ export default function ArticleGallery({ children }: { children: ReactNode }) {
   const viewport = useRef<HTMLDivElement>(null);
   const cards = Children.toArray(children);
   const [edges, setEdges] = useState({ start: true, end: true });
+  const [autoPaused, setAutoPaused] = useState(false);
 
   function updateEdges() {
     const track = viewport.current;
@@ -31,8 +32,25 @@ export default function ArticleGallery({ children }: { children: ReactNode }) {
     const second = track?.children[1];
     if (!track || !first || !second) return;
     const step = second.getBoundingClientRect().left - first.getBoundingClientRect().left;
-    track.scrollBy({ left: step * direction });
+    track.scrollBy({ left: step * direction, behavior: "smooth" });
   }
+
+  useEffect(() => {
+    if (cards.length < 2 || autoPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const timer = window.setInterval(() => {
+      const track = viewport.current;
+      const first = track?.children[0];
+      const second = track?.children[1];
+      if (!track || !first || !second || document.visibilityState !== "visible") return;
+      const step = second.getBoundingClientRect().left - first.getBoundingClientRect().left;
+      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+      if (atEnd) track.scrollTo({ left: 0, behavior: "smooth" });
+      else track.scrollBy({ left: step, behavior: "smooth" });
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [autoPaused, cards.length]);
 
   const arrowClass = "grid size-11 place-items-center border border-rule text-ink hover:bg-gray-100 disabled:opacity-35 disabled:hover:bg-transparent";
 
@@ -42,6 +60,14 @@ export default function ArticleGallery({ children }: { children: ReactNode }) {
         id={id}
         ref={viewport}
         onScroll={updateEdges}
+        onMouseEnter={() => setAutoPaused(true)}
+        onMouseLeave={() => setAutoPaused(false)}
+        onFocus={() => setAutoPaused(true)}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setAutoPaused(false);
+        }}
+        onTouchStart={() => setAutoPaused(true)}
+        onTouchEnd={() => setAutoPaused(false)}
         tabIndex={edges.start && edges.end ? undefined : 0}
         role="group"
         aria-label="Slider Jelajahi Artikel"

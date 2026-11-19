@@ -1,11 +1,13 @@
 import { getTrending } from "@/lib/data";
+import { getHomepageAd } from "@/lib/homepage-ad";
+import HomepageAdBanner from "@/app/components/landing/HomepageAdBanner";
 import TrendingList from "../../components/landing/TrendingList";
 
 export default async function Sidebar() {
-  const trending = await getTrending(5);
+  const [trending, sidebarAd] = await Promise.all([getTrending(5), getHomepageAd("sidebar").catch(() => null)]);
 
   return (
-    <aside className="flex flex-col gap-10">
+    <aside className="flex flex-col gap-10 lg:h-full">
       <form action="/cari" role="search" className="hidden lg:block">
         <label htmlFor="sidebar-article-search" className="sr-only">Cari artikel</label>
         <div className="flex gap-2">
@@ -16,6 +18,7 @@ export default async function Sidebar() {
         </div>
       </form>
       <TrendingList items={trending} />
+      {sidebarAd?.enabled && <HomepageAdBanner ad={sidebarAd} variant="sidebar" fillColumnHeight />}
     </aside>
   );
 }

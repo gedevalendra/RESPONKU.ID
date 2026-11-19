@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { deleteArticle, updateArticle } from "@/lib/db";
 import { getActor, isStaff } from "@/lib/authz";
-import { createNotification } from "@/lib/db";
-import { sendPushToUser } from "@/lib/push";
 import { communityDb } from "@/lib/community";
 import { notifyActivity } from "@/lib/activity-notifications";
+import { notifyNewArticle } from "@/lib/article-notifications";
 
 const patchSchema = z.object({
   title: z.string().min(5).max(180).optional(),
@@ -49,6 +48,10 @@ export async function PATCH(
         }
       : parsed.data;
   try {
+    const db = await communityDb();
+    const previous = await db
+      .collection<{ status?: string }>("articles")
+      .findOne({ id: params.id }, { projection: { status: 1 } });
     const article = await updateArticle(params.id, update, actor);
     if (parsed.data.status === "rejected" && article.authorId) {
       const reason = article.rejectionReason?.trim() || "Naskah perlu diperbaiki.";
@@ -59,16 +62,7 @@ export async function PATCH(
         href: "/akun#riwayat",
       }).catch((error) => console.error("Gagal mengirim notifikasi penolakan", error.code ?? error.name));
     }
-    if (parsed.data.status === "published" && article.authorId) {
-      const notification = {
-        userId: article.authorId,
-        title: "Artikel diterbitkan",
-        body: `Artikel “${article.title}” sudah diterbitkan di ResponKu.`,
-        href: `/artikel/${article.slug}`,
-      };
-      await createNotification(notification).catch(() => null);
-      await sendPushToUser(article.authorId, notification).catch(() => null);
-    }
+    if (article.status === "published" && previous?.status !== "published") await notifyNewArticle(article).catch(() => null);
     return NextResponse.json({
       article,
     });

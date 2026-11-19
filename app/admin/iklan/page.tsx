@@ -11,13 +11,14 @@ export default async function AdminAdsPage() {
   if (!actor) redirect("/masuk?next=/admin/iklan");
   if (!isStaff(actor.role)) redirect("/?error=forbidden");
 
-  const [hot, gallery] = await Promise.all([getHomepageAd("hot"), getHomepageAd("gallery")]);
+  const [hot, gallery, sidebar] = await Promise.all([getHomepageAd("hot"), getHomepageAd("gallery"), getHomepageAd("sidebar")]);
 
   return (
     <DashboardShell role={actor.role === "superadmin" ? "superadmin" : "admin"} breadcrumb="Iklan" title="Iklan">
       <div className="space-y-6">
         <HomepageAdEditor initial={hot} slot="hot" />
         <HomepageAdEditor initial={gallery} slot="gallery" />
+        <HomepageAdEditor initial={sidebar} slot="sidebar" />
       </div>
     </DashboardShell>
   );

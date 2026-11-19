@@ -176,6 +176,19 @@ export async function markNotificationRead(id: string, userId: string) {
   if (error) throw error;
 }
 
+export async function deleteNotifications(userId: string, notificationIds?: string[]) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) throw new Error("Supabase belum dikonfigurasi");
+  let query = supabase
+    .from("notifications")
+    .delete()
+    .in("user_id", await linkedAccountIds(userId));
+  if (notificationIds?.length) query = query.in("id", notificationIds);
+  const { data, error } = await query.select("id");
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
 export async function createNotification(input: {
   userId: string;
   title: string;
@@ -572,8 +585,8 @@ export async function recordArticleView(
   metadata: { ipHash?: string; userAgent?: string },
 ) {
   const db = await getMongoDb();
-  if (!db) return;
-  await Promise.all([
+  if (!db) return false;
+  const [articleUpdate] = await Promise.all([
     db
       .collection("articles")
       .updateOne(
@@ -589,6 +602,7 @@ export async function recordArticleView(
         createdAt: new Date(),
       }),
   ]);
+  return articleUpdate.matchedCount > 0;
 }
 
 export function isObjectId(value: string) {

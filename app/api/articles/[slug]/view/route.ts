@@ -8,15 +8,15 @@ export async function POST(
   { params }: { params: { slug: string } },
 ) {
   if (request.cookies.get(cookiePreferenceName)?.value !== "accept") {
-    return new NextResponse(null, { status: 204 });
+    return NextResponse.json({ recorded: false });
   }
   const forwarded =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     "anonymous";
   const ipHash = crypto.createHash("sha256").update(forwarded).digest("hex");
-  await recordArticleView(params.slug, {
+  const recorded = await recordArticleView(params.slug, {
     ipHash,
     userAgent: request.headers.get("user-agent") || undefined,
   });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ recorded });
 }

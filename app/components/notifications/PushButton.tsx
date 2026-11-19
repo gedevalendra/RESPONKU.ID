@@ -96,7 +96,7 @@ export default function PushButton() {
         <p className="mt-1 text-sm text-mute">
           {permission === "denied"
             ? "Izin diblokir. Ubah izin Notifikasi di pengaturan situs browser, lalu muat ulang halaman."
-            : "Terima pemberitahuan di perangkat ini."}
+            : "Terima notifikasi web saat artikel baru diterbitkan."}
         </p>
       </div>
       <button

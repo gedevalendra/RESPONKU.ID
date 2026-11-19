@@ -6,9 +6,10 @@ import HeroSection from "./components/landing/HeroSection";
 import Sidebar from "./components/layout/Sidebar";
 import ArticleCard from "./components/landing/ArticleCard";
 import ArticleGallery from "./components/landing/ArticleGallery";
+import CategoryNewsSection from "./components/landing/CategoryNewsSection";
 import NewsletterForm from "./components/landing/NewsletterForm";
 import Link from "next/link";
-import { getPinnedArticleId } from "@/lib/homepage-pin";
+import { getPinnedArticleIds } from "@/lib/homepage-pin";
 import { homepageDescription, homepageTitle, publicPageMetadata, siteOrganization, siteOrigin } from "@/lib/seo";
 import { getPublishedArticles } from "@/lib/data";
 import { publicProfile } from "@/lib/community";
@@ -32,9 +33,9 @@ const structuredData = {
 
 export default async function HomePage() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const [published, pinnedId, recentViews, homepageAd, galleryAd] = await Promise.all([
+  const [published, pinnedIds, recentViews, homepageAd, galleryAd] = await Promise.all([
     getPublishedArticles(),
-    getPinnedArticleId(),
+    getPinnedArticleIds(),
     countRecentArticleViews(since).catch(() => null),
     getHomepageAd("hot").catch(() => null),
     getHomepageAd("gallery").catch(() => null),
@@ -42,9 +43,9 @@ export default async function HomePage() {
   const hotStories = published.map((article) => ({ article, recentViews: recentViews ? recentViews.get(article.slug) ?? 0 : null }))
     .sort((a, b) => (b.recentViews ?? 0) - (a.recentViews ?? 0) || b.article.views - a.article.views)
     .slice(0, 7);
-  const pinned = published.find((article) => article.id === pinnedId);
+  const pinned = pinnedIds.map((id) => published.find((article) => article.id === id)).filter((article): article is NonNullable<typeof article> => Boolean(article));
   const featured = published.filter((article) => article.featured);
-  const heroStories = pinned ? [pinned] : featured.length ? featured : published.slice(0, 4);
+  const heroStories = pinned.length ? pinned : featured.length ? featured : published.slice(0, 4);
   const latest = published.slice(0, 2);
   const latestWithAuthors = await Promise.all(latest.map(async (article) => ({
     article,
@@ -89,20 +90,21 @@ export default async function HomePage() {
             </ArticleGallery>
           </section>
         )}
+        {galleryAd?.enabled && (
+          <div className="mt-10">
+            <HomepageAdBanner ad={galleryAd} compact />
+          </div>
+        )}
+        <div className="mt-8">
+          <NewsletterForm />
+        </div>
         </div>
         <div className="lg:col-span-4">
           <Sidebar />
         </div>
-        {galleryAd?.enabled && (
-          <div className="min-w-0 lg:col-span-8">
-            <HomepageAdBanner ad={galleryAd} compact />
-          </div>
-        )}
-        <div className="min-w-0 lg:col-span-4 lg:col-start-9">
-          <NewsletterForm />
-        </div>
       </div>
       <HotArticles stories={hotStories} ad={homepageAd?.enabled ? homepageAd : null} />
+      <CategoryNewsSection articles={published} />
       <section className="border-t border-rule">
         <div className="wrap flex flex-wrap items-center justify-between gap-4 py-7">
           <div>

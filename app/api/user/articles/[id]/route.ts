@@ -3,6 +3,7 @@ import { z } from "zod";
 import { deleteArticle, updateArticle } from "@/lib/db";
 import { getActor } from "@/lib/authz";
 import { prepareArticleSubmission } from "@/lib/article-analysis";
+import { notifyNewArticle } from "@/lib/article-notifications";
 
 const block = z.discriminatedUnion("type", [
   z.object({
@@ -79,16 +80,18 @@ export async function PATCH(
     const nextStatus = current.takenDownAt && current.status !== "published" && status === "published"
       ? "pending"
       : status;
+    const updated = await updateArticle(
+      params.id,
+      {
+        ...article,
+        author: actor.displayName,
+        status: nextStatus,
+      },
+      actor,
+    );
+    if (updated.status === "published" && current.status !== "published") await notifyNewArticle(updated).catch(() => null);
     return NextResponse.json({
-      article: await updateArticle(
-        params.id,
-        {
-          ...article,
-          author: actor.displayName,
-          status: nextStatus,
-        },
-        actor,
-      ),
+      article: updated,
       aiReview: review,
     });
   } catch (error) {

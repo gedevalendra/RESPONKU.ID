@@ -10,6 +10,7 @@ import ArticleEngagement from "../../components/article/ArticleEngagement";
 import { getArticleFromDatabase, getReactionSummary, listComments } from "@/lib/db";
 import ArticleBody from "@/app/components/article/ArticleBody";
 import ShareArticleButton from "@/app/components/article/ShareArticleButton";
+import ArticleViewCounter from "@/app/components/article/ArticleViewCounter";
 import { publicProfile } from "@/lib/community";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
@@ -170,10 +171,7 @@ export default async function ArticlePage({
           <span className="text-xs leading-none text-mute">{formatDate(article.date)}</span>
           <span aria-hidden="true" className="text-xs text-mute">·</span>
           <span className="text-xs leading-none text-mute">{article.readTime} menit baca</span>
-          <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-mute">
-            <i className="bx bx-show text-base" aria-hidden="true" />
-            {new Intl.NumberFormat("id-ID").format(article.views)} tayangan
-          </span>
+          <ArticleViewCounter articleSlug={article.slug} initialViews={article.views} />
           <div className="pointer-events-none absolute left-0 top-full z-20 mt-3 w-72 translate-y-2 rounded-xl border border-rule bg-white p-4 opacity-0 shadow-xl transition-all duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
             <div className="flex items-center gap-3"><span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-50 text-blue-600">{authorAvatar ? <img src={authorAvatar} alt="" className="h-full w-full object-cover" /> : <i className="bx bxs-user text-2xl" aria-hidden="true" />}</span><div className="min-w-0"><p className="flex items-center gap-1 text-base font-semibold">{article.author} {authorVerified && <i className="bx bxs-badge-check text-lg text-blue-500" title="Akun terverifikasi" aria-label="Akun terverifikasi" />}</p><p className="mt-0.5 truncate text-xs text-mute">{roleLabel}{authorProfile?.username ? ` · @${authorProfile.username}` : ""}</p></div></div>
             {authorProfile?.bio && <p className="mt-3 text-sm leading-relaxed text-mute">{authorProfile.bio}</p>}

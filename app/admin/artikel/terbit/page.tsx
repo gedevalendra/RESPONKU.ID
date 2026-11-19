@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import DashboardShell from "@/app/components/dashboard/DashboardShell";
 import PublishedArticleManager from "@/app/components/admin/PublishedArticleManager";
-import { getPinnedArticleId } from "@/lib/homepage-pin";
+import { getPinnedArticleIds } from "@/lib/homepage-pin";
 import { getActor, isStaff } from "@/lib/authz";
 import { listArticlesFromDatabase } from "@/lib/db";
 
@@ -11,12 +11,12 @@ export default async function PublishedArticlesPage() {
   const actor = await getActor();
   if (!actor) redirect("/masuk?next=/admin/artikel/terbit");
   if (!isStaff(actor.role)) redirect("/?error=forbidden");
-  const [articles, pinnedId] = await Promise.all([listArticlesFromDatabase({ status: "published" }), getPinnedArticleId()]);
+  const [articles, pinnedIds] = await Promise.all([listArticlesFromDatabase({ status: "published" }), getPinnedArticleIds()]);
 
   return (
     <DashboardShell role={actor.role === "superadmin" ? "superadmin" : "admin"} breadcrumb="Artikel terbit" title="Artikel terbit"
     >
-      <PublishedArticleManager pinnedId={pinnedId} canDelete={actor.role === "admin"} articles={articles.map(({ id, slug, title, author, views, promoted }) => ({
+      <PublishedArticleManager pinnedIds={pinnedIds} canDelete={actor.role === "admin"} articles={articles.map(({ id, slug, title, author, views, promoted }) => ({
         id, slug, title, author, views, promoted,
       }))} />
     </DashboardShell>

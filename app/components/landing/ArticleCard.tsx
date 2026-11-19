@@ -8,27 +8,29 @@ export default function ArticleCard({
   authorAvatarUrl,
 }: {
   article: Article;
-  variant?: "row" | "stacked" | "gallery";
+  variant?: "row" | "stacked" | "gallery" | "archive";
   authorAvatarUrl?: string;
 }) {
-  if (variant === "gallery") {
+  if (variant === "gallery" || variant === "archive") {
+    const archive = variant === "archive";
     return (
-      <article className="flex h-full min-w-0 flex-col border border-rule bg-white p-2 shadow-sm transition-shadow hover:shadow-md">
+      <article className={`flex h-full min-w-0 flex-col border border-rule bg-white shadow-sm transition-shadow hover:shadow-md ${archive ? "" : "p-2"}`}>
         <Link href={`/artikel/${article.slug}`} className="group flex flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-2">
-          <div className={`relative aspect-[16/7] overflow-hidden sm:aspect-[16/10] ${article.thumbnailUrl ? "bg-gray-100" : "bg-gradient-to-br from-slate-100 to-blue-100"}`}>
+          <div className={`relative overflow-hidden ${archive ? "aspect-[16/10]" : "aspect-[16/7] sm:aspect-[16/10]"} ${article.thumbnailUrl ? "bg-gray-100" : "bg-gradient-to-br from-slate-100 to-blue-100"}`}>
             {article.thumbnailUrl ? (
               <img src={article.thumbnailUrl} alt="" loading="lazy"
                 className="h-full w-full object-cover motion-safe:transition-transform motion-safe:group-hover:scale-105" />
             ) : (
               <i className="bx bx-news absolute bottom-3 right-3 text-5xl text-slate-400" aria-hidden="true" />
             )}
+            {archive && <span className="absolute right-0 top-0 bg-blue-500 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-white">{article.category}</span>}
           </div>
           <div className="flex flex-1 flex-col px-3 pb-3 pt-3">
-            <h3 className="line-clamp-4 break-words font-display text-base leading-snug group-hover:underline lg:text-xl group-hover:underline-offset-4">{article.title}</h3>
-            {article.dek && <p className="mt-2 line-clamp-2 text-sm leading-6 text-mute">{article.dek}</p>}
-            <p className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-4 text-xs text-mute">
+            <h3 className={`break-words font-display leading-snug group-hover:underline group-hover:underline-offset-4 ${archive ? "line-clamp-3 text-lg" : "line-clamp-4 text-base lg:text-xl"}`}>{article.title}</h3>
+            {article.dek && <p className={`mt-2 text-sm leading-6 text-mute ${archive ? "line-clamp-4" : "line-clamp-2"}`}>{article.dek}</p>}
+            <p className="mt-auto flex flex-wrap gap-x-3 gap-y-1 border-t border-rule pt-3 text-xs text-mute">
               <span className="inline-flex items-center gap-1"><i className="bx bx-calendar text-base" aria-hidden="true" />{formatDate(article.date)}</span>
-              <span className="inline-flex items-center gap-1"><i className="bx bx-time-five text-base" aria-hidden="true" />{article.readTime} menit baca</span>
+              {archive ? <span>{article.views.toLocaleString("id-ID")} tayangan</span> : <span className="inline-flex items-center gap-1"><i className="bx bx-time-five text-base" aria-hidden="true" />{article.readTime} menit baca</span>}
             </p>
           </div>
         </Link>

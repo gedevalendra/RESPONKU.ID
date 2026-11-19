@@ -8,7 +8,7 @@ import type { HomepageAd, HomepageAdSlot } from "@/lib/homepage-ad";
 const inputClass = "w-full min-w-0 border border-rule bg-gray-50 px-3 py-2.5";
 
 export default function HomepageAdEditor({ initial, slot }: { initial: HomepageAd; slot: HomepageAdSlot }) {
-  const title = slot === "gallery" ? "Iklan Jelajahi Artikel" : "Iklan Berita Hangat";
+  const title = slot === "gallery" ? "Iklan Jelajahi Artikel" : slot === "sidebar" ? "Iklan Sidebar" : "Iklan Berita Hangat";
   const [ad, setAd] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -44,7 +44,7 @@ export default function HomepageAdEditor({ initial, slot }: { initial: HomepageA
         <fieldset disabled={busy} className="grid min-w-0 gap-4 p-5 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" className="size-4 accent-accent" checked={ad.enabled} onChange={(event) => setAd({ ...ad, enabled: event.target.checked })} />
-            {slot === "gallery" ? "Tampilkan iklan di bawah slider artikel" : "Tampilkan iklan di bawah kartu Top 1"}
+            {slot === "gallery" ? "Tampilkan iklan di bawah slider artikel" : slot === "sidebar" ? "Tampilkan iklan di bawah daftar Terpopuler" : "Tampilkan iklan di bawah kartu Top 1"}
           </label>
           <label className="grid gap-2">Judul iklan
             <input value={ad.title} maxLength={100} required={ad.enabled} className={inputClass} onChange={(event) => setAd({ ...ad, title: event.target.value })} />
@@ -74,7 +74,7 @@ export default function HomepageAdEditor({ initial, slot }: { initial: HomepageA
       {mediaUrl.startsWith("https://") && ad.destination.startsWith("https://") && (
         <aside className="min-w-0">
           <h2 className="mb-3 font-display text-xl">Pratinjau</h2>
-          <HomepageAdBanner ad={ad} compact={slot === "gallery"} />
+          <HomepageAdBanner ad={ad} compact={slot === "gallery"} variant={slot === "sidebar" ? "sidebar" : "horizontal"} />
         </aside>
       )}
       <PopupStatus message={message} />

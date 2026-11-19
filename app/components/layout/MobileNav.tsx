@@ -78,7 +78,6 @@ export default function MobileNav({
   }, [pathname, searchParams]);
   const exploreItems = [
     ["/artikel", "Semua artikel", "bx-news"],
-    ["/artikel?sort=popular", "Terpopuler", "bx-trending-up"],
     ["/tentang", "Tentang ResponKu", "bx-info-circle"],
     ["/faq", "FAQ & bantuan", "bx-help-circle"],
     ["/dukungan", "Dukungan", "bx-coin"],

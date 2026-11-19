@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   countUnreadNotifications,
   createNotification,
+  deleteNotifications,
   listNotificationRecipients,
   listPushDeliveryHistory,
   listNotifications,
@@ -52,6 +53,24 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Status notifikasi gagal diperbarui" }, { status: 503 });
+  }
+}
+
+const deleteInput = z.object({
+  all: z.boolean().optional(),
+  ids: z.array(z.string().min(1).max(200)).min(1).max(100).optional(),
+}).refine((value) => value.all || value.ids?.length, { message: "Pilih notifikasi yang akan dihapus." });
+
+export async function DELETE(request: Request) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Silakan masuk terlebih dahulu" }, { status: 401 });
+  const parsed = deleteInput.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Data penghapusan tidak valid." }, { status: 422 });
+  try {
+    const deleted = await deleteNotifications(actor.id, parsed.data.all ? undefined : parsed.data.ids);
+    return NextResponse.json({ ok: true, deleted });
+  } catch {
+    return NextResponse.json({ error: "Notifikasi gagal dihapus." }, { status: 503 });
   }
 }
 

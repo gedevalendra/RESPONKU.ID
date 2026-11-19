@@ -30,14 +30,14 @@ export default async function ArticlesPage({
           ? "Artikel terpopuler"
           : "Artikel terbaru"}
       </h1>
-      <div className="mt-8 max-w-4xl divide-y divide-rule">
+      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.length === 0 ? (
-          <p className="border-t border-rule py-8 text-mute">
+          <p className="col-span-full border-y border-rule py-8 text-mute">
             Belum ada artikel yang diterbitkan.
           </p>
         ) : (
           sorted.map((article) => (
-            <ArticleCard key={article.id} article={article} />
+            <ArticleCard key={article.id} article={article} variant="archive" />
           ))
         )}
       </div>

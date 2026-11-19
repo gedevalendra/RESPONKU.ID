@@ -50,7 +50,7 @@ export default function ShareArticleButton({
     shareFile.current = null;
     dialog.current?.showModal();
     dialog.current?.focus({ preventScroll: true });
-    void QRCode.toDataURL(articleUrl, { width: 220, margin: 1, color: { dark: "#1f2937", light: "#ffffff" } })
+    void QRCode.toDataURL(articleUrl, { width: 288, margin: 1, color: { dark: "#1f2937", light: "#ffffff" } })
       .then(setQrDataUrl)
       .catch(() => setQrDataUrl(""));
     void prepareShareImage();
@@ -100,7 +100,7 @@ export default function ShareArticleButton({
     scratch.font = "400 30px Arial, sans-serif";
     const dekLines = wrapCanvasText(scratch, dek, width - padding * 2, 4);
     const imageHeight = imageUrl ? 536 : 0;
-    const height = 190 + titleLines.length * 64 + 34 + dekLines.length * 43 + (imageUrl ? imageHeight + 42 : 18) + 230;
+    const height = 212 + titleLines.length * 64 + 34 + dekLines.length * 43 + (imageUrl ? imageHeight + 42 : 18) + 230;
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -136,11 +136,18 @@ export default function ShareArticleButton({
     context.fillText(publishedLabel, width - padding, 80);
     context.textAlign = "left";
 
+    context.strokeStyle = "#e5e7eb";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(padding, 118);
+    context.lineTo(width - padding, 118);
+    context.stroke();
+
     context.fillStyle = "#6b7280";
     context.font = "600 23px Arial, sans-serif";
-    context.fillText(author, padding, 142);
+    context.fillText(author, padding, 164);
 
-    let y = 202;
+    let y = 224;
     context.fillStyle = "#1f2937";
     context.font = "700 54px Georgia, serif";
     for (const line of titleLines) {
@@ -284,6 +291,7 @@ export default function ShareArticleButton({
             <time className="shrink-0 text-xs text-mute">{publishedLabel}</time>
           </div>
 
+          <div className="mt-4 h-px w-full bg-rule" aria-hidden="true" />
           <p className="mt-5 truncate text-xs font-semibold text-mute">{author}</p>
           <h3 className="mt-2 font-display text-2xl font-bold leading-tight sm:text-3xl">{title}</h3>
           <p className="mt-3 text-sm leading-6 text-mute sm:text-base">{dek}</p>
@@ -312,7 +320,7 @@ export default function ShareArticleButton({
               </a>
             </div>
             <div className="justify-self-start text-center sm:justify-self-end">
-              {qrDataUrl ? <img src={qrDataUrl} alt="QR menuju artikel ini" className="size-28 border border-rule bg-white p-1" /> : <span className="grid size-28 place-items-center border border-rule text-xs text-mute">Menyiapkan QR…</span>}
+              {qrDataUrl ? <img src={qrDataUrl} alt="QR menuju artikel ini" className="size-36 border border-rule bg-white p-1" /> : <span className="grid size-36 place-items-center border border-rule text-xs text-mute">Menyiapkan QR…</span>}
             </div>
           </div>
         </section>

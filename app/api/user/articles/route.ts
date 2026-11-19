@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createArticle, listArticlesFromDatabase } from "@/lib/db";
 import { getActor } from "@/lib/authz";
 import { prepareArticleSubmission } from "@/lib/article-analysis";
+import { notifyNewArticle } from "@/lib/article-notifications";
 
 const block = z.discriminatedUnion("type", [
   z.object({
@@ -75,9 +76,11 @@ export async function POST(request: Request) {
     );
   try {
     const { article, status, review } = await prepareArticleSubmission(parsed.data);
+    const created = await createArticle({ ...article, author: actor.displayName }, actor, status);
+    if (created.status === "published") await notifyNewArticle(created).catch(() => null);
     return NextResponse.json(
       {
-        article: await createArticle({ ...article, author: actor.displayName }, actor, status),
+        article: created,
         aiReview: review,
       },
       { status: 201 },

@@ -32,7 +32,8 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
         <span style={{ fontSize: 24, color: "#6b7280" }}>{published}</span>
       </div>
 
-      <div style={{ display: "flex", marginTop: 34, fontSize: 23, fontWeight: 600, color: "#6b7280" }}>{article.author}</div>
+      <div style={{ display: "flex", width: "100%", height: 2, background: "#e5e7eb", marginTop: 18 }} />
+      <div style={{ display: "flex", marginTop: 26, fontSize: 23, fontWeight: 600, color: "#6b7280" }}>{article.author}</div>
       <div style={{ display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: 52, fontWeight: 700, lineHeight: 1.08, letterSpacing: "-1px", maxHeight: 174, overflow: "hidden" }}>
         {article.title}
       </div>

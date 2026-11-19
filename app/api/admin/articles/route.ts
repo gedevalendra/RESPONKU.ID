@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createArticle, listArticlesFromDatabase } from "@/lib/db";
 import { getActor, isStaff } from "@/lib/authz";
+import { notifyNewArticle } from "@/lib/article-notifications";
 
 const input = z.object({
   title: z.string().min(5).max(180),
@@ -38,14 +39,14 @@ export async function POST(request: Request) {
       { status: 422 },
     );
   try {
+    const article = await createArticle(
+      parsed.data,
+      actor,
+      parsed.data.status || "published",
+    );
+    if (article.status === "published") await notifyNewArticle(article).catch(() => null);
     return NextResponse.json(
-      {
-        article: await createArticle(
-          parsed.data,
-          actor,
-          parsed.data.status || "published",
-        ),
-      },
+      { article },
       { status: 201 },
     );
   } catch {

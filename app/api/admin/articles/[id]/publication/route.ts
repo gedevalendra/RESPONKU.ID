@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { getPinnedArticleId, setHomepagePin } from "@/lib/homepage-pin";
+import { setHomepagePin } from "@/lib/homepage-pin";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getActor, isStaff } from "@/lib/authz";
@@ -29,9 +29,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       );
       if (!published) return NextResponse.json({ error: "Hanya artikel yang sedang terbit yang dapat disematkan." }, { status: 409 });
 
-      await setHomepagePin(params.id, action.pinned);
+      const pinnedIds = await setHomepagePin(params.id, action.pinned);
       revalidatePath("/");
-      return NextResponse.json({ ok: true, pinnedId: await getPinnedArticleId() });
+      return NextResponse.json({ ok: true, pinnedIds });
     }
     const article = await db.collection<Article>("articles").findOneAndUpdate(
       { id: params.id, status: "published" },

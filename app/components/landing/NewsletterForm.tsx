@@ -18,9 +18,8 @@ export default function NewsletterForm() {
 
   return (
     <div className="border border-ink p-0">
-      <p className="eyebrow py-2">Ringkasan Pagi</p>
       <h3 className="mt-2 font-display text-xl leading-snug">
-        Lima berita penting, terkirim jam 6 pagi setiap hari kerja.
+        Aktifkan notifikasi email untuk setiap berita baru.
       </h3>
       {status === "sent" ? (
         <p className="mt-4 font-mono text-xs text-mute">
