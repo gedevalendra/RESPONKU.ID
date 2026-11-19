@@ -12,6 +12,11 @@ const popupSchema = z.object({
   title: z.string().max(150),
   text: z.string().max(5000),
   buttonLabel: z.string().trim().max(50).optional(),
+  buttonUrl: z.string().trim().max(2000).refine((value) => {
+    if (!value || value.startsWith("/")) return true;
+    try { return ["http:", "https:"].includes(new URL(value).protocol); }
+    catch { return false; }
+  }, "Tautan tombol tidak valid").optional(),
   buttonAlignment: z.enum(["left", "center", "right"]).optional(),
   buttonWidth: z.union([z.literal("full"), z.number().int().min(48).max(400)]).optional(),
   buttonHeight: z.number().int().min(40).max(88).optional(),

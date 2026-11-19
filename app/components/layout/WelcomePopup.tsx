@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 type ButtonAlignment = "left" | "center" | "right";
 type Popup = {
   enabled: boolean; title: string; text: string; image: string; version: string;
-  buttonLabel?: string; buttonAlignment?: ButtonAlignment;
+  buttonLabel?: string; buttonUrl?: string; buttonAlignment?: ButtonAlignment;
   buttonWidth?: number | "full";
   buttonHeight?: number;
   buttonRadius?: number;
@@ -28,6 +28,14 @@ const labelClass = "grid min-w-0 gap-2 text-sm font-medium";
 
 function PopupContent({ popup, onClose }: { popup: Popup; onClose?: () => void }) {
   const width = popup.buttonWidth === "full" ? "100%" : Number.isFinite(popup.buttonWidth) ? popup.buttonWidth : undefined;
+  const buttonStyle = {
+    width,
+    minHeight: popup.buttonHeight ?? 40,
+    borderRadius: popup.buttonRadius ?? 8,
+    backgroundColor: popup.buttonColor ?? "#2b7fff",
+    color: popup.buttonTextColor ?? "#ffffff",
+  };
+  const buttonClass = "inline-flex max-w-full min-w-0 items-center justify-center break-words px-4 py-2 text-center leading-snug hover:brightness-90 focus-visible:outline-2 focus-visible:outline-offset-2";
 
   return (
     <>
@@ -40,24 +48,18 @@ function PopupContent({ popup, onClose }: { popup: Popup; onClose?: () => void }
           <i className="bx bx-x text-2xl" aria-hidden="true" />
         </button>
       </div>
-      {popup.image && <img src={popup.image} alt="Informasi ResponKu" className="my-4 max-h-72 w-full object-contain" />}
+      {popup.image && <img src={popup.image} alt="Informasi ResponKu" className={`${onClose ? "-mx-6 w-[calc(100%+3rem)]" : "-mx-5 w-[calc(100%+2.5rem)]"} my-4 h-auto object-cover`} />}
       <p className="my-4 whitespace-pre-wrap break-words text-sm leading-6">{popup.text || (onClose ? "" : "Isi informasi popup")}</p>
       <div className={`flex ${buttonAlignmentClasses[popup.buttonAlignment ?? "left"]}`}>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={!onClose}
-          className="max-w-full min-w-0 break-words px-4 py-2 leading-snug enabled:hover:brightness-90 focus-visible:outline-2 focus-visible:outline-offset-2"
-          style={{
-            width,
-            minHeight: popup.buttonHeight ?? 40,
-            borderRadius: popup.buttonRadius ?? 8,
-            backgroundColor: popup.buttonColor ?? "#2b7fff",
-            color: popup.buttonTextColor ?? "#ffffff",
-          }}
-        >
-          {popup.buttonLabel?.trim() || "Mengerti"}
-        </button>
+        {popup.buttonUrl?.trim() ? (
+          <a href={popup.buttonUrl.trim()} onClick={onClose} className={buttonClass} style={buttonStyle}>
+            {popup.buttonLabel?.trim() || "Buka tautan"}
+          </a>
+        ) : (
+          <button type="button" onClick={onClose} disabled={!onClose} className={`${buttonClass} disabled:cursor-not-allowed disabled:opacity-70`} style={buttonStyle}>
+            {popup.buttonLabel?.trim() || "Mengerti"}
+          </button>
+        )}
       </div>
     </>
   );
@@ -192,6 +194,9 @@ export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className={labelClass}>Teks tombol
                   <input className={fieldClass} maxLength={50} value={popup.buttonLabel ?? "Mengerti"} onChange={(event) => update("buttonLabel", event.target.value)} />
+                </label>
+                <label className={labelClass}>Tautan tombol
+                  <input className={fieldClass} type="text" maxLength={2000} placeholder="/buat-artikel-gratis atau https://..." value={popup.buttonUrl ?? ""} onChange={(event) => update("buttonUrl", event.target.value)} />
                 </label>
                 <label className={labelClass}>Posisi tombol
                   <select className={fieldClass} value={popup.buttonAlignment ?? "left"} onChange={(event) => update("buttonAlignment", event.target.value as ButtonAlignment)}>
