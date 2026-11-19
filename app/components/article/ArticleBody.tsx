@@ -63,7 +63,7 @@ export default function ArticleBody({
           return (
             <blockquote
               key={block.id}
-              className="border-l-4 border-gray-800 pl-5 font-display text-2xl leading-snug text-gray-800"
+              className="border-l-4 border-gray-800 pl-5 font-display text-md sm:text-lg md:text-xl lg:text-2xl leading-snug text-gray-800"
             >
               “{block.text}”
               {block.attribution && (
