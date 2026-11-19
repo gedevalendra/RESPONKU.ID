@@ -53,18 +53,18 @@ export type AiUsageSummary = {
   }>;
 };
 
-export async function getAiUsageSummary(days = 30): Promise<AiUsageSummary | null> {
+export async function getAiUsageSummary(days: number | null = 30): Promise<AiUsageSummary | null> {
   const db = await getMongoDb();
   if (!db) return null;
   const today = new Date();
-  const since = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - days + 1));
+  const since = days === null ? null : new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - days + 1));
   const result = await db.collection("ai_usage").aggregate<{
     totals: Array<{ requests: number; inputTokens: number; outputTokens: number; totalTokens: number }>;
     providers: Array<{ provider: string; requests: number; inputTokens: number; outputTokens: number; totalTokens: number }>;
     daily: Array<{ date: string; requests: number; inputTokens: number; outputTokens: number; totalTokens: number }>;
     providerDaily: Array<{ provider: string; date: string; requests: number; inputTokens: number; outputTokens: number; totalTokens: number }>;
   }>([
-    { $match: { createdAt: { $gte: since } } },
+    ...(since ? [{ $match: { createdAt: { $gte: since } } }] : []),
     { $facet: {
       totals: [{ $group: {
         _id: null,
@@ -80,7 +80,7 @@ export async function getAiUsageSummary(days = 30): Promise<AiUsageSummary | nul
       ],
       daily: [
         { $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "UTC" } },
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "Asia/Jakarta" } },
           requests: { $sum: 1 },
           inputTokens: { $sum: "$inputTokens" },
           outputTokens: { $sum: "$outputTokens" },
@@ -91,7 +91,7 @@ export async function getAiUsageSummary(days = 30): Promise<AiUsageSummary | nul
       ],
       providerDaily: [
         { $group: {
-          _id: { provider: "$provider", date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "UTC" } } },
+          _id: { provider: "$provider", date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "Asia/Jakarta" } } },
           requests: { $sum: 1 },
           inputTokens: { $sum: "$inputTokens" },
           outputTokens: { $sum: "$outputTokens" },
@@ -105,10 +105,11 @@ export async function getAiUsageSummary(days = 30): Promise<AiUsageSummary | nul
   if (!result) return null;
   const totals = result.totals[0] || { requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 };
   const fillDaily = (source: typeof result.daily) => {
+    if (days === null) return source;
     const rows = new Map(source.map((row) => [row.date, row]));
     return Array.from({ length: days }, (_, index) => {
-      const date = new Date(since);
-      date.setUTCDate(since.getUTCDate() + index);
+      const date = new Date(since!);
+      date.setUTCDate(since!.getUTCDate() + index);
       const key = date.toISOString().slice(0, 10);
       return rows.get(key) || { date: key, requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 };
     });

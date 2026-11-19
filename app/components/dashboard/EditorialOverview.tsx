@@ -19,7 +19,7 @@ export default async function EditorialOverview({ role }: { role: "admin" | "sup
       queue: [{ $match: { status: "pending" } }, { $sort: { submittedAt: 1, _id: 1 } }, { $limit: 5 }, { $project: { id: 1, title: 1, author: 1 } }],
       popular: [{ $match: { status: "published" } }, { $sort: { views: -1, _id: 1 } }, { $limit: 5 }, { $project: { id: 1, title: 1, slug: 1, views: 1 } }],
     } },
-  ]).next().catch(() => null), getAiUsageSummary(30)]);
+  ]).next().catch(() => null), getAiUsageSummary(null)]);
   const published = data?.totals.find((row) => row._id === "published");
   const format = new Intl.NumberFormat("id-ID");
   const stats = [
@@ -50,7 +50,7 @@ export default async function EditorialOverview({ role }: { role: "admin" | "sup
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-rule pb-4">
             <div>
               <p className="eyebrow">Pemakaian AI</p>
-              <h2 className="mt-1 font-display text-xl">Token 30 hari terakhir</h2>
+              <h2 className="mt-1 font-display text-xl">Riwayat penggunaan token</h2>
             </div>
             <i className="bx bx-chip text-2xl text-mute" aria-hidden="true" />
           </div>

@@ -27,8 +27,9 @@ export default function ShareArticleButton({
   const [message, setMessage] = useState("");
   const [manualLink, setManualLink] = useState("");
   const [url, setUrl] = useState("");
-  const [nativeShare, setNativeShare] = useState(false);
+  const [shareImageBusy, setShareImageBusy] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const shareFile = useRef<File | null>(null);
   const titleId = useId();
 
   function recordShare() {
@@ -41,29 +42,166 @@ export default function ShareArticleButton({
   function openShare() {
     const articleUrl = new URL(`/artikel/${encodeURIComponent(slug)}`, window.location.origin).href;
     setUrl(articleUrl);
-    setNativeShare(typeof navigator.share === "function");
     setMessage("");
     setManualLink("");
+    shareFile.current = null;
     dialog.current?.showModal();
     dialog.current?.focus({ preventScroll: true });
+    void prepareShareImage();
+  }
+
+  function loadCanvasImage(src: string) {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Gambar gagal dimuat"));
+      image.src = src;
+    });
+  }
+
+  function wrapCanvasText(context: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number) {
+    const words = text.trim().split(/\s+/);
+    const lines: string[] = [];
+    let line = "";
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (context.measureText(candidate).width <= maxWidth || !line) {
+        line = candidate;
+      } else {
+        lines.push(line);
+        line = word;
+        if (lines.length === maxLines) break;
+      }
+    }
+    if (lines.length < maxLines && line) lines.push(line);
+    if (lines.length === maxLines && words.join(" ") !== lines.join(" ")) {
+      let last = lines[maxLines - 1];
+      while (last && context.measureText(`${last}…`).width > maxWidth) last = last.slice(0, -1);
+      lines[maxLines - 1] = `${last.trimEnd()}…`;
+    }
+    return lines;
+  }
+
+  async function createSharePoster() {
+    await document.fonts?.ready;
+    const width = 1080;
+    const padding = 64;
+    const scratch = document.createElement("canvas").getContext("2d");
+    if (!scratch) throw new Error("Canvas tidak tersedia");
+    scratch.font = "700 54px Georgia, serif";
+    const titleLines = wrapCanvasText(scratch, title, width - padding * 2, 4);
+    scratch.font = "400 30px Arial, sans-serif";
+    const dekLines = wrapCanvasText(scratch, dek, width - padding * 2, 4);
+    const imageHeight = imageUrl ? 536 : 0;
+    const height = 190 + titleLines.length * 64 + 34 + dekLines.length * 43 + (imageUrl ? imageHeight + 42 : 18) + 230;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas tidak tersedia");
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    let logo: HTMLImageElement | null = null;
+    let thumbnail: HTMLImageElement | null = null;
+    try { logo = await loadCanvasImage("/image/icon_black.svg"); } catch { /* fallback teks */ }
+    if (imageUrl) {
+      try { thumbnail = await loadCanvasImage(imageUrl); } catch { /* poster tetap dibuat tanpa gambar */ }
+    }
+
+    if (logo) context.drawImage(logo, padding, 42, 210, 56);
+    else {
+      context.fillStyle = "#1f2937";
+      context.font = "700 32px Arial, sans-serif";
+      context.fillText("ResponKu", padding, 82);
+    }
+    context.fillStyle = "#6b7280";
+    context.font = "400 24px Arial, sans-serif";
+    context.textAlign = "right";
+    context.fillText(publishedLabel, width - padding, 80);
+    context.textAlign = "left";
+
+    context.fillStyle = "#6b7280";
+    context.font = "600 23px Arial, sans-serif";
+    context.fillText(author, padding, 142);
+
+    let y = 202;
+    context.fillStyle = "#1f2937";
+    context.font = "700 54px Georgia, serif";
+    for (const line of titleLines) {
+      context.fillText(line, padding, y);
+      y += 64;
+    }
+    y += 10;
+    context.fillStyle = "#6b7280";
+    context.font = "400 30px Arial, sans-serif";
+    for (const line of dekLines) {
+      context.fillText(line, padding, y);
+      y += 43;
+    }
+
+    if (thumbnail) {
+      y += 18;
+      const targetWidth = width - padding * 2;
+      const sourceRatio = thumbnail.width / thumbnail.height;
+      const targetRatio = targetWidth / imageHeight;
+      let sx = 0; let sy = 0; let sw = thumbnail.width; let sh = thumbnail.height;
+      if (sourceRatio > targetRatio) {
+        sw = thumbnail.height * targetRatio;
+        sx = (thumbnail.width - sw) / 2;
+      } else {
+        sh = thumbnail.width / targetRatio;
+        sy = (thumbnail.height - sh) / 2;
+      }
+      context.drawImage(thumbnail, sx, sy, sw, sh, padding, y, targetWidth, imageHeight);
+      y += imageHeight + 42;
+    } else {
+      y += 28;
+    }
+
+    context.fillStyle = "#6b7280";
+    context.font = "400 25px Arial, sans-serif";
+    context.fillText(`♡  ${new Intl.NumberFormat("id-ID").format(likeCount)} suka`, padding, y);
+    context.fillText(`▢  ${new Intl.NumberFormat("id-ID").format(commentCount)} komentar`, padding + 220, y);
+    y += 46;
+    context.strokeStyle = "#e5e7eb";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(padding, y);
+    context.lineTo(width - padding, y);
+    context.stroke();
+    y += 62;
+    context.fillStyle = "#1f2937";
+    context.font = "700 34px Georgia, serif";
+    context.fillText("Ikut berbagi cerita bersama ResponKu", padding, y);
+    context.fillStyle = "#6b7280";
+    context.font = "400 23px Arial, sans-serif";
+    context.fillText("Baca, tulis, dan terhubung di responku.id", padding, y + 40);
+
+    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Poster gagal dibuat")), "image/png", 0.95));
+    return new File([blob], `responku-${slug}.png`, { type: "image/png" });
+  }
+
+  async function prepareShareImage() {
+    setShareImageBusy(true);
+    try {
+      shareFile.current = await createSharePoster();
+    } catch {
+      shareFile.current = null;
+    } finally {
+      setShareImageBusy(false);
+    }
   }
 
   async function getShareData(): Promise<ShareData> {
-    const shareData: ShareData = { title, text: title, url };
-
-    if (!imageUrl || typeof navigator.canShare !== "function") return shareData;
-
-    try {
-      const response = await fetch(imageUrl, { mode: "cors" });
-      if (!response.ok) return shareData;
-      const blob = await response.blob();
-      const extension = blob.type.split("/")[1]?.replace(/[^a-z0-9]/gi, "") || "jpg";
-      const file = new File([blob], `responku-${slug}.${extension}`, { type: blob.type || "image/jpeg" });
-      const mediaShareData: ShareData = { title, text: `${title}\n${url}`, files: [file] };
-      return navigator.canShare(mediaShareData) ? mediaShareData : shareData;
-    } catch {
-      return shareData;
-    }
+    if (typeof navigator.canShare !== "function") throw new Error("Berbagi file belum didukung");
+    const file = shareFile.current || await createSharePoster();
+    const mediaShareData: ShareData = { title, text: `${title}\n${url}`, files: [file] };
+    if (!navigator.canShare(mediaShareData)) throw new Error("Berbagi file belum didukung");
+    return mediaShareData;
   }
 
   async function share() {
@@ -78,10 +216,21 @@ export default function ShareArticleButton({
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
+        setMessage("Perangkat ini tidak mendukung berbagi gambar langsung. Poster akan diunduh.");
       }
     }
-
-    await copyLink();
+    try {
+      const file = shareFile.current || await createSharePoster();
+      const downloadUrl = URL.createObjectURL(file);
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = file.name;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+      setMessage("Poster lengkap diunduh. Unggah gambar tersebut ke aplikasi tujuan.");
+    } catch {
+      setMessage("Poster gagal dibuat. Silakan coba lagi.");
+    }
   }
 
   async function copyLink() {
@@ -95,23 +244,10 @@ export default function ShareArticleButton({
     }
   }
 
-  const link = encodeURIComponent(url);
-  const caption = encodeURIComponent(`${title}\n${url}`);
-  const platforms = [
-    ["WhatsApp", `https://wa.me/?text=${caption}`, "bxl-whatsapp"],
-    ["Telegram", `https://t.me/share/url?url=${link}&text=${encodeURIComponent(title)}`, "bxl-telegram"],
-    ["Threads", `https://www.threads.net/intent/post?text=${caption}`, "bx-at"],
-    ["Facebook", `https://www.facebook.com/sharer/sharer.php?u=${link}`, "bxl-facebook"],
-    ["X", `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${link}`, "bx-link-external"],
-    ["Instagram", "https://www.instagram.com/direct/inbox/", "bxl-instagram"],
-    ["LinkedIn", `https://www.linkedin.com/sharing/share-offsite/?url=${link}`, "bxl-linkedin"],
-  ];
-
   return (
     <>
       <button type="button" aria-haspopup="dialog" onClick={openShare} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-rule px-3 text-sm font-medium text-ink hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2">
         <i className="bx bx-share-alt text-lg" aria-hidden="true" />
-        Bagikan
       </button>
       <dialog ref={dialog} tabIndex={-1} aria-labelledby={titleId} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 text-ink shadow-xl backdrop:bg-black/40 sm:p-7">
         <div className="flex items-center justify-between gap-3">
@@ -123,14 +259,12 @@ export default function ShareArticleButton({
 
         <section className="mt-5" aria-label="Pratinjau artikel yang dibagikan">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <img src="/image/icon_black.svg" alt="ResponKu" className="h-8 w-24 shrink-0 object-contain object-left" />
-              <span className="truncate text-sm font-semibold">{author}</span>
-            </div>
+            <img src="/image/icon_black.svg" alt="ResponKu" className="h-8 w-24 shrink-0 object-contain object-left" />
             <time className="shrink-0 text-xs text-mute">{publishedLabel}</time>
           </div>
 
-          <h3 className="mt-5 font-display text-2xl font-bold leading-tight sm:text-3xl">{title}</h3>
+          <p className="mt-5 truncate text-xs font-semibold text-mute">{author}</p>
+          <h3 className="mt-2 font-display text-2xl font-bold leading-tight sm:text-3xl">{title}</h3>
           <p className="mt-3 text-sm leading-6 text-mute sm:text-base">{dek}</p>
 
           {imageUrl && (
@@ -159,21 +293,13 @@ export default function ShareArticleButton({
 
         <div className="mt-6 border-t border-rule pt-5">
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest2 text-mute">Pilih cara membagikan</p>
-          <div className="grid gap-2 text-sm font-medium">
+          <div className="grid gap-2 text-sm font-medium sm:grid-cols-2">
           <button type="button" onClick={() => void copyLink()} className="flex min-h-11 items-center gap-2 rounded-lg bg-gray-100 px-3 hover:bg-gray-200">
             <i className="bx bx-link text-xl" aria-hidden="true" /> Salin tautan
           </button>
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
-            {platforms.map(([label, href, icon]) => (
-              <a key={label} href={href} target="_blank" rel="noopener noreferrer" onClick={label === "Instagram" ? () => void copyLink() : recordShare}
-                className="flex min-h-11 items-center gap-2 rounded-lg px-3 hover:bg-gray-100">
-                <i className={`bx ${icon} text-xl`} aria-hidden="true" /> {label}
-              </a>
-            ))}
-          </div>
-          {nativeShare && <button type="button" onClick={() => void share()} className="flex min-h-11 items-center gap-2 rounded-lg px-3 hover:bg-gray-100">
-            <i className="bx bx-share-alt text-xl" aria-hidden="true" /> Opsi berbagi lainnya
-          </button>}
+          <button type="button" onClick={() => void share()} disabled={shareImageBusy} className="flex min-h-11 items-center gap-2 rounded-lg bg-gray-800 px-3 text-white hover:bg-gray-700 disabled:opacity-50">
+            <i className={`bx ${shareImageBusy ? "bx-loader-alt animate-spin" : "bx-share-alt"} text-xl`} aria-hidden="true" /> {shareImageBusy ? "Menyiapkan gambar…" : "Bagikan cara lain"}
+          </button>
           </div>
         </div>
       <PopupStatus message={manualLink ? "" : message} />

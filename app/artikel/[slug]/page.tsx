@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { articleImageUrl, articleUrl, publicationDate, siteOrganization, siteOrigin, websiteCover } from "@/lib/seo";
+import { articleImageUrl, articleUrl, publicationDate, siteOrganization, siteOrigin } from "@/lib/seo";
 import { getRelated, formatDate } from "@/lib/data";
 import ArticleCard from "../../components/landing/ArticleCard";
 import Sidebar from "../../components/layout/Sidebar";
@@ -29,7 +29,7 @@ export async function generateMetadata({
   const article = await getPublicArticle(params.slug);
   if (!article) return { title: "Artikel Tidak Ditemukan — ResponKu", robots: { index: false } };
   const url = articleUrl(article.slug);
-  const image = articleImageUrl(article.thumbnailUrl);
+  const shareImage = new URL(`/api/articles/${encodeURIComponent(article.slug)}/share-image`, siteOrigin).href;
   return {
     title: `${article.title} — ResponKu`,
     description: article.dek,
@@ -42,13 +42,13 @@ export async function generateMetadata({
       title: article.title,
       description: article.dek,
       publishedTime: publicationDate(article)?.toISOString(),
-      images: image ? [image] : [websiteCover],
+      images: [{ url: shareImage, width: 1200, height: 1200, alt: article.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: article.title,
       description: article.dek,
-      images: image ? [image] : [websiteCover],
+      images: [shareImage],
     },
   };
 }

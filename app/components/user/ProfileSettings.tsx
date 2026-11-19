@@ -13,6 +13,10 @@ type ProfileForm = Profile & {
   emailConfirmed: boolean;
 };
 
+function normalizeUsername(value: string) {
+  return value.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9_.-]/g, "");
+}
+
 function ImageUpload({ kind, busy, onUpload }: {
   kind: "avatar" | "background";
   busy: boolean;
@@ -199,11 +203,17 @@ export default function ProfileSettings({
             <input
               required
               minLength={3}
+              maxLength={50}
+              pattern="[a-z0-9_.-]+"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={profile.username}
-              onChange={(event) => update("username", event.target.value)}
+              onChange={(event) => update("username", normalizeUsername(event.target.value))}
               placeholder="nama_pengguna"
               className="px-3 py-3"
             />
+            <span className="text-xs text-mute">Huruf kecil tanpa spasi.</span>
           </label>
         </div>
         <label className="grid gap-2 text-sm">

@@ -10,10 +10,12 @@ const input = z.object({
   displayName: z.string().min(2).max(100),
   username: z
     .string()
+    .trim()
+    .toLowerCase()
     .min(3)
     .max(50)
     .regex(
-      /^[a-zA-Z0-9_.-]+$/,
+      /^[a-z0-9_.-]+$/,
       "Username hanya boleh memakai huruf, angka, titik, garis bawah, atau strip",
     ),
   organization: z.string().max(150).default(""),

@@ -3,7 +3,7 @@
 import BrandLogo from "@/app/components/layout/BrandLogo";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import LogoutButton from "@/app/components/auth/LogoutButton";
 
@@ -22,6 +22,7 @@ export default function MobileNav({
   role?: string;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -69,11 +70,12 @@ export default function MobileNav({
     void animateMenu(true);
   }
   useEffect(() => {
+    setHoveredIndex(null);
     setMenuOpen(false);
     dialog.current?.close();
     if (previousOverflow.current !== null) document.body.style.overflow = previousOverflow.current;
     previousOverflow.current = null;
-  }, [pathname]);
+  }, [pathname, searchParams]);
   const exploreItems = [
     ["/artikel", "Semua artikel", "bx-news"],
     ["/artikel?sort=popular", "Terpopuler", "bx-trending-up"],
@@ -102,21 +104,39 @@ export default function MobileNav({
       icon: "user" as const,
     },
   ];
-  const activeIndex = items.findIndex((item) =>
-    item.href === "/"
-      ? pathname === "/"
-      : pathname.startsWith(item.href.split("?")[0]),
-  );
+  const activeIndex = items.findIndex((item) => {
+    const target = item.href.split("?")[0];
+    if (target === "/") return pathname === "/";
+    if (target === "/akun") return pathname === "/akun";
+    return pathname.startsWith(target);
+  });
   const pillIndex = hoveredIndex ?? activeIndex;
   const moreMenuActive = activeIndex < 0;
+  const moreIcon = pathname.startsWith("/admin") || pathname.startsWith("/superadmin")
+    ? "bx-shield-quarter"
+    : pathname === "/artikel" && searchParams.get("sort") === "popular"
+      ? "bx-trending-up"
+      : pathname === "/artikel"
+        ? "bx-news"
+        : pathname === "/tentang"
+          ? "bx-info-circle"
+          : pathname === "/faq"
+            ? "bx-help-circle"
+            : pathname === "/dukungan"
+              ? "bx-coin"
+              : pathname === "/akun/artikel"
+                ? "bx-edit"
+                : pathname === "/akun/pengaturan"
+                  ? "bx-cog"
+                  : "bx-grid-alt";
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 backdrop-blur lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 lg:hidden"
       aria-label="Navigasi utama mobile"
       onMouseLeave={() => setHoveredIndex(null)}
     >
-      <div className="relative mx-auto grid w-full max-w-xl grid-cols-5 items-center rounded-t-4xl bg-paper px-2 py-2 shadow-sm">
+      <div className="relative mx-auto grid w-full max-w-xl grid-cols-5 items-center rounded-t-4xl bg-paper px-2 py-2 shadow-xl outline outline-gray-100">
         <span
           aria-hidden="true"
           className="pointer-events-none absolute bottom-2 top-2 rounded-full bg-ink transition-transform duration-300 ease-out"
@@ -133,7 +153,7 @@ export default function MobileNav({
             <Fragment key={item.label}>
             {index === 2 && <div className="relative z-10 flex min-w-0 flex-1 justify-center self-stretch">
               <button type="button" aria-label={moreMenuActive ? "Menu lainnya, halaman aktif berada di menu ini" : "Buka menu lainnya"} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={openMenu} className={`absolute -top-5 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg ring-4 ring-white motion-safe:transition-transform motion-safe:hover:scale-110 ${moreMenuActive ? "mobile-more-attention" : "bg-gray-800"}`}>
-                <i className="bx bx-grid-alt text-2xl" aria-hidden="true" />
+                <i key={moreIcon} className={`bx ${moreIcon} mobile-more-icon text-2xl`} aria-hidden="true" />
               </button>
             </div>}
             <Link
@@ -142,6 +162,8 @@ export default function MobileNav({
               aria-label={item.icon === "bell" && unreadCount > 0 ? `${item.label}, ${unreadCount} belum dibaca` : item.label}
               onMouseEnter={() => setHoveredIndex(index)}
               onFocus={() => setHoveredIndex(index)}
+              onBlur={() => setHoveredIndex(null)}
+              onClick={() => setHoveredIndex(null)}
               className={`relative z-10 flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[10px] leading-tight font-medium transition-colors ${highlighted ? "text-paper" : "text-ink"}`}
             >
               <span className="relative inline-flex">
@@ -192,7 +214,7 @@ function MenuGroup({
   if (items.length === 0) return null;
 
   return (
-    <section className="border-t border-gray-200 py-4 first:border-t-0 first:pt-1">
+    <section className="border-t border-gray-400 py-4 first:border-t-0 first:pt-1">
       <h3 className="mb-2 font-mono text-[11px] uppercase tracking-widest text-mute">{title}</h3>
       <div className="grid grid-cols-2 gap-1">
         {items.map(([href, label, icon]) => (
