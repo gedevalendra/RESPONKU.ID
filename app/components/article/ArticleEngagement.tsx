@@ -81,7 +81,7 @@ export default function ArticleEngagement({
   const [comments, setComments] = useState<Comment[]>([]);
   const pendingVotes = useRef(new Set<string>());
   const [visibleCount, setVisibleCount] = useState(4);
-  const [expandedThreads, setExpandedThreads] = useState<Record<string, boolean>>({});
+  const [visibleReplyCounts, setVisibleReplyCounts] = useState<Record<string, number>>({});
   const [reactions, setReactions] = useState(initialReactions);
   const [articleReaction, setArticleReaction] = useState<keyof ReactionSummary | null>(null);
   const [reactionBusy, setReactionBusy] = useState(false);
@@ -379,11 +379,12 @@ export default function ArticleEngagement({
           <>
             {commentThreads.slice(0, visibleCount).map(({ comment }) => {
               const allReplies = descendantReplies(comment.id);
-              const expanded = Boolean(expandedThreads[comment.id]);
-              const visibleReplies = new Set((expanded ? allReplies : allReplies.slice(0, 3)).map((reply) => reply.id));
+              const visibleReplyCount = visibleReplyCounts[comment.id] ?? 2;
+              const visibleReplies = new Set(allReplies.slice(0, visibleReplyCount).map((reply) => reply.id));
+              const remainingReplies = Math.max(0, allReplies.length - visibleReplyCount);
               return <div key={comment.id}>
                 {renderComment(comment, 0, visibleReplies)}
-                {!expanded && allReplies.length > 3 && <button type="button" onClick={() => setExpandedThreads((threads) => ({ ...threads, [comment.id]: true }))} className="mb-5 ml-12 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-gray-800 hover:bg-gray-100"><i className="bx bx-message-rounded-dots text-lg" aria-hidden="true" />Lihat semua balasan ({allReplies.length})</button>}
+                {remainingReplies > 0 && <button type="button" onClick={() => setVisibleReplyCounts((counts) => ({ ...counts, [comment.id]: Math.min(allReplies.length, visibleReplyCount + 2) }))} className="mb-5 ml-12 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-gray-800 hover:bg-gray-100"><i className="bx bx-message-rounded-dots text-lg" aria-hidden="true" />Lihat {Math.min(2, remainingReplies)} balasan lagi ({remainingReplies} tersisa)</button>}
               </div>;
             })}
             {commentThreads.length > visibleCount && <button type="button" onClick={() => setVisibleCount((count) => count + 4)} className="my-4 rounded-xl bg-gray-100 px-5 py-3 text-sm font-medium">Lihat komentar lain ({commentThreads.length - visibleCount})</button>}

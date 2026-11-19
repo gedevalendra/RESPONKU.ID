@@ -3,7 +3,27 @@
 import { useId, useRef, useState } from "react";
 import { PopupStatus } from "@/app/components/layout/ActionFeedback";
 
-export default function ShareArticleButton({ slug, title, imageUrl }: { slug: string; title: string; imageUrl?: string }) {
+type ShareArticleButtonProps = {
+  slug: string;
+  title: string;
+  dek: string;
+  author: string;
+  publishedLabel: string;
+  imageUrl?: string;
+  likeCount: number;
+  commentCount: number;
+};
+
+export default function ShareArticleButton({
+  slug,
+  title,
+  dek,
+  author,
+  publishedLabel,
+  imageUrl,
+  likeCount,
+  commentCount,
+}: ShareArticleButtonProps) {
   const [message, setMessage] = useState("");
   const [manualLink, setManualLink] = useState("");
   const [url, setUrl] = useState("");
@@ -93,14 +113,53 @@ export default function ShareArticleButton({ slug, title, imageUrl }: { slug: st
         <i className="bx bx-share-alt text-lg" aria-hidden="true" />
         Bagikan
       </button>
-      <dialog ref={dialog} tabIndex={-1} aria-labelledby={titleId} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl bg-white p-5 text-ink shadow-xl backdrop:bg-black/40">
+      <dialog ref={dialog} tabIndex={-1} aria-labelledby={titleId} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 text-ink shadow-xl backdrop:bg-black/40 sm:p-7">
         <div className="flex items-center justify-between gap-3">
           <h2 id={titleId} className="text-lg font-semibold">Bagikan artikel</h2>
           <button type="button" aria-label="Tutup" onClick={() => dialog.current?.close()} className="popup-close grid size-10 place-items-center rounded-full hover:bg-gray-100">
             <i className="bx bx-x text-2xl" aria-hidden="true" />
           </button>
         </div>
-        <div className="mt-3 grid gap-2 text-sm font-medium">
+
+        <section className="mt-5" aria-label="Pratinjau artikel yang dibagikan">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <img src="/image/icon_black.svg" alt="ResponKu" className="h-8 w-24 shrink-0 object-contain object-left" />
+              <span className="truncate text-sm font-semibold">{author}</span>
+            </div>
+            <time className="shrink-0 text-xs text-mute">{publishedLabel}</time>
+          </div>
+
+          <h3 className="mt-5 font-display text-2xl font-bold leading-tight sm:text-3xl">{title}</h3>
+          <p className="mt-3 text-sm leading-6 text-mute sm:text-base">{dek}</p>
+
+          {imageUrl && (
+            <img src={imageUrl} alt={`Thumbnail ${title}`} className="mt-5 aspect-[16/9] w-full object-cover" />
+          )}
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-mute">
+            <span className="inline-flex items-center gap-1.5">
+              <i className="bx bx-like text-lg" aria-hidden="true" />
+              {new Intl.NumberFormat("id-ID").format(likeCount)} suka
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <i className="bx bx-comment-detail text-lg" aria-hidden="true" />
+              {new Intl.NumberFormat("id-ID").format(commentCount)} komentar
+            </span>
+          </div>
+
+          <div className="mt-5 border-t border-rule pt-5">
+            <p className="font-display text-xl font-semibold">Ikut berbagi cerita bersama ResponKu</p>
+            <p className="mt-1 text-sm leading-6 text-mute">Baca, tulis, dan terhubung dalam ruang media digital yang terbuka untuk semua.</p>
+            <a href="/masuk" className="mt-3 inline-flex min-h-10 items-center font-semibold text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink">
+              Bergabung ke ResponKu
+            </a>
+          </div>
+        </section>
+
+        <div className="mt-6 border-t border-rule pt-5">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest2 text-mute">Pilih cara membagikan</p>
+          <div className="grid gap-2 text-sm font-medium">
           <button type="button" onClick={() => void copyLink()} className="flex min-h-11 items-center gap-2 rounded-lg bg-gray-100 px-3 hover:bg-gray-200">
             <i className="bx bx-link text-xl" aria-hidden="true" /> Salin tautan
           </button>
@@ -115,6 +174,7 @@ export default function ShareArticleButton({ slug, title, imageUrl }: { slug: st
           {nativeShare && <button type="button" onClick={() => void share()} className="flex min-h-11 items-center gap-2 rounded-lg px-3 hover:bg-gray-100">
             <i className="bx bx-share-alt text-xl" aria-hidden="true" /> Opsi berbagi lainnya
           </button>}
+          </div>
         </div>
       <PopupStatus message={manualLink ? "" : message} />
       {manualLink && (

@@ -1,6 +1,5 @@
 "use client";
 
-import BrandLogo from "@/app/components/layout/BrandLogo";
 import { PopupAdminContent } from "@/app/components/loading/AdminSkeletons";
 import { Skeleton } from "@/app/components/loading/PageSkeleton";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
@@ -27,6 +26,7 @@ const fieldClass = "min-w-0 w-full border border-rule bg-gray-50 px-3 py-2.5 tex
 const labelClass = "grid min-w-0 gap-2 text-sm font-medium";
 
 function PopupContent({ popup, onClose }: { popup: Popup; onClose?: () => void }) {
+  const hasTitle = Boolean(popup.title.trim());
   const width = popup.buttonWidth === "full" ? "100%" : Number.isFinite(popup.buttonWidth) ? popup.buttonWidth : undefined;
   const buttonStyle = {
     width,
@@ -36,19 +36,28 @@ function PopupContent({ popup, onClose }: { popup: Popup; onClose?: () => void }
     color: popup.buttonTextColor ?? "#ffffff",
   };
   const buttonClass = "inline-flex max-w-full min-w-0 items-center justify-center break-words px-4 py-2 text-center leading-snug hover:brightness-90 focus-visible:outline-2 focus-visible:outline-offset-2";
+  const closeButton = (overlay = false) => (
+    <button type="button" onClick={onClose} disabled={!onClose} aria-label="Tutup"
+      className={`popup-close grid size-10 shrink-0 place-items-center rounded-full border-0 ${overlay ? "bg-white/90 shadow-sm backdrop-blur-sm" : ""} enabled:hover:bg-gray-100`}>
+      <i className="bx bx-x text-2xl" aria-hidden="true" />
+    </button>
+  );
 
   return (
     <>
-      <div className="flex items-start justify-between gap-3">
+      {hasTitle && <div className="flex items-start justify-between gap-3">
         <h2 id={onClose ? "welcome-popup-title" : undefined} className="min-w-0 break-words text-xl font-semibold">
-          {popup.title || (onClose ? <>Informasi <BrandLogo /></> : "Judul popup")}
+          {popup.title}
         </h2>
-        <button type="button" onClick={onClose} disabled={!onClose} aria-label="Tutup"
-          className="popup-close grid size-10 shrink-0 place-items-center rounded-full border-0 enabled:hover:bg-gray-100">
-          <i className="bx bx-x text-2xl" aria-hidden="true" />
-        </button>
-      </div>
-      {popup.image && <img src={popup.image} alt="Informasi ResponKu" className={`${onClose ? "-mx-6 w-[calc(100%+3rem)]" : "-mx-5 w-[calc(100%+2.5rem)]"} my-4 h-auto object-cover`} />}
+        {closeButton()}
+      </div>}
+      {!hasTitle && !popup.image && <div className="flex justify-end">{closeButton()}</div>}
+      {popup.image && (
+        <div className={`${onClose ? "-mx-6 w-[calc(100%+3rem)]" : "-mx-5 w-[calc(100%+2.5rem)]"} ${hasTitle ? "my-4" : onClose ? "-mt-6 mb-4" : "-mt-5 mb-4"} relative`}>
+          <img src={popup.image} alt="Informasi ResponKu" className="h-auto w-full max-w-none object-cover" />
+          {!hasTitle && <div className="absolute right-3 top-3">{closeButton(true)}</div>}
+        </div>
+      )}
       <p className="my-4 whitespace-pre-wrap break-words text-sm leading-6">{popup.text || (onClose ? "" : "Isi informasi popup")}</p>
       <div className={`flex ${buttonAlignmentClasses[popup.buttonAlignment ?? "left"]}`}>
         {popup.buttonUrl?.trim() ? (
@@ -243,7 +252,7 @@ export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
           <aside className="min-w-0 border border-rule bg-paper">
             <h2 className="border-b border-rule px-5 py-4 font-display text-xl">Pratinjau popup</h2>
             <div className="bg-gray-100 p-4">
-              <div className="mx-auto max-w-md rounded-xl bg-paper p-5 shadow-sm">
+              <div className="mx-auto max-w-md overflow-hidden rounded-xl bg-paper p-5 shadow-sm">
                 <PopupContent popup={popup} />
               </div>
             </div>
@@ -254,8 +263,8 @@ export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
   }
 
   return (
-    <dialog ref={dialog} tabIndex={-1} onCancel={close} aria-labelledby="welcome-popup-title"
-      className="action-popup fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-xl bg-white p-6 backdrop:bg-black/40">
+    <dialog ref={dialog} tabIndex={-1} onCancel={close} aria-labelledby={popup.title.trim() ? "welcome-popup-title" : undefined} aria-label={popup.title.trim() ? undefined : "Informasi ResponKu"}
+      className="action-popup fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-xl bg-white p-6 backdrop:bg-black/40">
       <PopupContent popup={popup} onClose={close} />
     </dialog>
   );

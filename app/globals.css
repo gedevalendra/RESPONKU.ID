@@ -23,20 +23,32 @@
 .comment-children { position: relative; }
 .comment-indent { margin-left: 40px; }
 .comment-indent::before, .comment-indent-desktop::before {
-  content: ""; position: absolute; left: -20px; top: -60px; bottom: 20px;
-  border-left: 1px solid #d1d5db;
+  content: ""; position: absolute; left: -20px; top: -60px; bottom: 20px; width: 20px;
+  border-left: 1px solid #d1d5db; border-top: 1px solid #d1d5db; border-top-left-radius: 18px;
 }
 .comment-indent > .comment-node::before {
-  content: ""; position: absolute; left: -20px; top: 0; width: 40px; height: 40px;
+  content: ""; position: absolute; left: -20px; top: 0; width: 56px; height: 40px;
   border-left: 1px solid #d1d5db; border-bottom: 1px solid #d1d5db; border-bottom-left-radius: 18px;
+}
+.comment-indent > .comment-node:last-child::after {
+  content: ""; pointer-events: none; position: absolute; z-index: 1;
+  left: -23px; top: 36px; bottom: -24px; width: 7px;
+  background: radial-gradient(circle at 50% 4px, #d1d5db 0 2.5px, transparent 3px) no-repeat,
+    linear-gradient(to bottom, transparent 0 7px, #fff 7px);
 }
 .comment-indent-desktop::before { display: none; }
 @media (min-width: 768px) {
   .comment-indent-desktop { margin-left: 40px; }
   .comment-indent-desktop::before { display: block; }
   .comment-indent-desktop > .comment-node::before {
-    content: ""; position: absolute; left: -20px; top: 0; width: 40px; height: 40px;
+    content: ""; position: absolute; left: -20px; top: 0; width: 56px; height: 40px;
     border-left: 1px solid #d1d5db; border-bottom: 1px solid #d1d5db; border-bottom-left-radius: 18px;
+  }
+  .comment-indent-desktop > .comment-node:last-child::after {
+    content: ""; pointer-events: none; position: absolute; z-index: 1;
+    left: -23px; top: 36px; bottom: -24px; width: 7px;
+    background: radial-gradient(circle at 50% 4px, #d1d5db 0 2.5px, transparent 3px) no-repeat,
+      linear-gradient(to bottom, transparent 0 7px, #fff 7px);
   }
 }
 

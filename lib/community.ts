@@ -25,14 +25,14 @@ export async function publicProfile(id: string) {
     id: String(oauth.id), displayName: String(oauth.displayName),
     username: String(oauth.username || ""), avatarUrl: String(oauth.avatarUrl || ""),
     backgroundUrl: String(oauth.backgroundUrl || ""),
-    bio: String(oauth.bio || ""),
+    bio: String(oauth.bio || ""), role: String(oauth.role || "reader"),
   } : null;
   if (!profile) {
     const admin = getSupabaseAdmin();
     const column = /^[0-9a-f-]{36}$/i.test(id) ? "id" : "username";
-    const result = await admin?.from("profiles").select("id,display_name,username,avatar_url,background_url,bio").eq(column, id).maybeSingle();
+    const result = await admin?.from("profiles").select("id,display_name,username,avatar_url,background_url,bio,role").eq(column, id).maybeSingle();
     const row = result?.data;
-    if (row) profile = { id: row.id, displayName: row.display_name, username: row.username || "", avatarUrl: row.avatar_url || "", backgroundUrl: row.background_url || "", bio: row.bio || "" };
+    if (row) profile = { id: row.id, displayName: row.display_name, username: row.username || "", avatarUrl: row.avatar_url || "", backgroundUrl: row.background_url || "", bio: row.bio || "", role: row.role || "reader" };
   }
   if (!profile) return null;
   const badge = await db.collection("profile_badges").findOne({ userId: profile.id });

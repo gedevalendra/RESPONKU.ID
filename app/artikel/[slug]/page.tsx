@@ -7,7 +7,7 @@ import { getRelated, formatDate } from "@/lib/data";
 import ArticleCard from "../../components/landing/ArticleCard";
 import Sidebar from "../../components/layout/Sidebar";
 import ArticleEngagement from "../../components/article/ArticleEngagement";
-import { getArticleFromDatabase } from "@/lib/db";
+import { getArticleFromDatabase, getReactionSummary, listComments } from "@/lib/db";
 import ArticleBody from "@/app/components/article/ArticleBody";
 import ShareArticleButton from "@/app/components/article/ShareArticleButton";
 import { publicProfile } from "@/lib/community";
@@ -99,12 +99,20 @@ export default async function ArticlePage({
       .maybeSingle();
     authorProfile = result.data as AuthorProfile | null;
   }
-  const roleLabel = authorProfile?.role === "superadmin" ? "Superadmin" : authorProfile?.role === "admin" ? "Redaksi" : "Penulis";
-  const linkedProfile = article.authorId && !authorProfile?.avatar_url
-    ? await publicProfile(article.authorId).catch(() => null)
+  const profileLookupId = article.authorId || authorProfile?.id;
+  const linkedProfile = profileLookupId
+    ? await publicProfile(profileLookupId).catch(() => null)
     : null;
+  const authorRole = authorProfile?.role || linkedProfile?.role || "";
+  const roleLabel = authorRole === "superadmin" ? "Superadmin" : authorRole === "admin" ? "Redaksi" : "Penulis";
+  const authorVerified = Boolean(linkedProfile?.verified);
+  const isUserArticle = ["reader", "author", "user"].includes(authorRole);
   const authorAvatar = authorProfile?.avatar_url || linkedProfile?.avatarUrl;
   const authorProfileHref = article.authorId || authorProfile?.id;
+  const [reactionSummary, articleComments] = await Promise.all([
+    getReactionSummary(article.slug).catch(() => ({ like: 0, insightful: 0, celebrate: 0 })),
+    listComments(article.slug).catch(() => []),
+  ]);
 
   const url = articleUrl(article.slug);
   const image = articleImageUrl(article.thumbnailUrl);
@@ -156,7 +164,7 @@ export default async function ArticlePage({
               {authorAvatar ? <img src={authorAvatar} alt="" className="h-full w-full object-cover" /> : <i className="bx bxs-user text-lg" aria-hidden="true" />}
             </span>
             <strong className="text-sm font-semibold leading-none text-ink">{article.author}</strong>
-            <i className="bx bxs-badge-check -ml-1 text-lg leading-none text-blue-500" title="Akun terverifikasi" aria-label="Akun terverifikasi" />
+            {authorVerified && <i className="bx bxs-badge-check -ml-1 text-lg leading-none text-blue-500" title="Akun terverifikasi" aria-label="Akun terverifikasi" />}
           </a>
           <span aria-hidden="true" className="text-xs text-mute">·</span>
           <span className="text-xs leading-none text-mute">{formatDate(article.date)}</span>
@@ -167,13 +175,30 @@ export default async function ArticlePage({
             {new Intl.NumberFormat("id-ID").format(article.views)} tayangan
           </span>
           <div className="pointer-events-none absolute left-0 top-full z-20 mt-3 w-72 translate-y-2 rounded-xl border border-rule bg-white p-4 opacity-0 shadow-xl transition-all duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
-            <div className="flex items-center gap-3"><span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-50 text-blue-600">{authorAvatar ? <img src={authorAvatar} alt="" className="h-full w-full object-cover" /> : <i className="bx bxs-user text-2xl" aria-hidden="true" />}</span><div className="min-w-0"><p className="flex items-center gap-1 text-base font-semibold">{article.author} <i className="bx bxs-badge-check text-lg text-blue-500" title="Akun terverifikasi" aria-label="Akun terverifikasi" /></p><p className="mt-0.5 truncate text-xs text-mute">{roleLabel}{authorProfile?.username ? ` · @${authorProfile.username}` : ""}</p></div></div>
+            <div className="flex items-center gap-3"><span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-50 text-blue-600">{authorAvatar ? <img src={authorAvatar} alt="" className="h-full w-full object-cover" /> : <i className="bx bxs-user text-2xl" aria-hidden="true" />}</span><div className="min-w-0"><p className="flex items-center gap-1 text-base font-semibold">{article.author} {authorVerified && <i className="bx bxs-badge-check text-lg text-blue-500" title="Akun terverifikasi" aria-label="Akun terverifikasi" />}</p><p className="mt-0.5 truncate text-xs text-mute">{roleLabel}{authorProfile?.username ? ` · @${authorProfile.username}` : ""}</p></div></div>
             {authorProfile?.bio && <p className="mt-3 text-sm leading-relaxed text-mute">{authorProfile.bio}</p>}
             {authorProfileHref && <a href={`/akun/${authorProfileHref}`} className="mt-3 inline-flex items-center text-sm font-medium text-blue-500">Lihat profil <i className="bx bx-right-arrow-alt ml-1 text-base" aria-hidden="true" /></a>}
           </div>
         </div>
-          <ShareArticleButton title={article.title} slug={article.slug} imageUrl={image} />
+          <ShareArticleButton
+            title={article.title}
+            slug={article.slug}
+            dek={article.dek}
+            author={article.author}
+            publishedLabel={formatDate(article.date)}
+            imageUrl={image}
+            likeCount={reactionSummary.like}
+            commentCount={articleComments.length}
+          />
         </div>
+        {isUserArticle && (
+          <aside className="mt-6 flex max-w-4xl items-start gap-3 border border-rule bg-gray-50 p-4 text-sm leading-6 text-mute" role="note">
+            <i className="bx bx-info-circle mt-0.5 shrink-0 text-xl text-ink" aria-hidden="true" />
+            <p>
+              Berita ini diterbitkan oleh <strong className="font-semibold text-ink">{article.author}</strong>. Isi dan segala pertanggungjawaban atas artikel ini berada pada <strong className="font-semibold text-ink">{article.author}</strong>.
+            </p>
+          </aside>
+        )}
       </div>
 
       {article.thumbnailUrl ? (
