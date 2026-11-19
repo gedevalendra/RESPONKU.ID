@@ -159,6 +159,16 @@
   border-color: var(--color-rule);
 }
 
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Flat white interface: separators stay subtle, controls do not use boxed borders. */
 .border-ink,
 .border-signal {
