@@ -139,9 +139,15 @@ export default function Organizations({ admin = false }: { admin?: boolean }) {
     <details open={admin || undefined} className="border-t border-rule px-5 py-4 sm:px-6">
       <summary className="cursor-pointer text-sm font-semibold">{admin ? "Buat organisasi" : "Ajukan organisasi baru"}</summary>
       <form className="mt-4 grid gap-4" onSubmit={createOrganization}>
-        <label className="grid gap-2 text-sm">Foto organisasi
-          <input className="min-w-0 w-full p-2 file:mr-2 file:bg-gray-200 file:px-2 file:py-1" type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading || saving} onChange={(event) => void uploadPhoto(event.target.files?.[0])} />
-        </label>
+        <div className="grid gap-2 text-sm"><span>Foto organisasi</span>
+          <label title="Unggah foto organisasi" aria-label="Unggah foto organisasi" className="grid size-11 cursor-pointer place-items-center bg-gray-800 text-2xl text-white hover:bg-gray-700">
+            <i className={`bx ${uploading ? "bx-loader-alt motion-safe:animate-spin" : "bx-image-add"}`} aria-hidden="true" />
+            <input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading || saving} onChange={(event) => {
+              void uploadPhoto(event.target.files?.[0]);
+              event.target.value = "";
+            }} />
+          </label>
+        </div>
         {photoUrl && <img src={photoUrl} alt="Pratinjau foto organisasi" className="size-16 object-contain" />}
         <label className="grid gap-2 text-sm">Nama organisasi<input name="name" required minLength={2} maxLength={150} className="w-full p-3" /></label>
         <label className="grid gap-2 text-sm">Deskripsi singkat<textarea name="description" maxLength={500} rows={3} className="w-full p-3" /></label>

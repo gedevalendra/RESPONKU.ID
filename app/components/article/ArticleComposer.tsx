@@ -3,7 +3,7 @@
 import BrandLogo from "@/app/components/layout/BrandLogo";
 import { PopupStatus, confirmAction } from "@/app/components/layout/ActionFeedback";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Article, ArticleBlock, Category } from "@/lib/types";
 import ArticleBody from "./ArticleBody";
@@ -114,9 +114,13 @@ export default function ArticleComposer({
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
   const [freeformSource, setFreeformSource] = useState("");
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [formatBusy, setFormatBusy] = useState(false);
+  const [formatProgress, setFormatProgress] = useState(0);
   const [formatMessage, setFormatMessage] = useState("");
   const [analysisMessage, setAnalysisMessage] = useState("Kategori dan durasi baca ditentukan otomatis dari isi artikel.");
+  const blockElements = useRef(new Map<string, HTMLDivElement>());
+  const previousBlockPositions = useRef(new Map<string, DOMRect>());
   const outputBlocks = useMemo(() => applyLocation(draft.blocks, draft.location), [draft.blocks, draft.location]);
   const analysisText = outputBlocks.map((block) => "text" in block ? block.text : block.type === "image" ? block.caption || "" : "").join("\n");
   useEffect(() => {
@@ -146,6 +150,38 @@ export default function ArticleComposer({
   useEffect(() => {
     setDraft(initial(article, authorName));
   }, [article, authorName]);
+  useEffect(() => {
+    if (!formatBusy) return;
+    const timer = window.setInterval(() => {
+      setFormatProgress((current) => {
+        if (current >= 92) return current;
+        const increment = current < 35 ? 7 : current < 70 ? 4 : 2;
+        return Math.min(92, current + increment);
+      });
+    }, 700);
+    return () => window.clearInterval(timer);
+  }, [formatBusy]);
+  useLayoutEffect(() => {
+    if (previousBlockPositions.current.size === 0) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    blockElements.current.forEach((element, blockId) => {
+      const previous = previousBlockPositions.current.get(blockId);
+      if (!previous) return;
+      const current = element.getBoundingClientRect();
+      const deltaX = previous.left - current.left;
+      const deltaY = previous.top - current.top;
+      if (reduceMotion || (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1)) return;
+      element.getAnimations().forEach((animation) => animation.cancel());
+      element.animate(
+        [
+          { transform: `translate(${deltaX}px, ${deltaY}px)`, opacity: 0.88 },
+          { transform: "translate(0, 0)", opacity: 1 },
+        ],
+        { duration: 280, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+      );
+    });
+    previousBlockPositions.current.clear();
+  }, [draft.blocks]);
   const textContent = useMemo(
     () =>
       outputBlocks
@@ -172,19 +208,26 @@ export default function ArticleComposer({
     }));
   }
   async function formatFreeformArticle() {
-    if (freeformSource.trim().length < 20 || formatBusy) {
-      setFormatMessage("Tempel naskah minimal 20 karakter terlebih dahulu.");
+    if ((!sourceFile && freeformSource.trim().length < 20) || formatBusy) {
+      setFormatMessage("Tempel naskah minimal 20 karakter atau pilih dokumen terlebih dahulu.");
       return;
     }
     setFormatBusy(true);
-    setFormatMessage("AI sedang menyusun struktur artikel…");
+    setFormatProgress(8);
+    setFormatMessage("");
     try {
-      const response = await fetch("/api/ai/format-article", {
+      const requestBody = sourceFile ? new FormData() : null;
+      if (requestBody && sourceFile) requestBody.append("file", sourceFile);
+      const response = await fetch("/api/ai/format-article", sourceFile ? {
+        method: "POST",
+        body: requestBody,
+      } : {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source: freeformSource }),
       });
-      const data = await response.json();
+      setFormatProgress(94);
+      const data = await response.json().catch(() => ({ error: "Server tidak mengirim respons yang dapat dibaca." }));
       if (!response.ok) throw new Error(data.error || "Format artikel gagal.");
       const formattedBlocks = Array.isArray(data.blocks) && data.blocks.length
         ? data.blocks.map((block: { type: ArticleBlock["type"]; text?: string; attribution?: string }, index: number) => ({
@@ -203,7 +246,8 @@ export default function ArticleComposer({
         ...(data.readTime ? { readTime: data.readTime } : {}),
         ...(formattedBlocks ? { blocks: formattedBlocks } : {}),
       }));
-      setFormatMessage("Struktur artikel sudah diisi AI. Periksa dan lengkapi field yang masih kosong.");
+      setFormatProgress(100);
+      setFormatMessage(`${data.sourceFileName ? `${data.sourceFileName} berhasil dibaca. ` : ""}Struktur artikel sudah diisi AI. Periksa hasilnya sebelum dikirim.`);
     } catch (formatError) {
       setFormatMessage(formatError instanceof Error ? formatError.message : "Format artikel gagal.");
     } finally {
@@ -252,6 +296,10 @@ export default function ArticleComposer({
         ? { id: id(), type, url: "", alt: "", caption: "" }
         : type === "divider"
           ? { id: id(), type }
+          : type === "link" || type === "button"
+            ? { id: id(), type, text: "", url: "" }
+          : type === "callout"
+            ? { id: id(), type, title: "", text: "" }
           : type === "quote"
             ? { id: id(), type, text: "", attribution: "" }
             : { id: id(), type, text: "" };
@@ -264,6 +312,9 @@ export default function ArticleComposer({
     }));
   }
   function move(blockId: string, direction: -1 | 1) {
+    previousBlockPositions.current = new Map(
+      Array.from(blockElements.current, ([id, element]) => [id, element.getBoundingClientRect()]),
+    );
     setDraft((current) => {
       const index = current.blocks.findIndex((block) => block.id === blockId);
       const target = index + direction;
@@ -390,6 +441,10 @@ export default function ArticleComposer({
       setError("Lengkapi URL atau upload foto pada setiap blok foto.");
       return;
     }
+    if (draft.blocks.some((block) => (block.type === "link" || block.type === "button") && !/^https:\/\//i.test(block.url))) {
+      setError("Setiap tautan dan tombol harus memakai URL lengkap yang diawali https://.");
+      return;
+    }
     if (!(await confirmAction("Kirim artikel untuk diperiksa?", "Kirim"))) return;
     setBusy(true);
     const payload = {
@@ -460,10 +515,10 @@ export default function ArticleComposer({
     );
   }
   return (
-    <div className="grid gap-8 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,7fr)] 2xl:gap-6">
       <form
         onSubmit={submit}
-        className="space-y-5 bg-white p-5 shadow-sm sm:p-7"
+        className="min-w-0 space-y-5 border border-rule bg-white p-5 sm:p-6 xl:p-7"
       >
         <div>
           <p className="eyebrow">
@@ -474,27 +529,54 @@ export default function ArticleComposer({
             Tambahkan bagian teks, foto, kutipan, dan judul sesuai alur cerita.
           </p>
         </div>
-        <section className="grid gap-3 border border-blue-100 bg-blue-50 p-4">
+        <section className="grid gap-3 border border-gray-200 bg-gray-100 p-4">
           <div>
-            <p className="eyebrow text-blue-600">Format bebas dengan AI</p>
+            <p className="eyebrow text-gray-800">Format bebas dengan AI</p>
             <p className="mt-1 text-sm text-gray-600">Tempel naskah apa pun. AI akan memisahkan judul, dek, lokasi, teks, heading, dan kutipan.</p>
           </div>
           <textarea
             value={freeformSource}
-            onChange={(event) => setFreeformSource(event.target.value)}
+            onChange={(event) => { setFreeformSource(event.target.value); setSourceFile(null); }}
             placeholder="Tempel naskah artikel di sini..."
             className="min-h-28 w-full px-3 py-3 text-sm"
           />
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="cursor-pointer bg-white px-3 py-2 font-mono text-xs text-blue-600 ring-1 ring-blue-200 hover:bg-blue-100">
-              Pilih file teks
-              <input type="file" accept=".txt,.md,text/plain,text/markdown" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then(setFreeformSource); }} />
+          <div className="flex flex-wrap items-center gap-2">
+            <label title="Unggah dokumen" aria-label="Unggah dokumen" className="grid size-9 shrink-0 cursor-pointer place-items-center bg-white text-lg text-gray-800 ring-1 ring-gray-300 transition-colors hover:bg-gray-200">
+              <i className="bx bx-upload" aria-hidden="true" />
+              <input type="file" className="sr-only" onChange={(event) => {
+                const file = event.target.files?.[0] || null;
+                setSourceFile(file);
+                if (file) {
+                  setFreeformSource("");
+                  setFormatMessage(`${file.name} siap diproses (${(file.size / 1024 / 1024).toFixed(2)} MB).`);
+                }
+                event.target.value = "";
+              }} />
             </label>
-            <button type="button" onClick={() => void formatFreeformArticle()} disabled={formatBusy} className="bg-blue-500 px-4 py-2 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-blue-600 disabled:opacity-50">
+            <button type="button" onClick={() => void formatFreeformArticle()} disabled={formatBusy} className="inline-flex h-9 items-center justify-center bg-gray-800 px-3 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-gray-700 disabled:opacity-50">
               {formatBusy ? "Memformat…" : "Format dengan AI"}
             </button>
-            {formatMessage && <span role="status" className="text-xs text-mute">{formatMessage}</span>}
           </div>
+          {formatBusy && (
+            <div role="status" aria-live="polite" className="grid gap-2">
+              <div className="flex items-center justify-between gap-3 text-xs text-gray-600">
+                <span>{formatProgress < 25 ? "Membaca dan menyiapkan dokumen…"
+                  : formatProgress < 55 ? "Mengirim naskah ke model AI…"
+                    : formatProgress < 82 ? "AI sedang menyusun struktur artikel…"
+                      : "Memeriksa dan menyiapkan hasil…"}</span>
+                <span className="font-mono tabular-nums">{formatProgress}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden bg-gray-200" aria-hidden="true">
+                <div
+                  className="h-full bg-gray-800 transition-[width] duration-500 ease-out"
+                  style={{ width: `${formatProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+          {!formatBusy && formatMessage && (
+            <p role="status" className="text-xs leading-5 text-mute">{formatMessage}</p>
+          )}
         </section>
         <div className="grid gap-3">
           <input
@@ -513,20 +595,25 @@ export default function ArticleComposer({
             placeholder="Ringkasan / dek"
             className="min-h-24 px-3 py-3 text-sm"
           />
-          <label className="grid gap-2 bg-blue-50 p-4">
-            <span className="eyebrow text-blue-600">Thumbnail utama · wajib</span>
+          <label className="grid gap-2 bg-gray-100 p-4">
+            <span className="eyebrow text-gray-800">Thumbnail utama · wajib</span>
             <span className="text-sm text-gray-600">
               Foto ini akan tampil di bawah judul artikel dan maksimal 2 MB.
             </span>
-            <input
-              type="file"
-              required={!draft.thumbnailUrl}
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(event) =>
-                void uploadThumbnail(event.target.files?.[0])
-              }
-              className="px-3 py-3 text-sm"
-            />
+            <label title="Unggah thumbnail" aria-label="Unggah thumbnail" className="grid size-11 cursor-pointer place-items-center bg-gray-800 text-2xl text-white transition-colors hover:bg-gray-700">
+              <i className={`bx ${thumbnailBusy ? "bx-loader-alt motion-safe:animate-spin" : "bx-image-add"}`} aria-hidden="true" />
+              <input
+                type="file"
+                required={!draft.thumbnailUrl}
+                accept="image/png,image/jpeg,image/webp"
+                disabled={thumbnailBusy}
+                onChange={(event) => {
+                  void uploadThumbnail(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+                className="sr-only"
+              />
+            </label>
             {thumbnailBusy && (
               <span className="font-mono text-xs text-mute">
                 Mengolah thumbnail...
@@ -553,34 +640,47 @@ export default function ArticleComposer({
         </div>
         <div className="space-y-3">
           {draft.blocks.map((block, index) => (
-            <div key={block.id} className="bg-gray-50 p-4">
+            <div
+              key={block.id}
+              ref={(element) => {
+                if (element) blockElements.current.set(block.id, element);
+                else blockElements.current.delete(block.id);
+              }}
+              className="bg-gray-50 p-4"
+            >
               <div className="mb-3 flex items-center justify-between">
                 <span className="eyebrow">
                   Bagian {index + 1} · {block.type}
                 </span>
-                <div className="flex gap-2 font-mono text-xs">
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
+                    title="Pindahkan bagian ke atas"
+                    aria-label="Pindahkan bagian ke atas"
                     onClick={() => move(block.id, -1)}
                     disabled={index === 0}
-                    className="text-gray-500 hover:text-blue-500 disabled:opacity-30"
+                    className="grid size-8 place-items-center bg-gray-200 text-lg text-gray-800 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-30"
                   >
-                    ↑
+                    <i className="bx bx-up-arrow-alt" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
+                    title="Pindahkan bagian ke bawah"
+                    aria-label="Pindahkan bagian ke bawah"
                     onClick={() => move(block.id, 1)}
                     disabled={index === draft.blocks.length - 1}
-                    className="text-gray-500 hover:text-blue-500 disabled:opacity-30"
+                    className="grid size-8 place-items-center bg-gray-200 text-lg text-gray-800 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-30"
                   >
-                    ↓
+                    <i className="bx bx-down-arrow-alt" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
+                    title="Hapus bagian"
+                    aria-label="Hapus bagian"
                     onClick={() => remove(block.id)}
-                    className="text-gray-500 hover:text-blue-500"
+                    className="grid size-8 place-items-center bg-gray-800 text-lg text-white transition-colors hover:bg-gray-700"
                   >
-                    Hapus
+                    <i className="bx bx-trash" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -602,7 +702,7 @@ export default function ArticleComposer({
                           type="button"
                           onClick={() => void useCurrentLocation()}
                           disabled={locationBusy}
-                          className="bg-blue-50 px-3 py-2 font-mono text-xs text-blue-600 hover:bg-blue-100 disabled:opacity-50"
+                          className="bg-gray-200 px-3 py-2 font-mono text-xs text-gray-800 hover:bg-gray-300 disabled:opacity-50"
                         >
                           <i className="bx bx-current-location mr-1" aria-hidden="true" />
                           {locationBusy ? "Mencari lokasi…" : "Gunakan lokasi saya"}
@@ -629,19 +729,22 @@ export default function ArticleComposer({
               )}
               {block.type === "image" && (
                 <div className="grid gap-2">
-                  <label className="flex cursor-pointer items-center justify-center bg-blue-50 px-3 py-3 font-mono text-xs text-blue-600 hover:bg-blue-100">
+                  <div className="flex items-center gap-3">
+                  <label title="Unggah foto artikel" aria-label="Unggah foto artikel" className="grid size-11 cursor-pointer place-items-center bg-gray-800 text-2xl text-white transition-colors hover:bg-gray-700">
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
                       className="sr-only"
-                      onChange={(event) =>
-                        void uploadImage(block.id, event.target.files?.[0])
-                      }
+                      disabled={imageBusy === block.id}
+                      onChange={(event) => {
+                        void uploadImage(block.id, event.target.files?.[0]);
+                        event.target.value = "";
+                      }}
                     />
-                    {imageBusy === block.id
-                      ? "Mengolah foto..."
-                      : "Upload foto · otomatis WebP, maksimal 2 MB"}
+                    <i className={`bx ${imageBusy === block.id ? "bx-loader-alt motion-safe:animate-spin" : "bx-image-add"}`} aria-hidden="true" />
                   </label>
+                  <span className="text-xs text-mute">Otomatis WebP · maksimal 2 MB</span>
+                  </div>
                   <input
                     value={block.url}
                     onChange={(event) =>
@@ -705,6 +808,43 @@ export default function ArticleComposer({
                   />
                 </div>
               )}
+              {(block.type === "link" || block.type === "button") && (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input
+                    required
+                    value={block.text}
+                    onChange={(event) => updateBlock(block.id, { text: event.target.value })}
+                    placeholder={block.type === "button" ? "Teks tombol" : "Judul tautan"}
+                    className="px-3 py-3 text-sm"
+                  />
+                  <input
+                    required
+                    type="url"
+                    pattern="https://.*"
+                    value={block.url}
+                    onChange={(event) => updateBlock(block.id, { url: event.target.value })}
+                    placeholder="https://contoh.com"
+                    className="px-3 py-3 text-sm"
+                  />
+                </div>
+              )}
+              {block.type === "callout" && (
+                <div className="grid gap-2">
+                  <input
+                    value={block.title || ""}
+                    onChange={(event) => updateBlock(block.id, { title: event.target.value })}
+                    placeholder="Judul sorotan (opsional)"
+                    className="px-3 py-3 text-sm"
+                  />
+                  <textarea
+                    required
+                    value={block.text}
+                    onChange={(event) => updateBlock(block.id, { text: event.target.value })}
+                    placeholder="Isi informasi penting..."
+                    className="min-h-24 px-3 py-3 text-sm"
+                  />
+                </div>
+              )}
               {block.type === "divider" && (
                 <p className="text-sm text-mute">Garis pemisah antarbagian.</p>
               )}
@@ -719,6 +859,9 @@ export default function ArticleComposer({
               ["heading", "Judul bagian"],
               ["image", "Foto"],
               ["quote", "Kutipan"],
+              ["link", "Tautan"],
+              ["button", "Tombol"],
+              ["callout", "Sorotan"],
               ["divider", "Pemisah"],
             ] as const
           ).map(([type, label]) => (
@@ -726,7 +869,7 @@ export default function ArticleComposer({
               key={type}
               type="button"
               onClick={() => add(type)}
-              className="bg-blue-50 px-3 py-2 font-mono text-xs text-blue-600 transition-colors hover:bg-blue-500 hover:text-white"
+              className="bg-gray-200 px-3 py-2 font-mono text-xs text-gray-800 transition-colors hover:bg-gray-800 hover:text-white"
             >
               + {label}
             </button>
@@ -736,7 +879,7 @@ export default function ArticleComposer({
         <div className="flex flex-wrap gap-3">
           <button
             disabled={busy}
-            className="bg-blue-500 px-5 py-3 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-blue-600 disabled:opacity-50"
+            className="bg-gray-800 px-5 py-3 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-gray-700 disabled:opacity-50"
           >
             {busy
               ? "Mengirim..."
@@ -750,17 +893,17 @@ export default function ArticleComposer({
               onClick={async () => {
                 if (await confirmAction("Batalkan pengeditan artikel?", "Batalkan edit")) onCancel();
               }}
-              className="px-5 py-3 font-mono text-xs text-gray-800 hover:text-blue-500"
+              className="px-5 py-3 font-mono text-xs text-gray-800 hover:bg-gray-100"
             >
               Batal edit
             </button>
           )}
         </div>
       </form>
-      <aside className="min-w-0 bg-white p-5 shadow-sm sm:p-8">
+      <aside className="min-w-0 border border-rule bg-white p-5 sm:p-7 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:min-h-[calc(100vh-7rem)] lg:overflow-y-auto xl:p-8">
         <div className="mb-8 flex items-center justify-between">
           <span className="eyebrow">Live preview</span>
-          <span className="font-mono text-[10px] text-blue-500">DRAFT</span>
+          <span className="font-mono text-[10px] text-gray-800">DRAFT</span>
         </div>
         <article>
           <p className="eyebrow">{draft.category}</p>

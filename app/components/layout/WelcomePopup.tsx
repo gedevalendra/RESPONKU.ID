@@ -175,13 +175,16 @@ export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
               <label className={labelClass}>Informasi
                 <textarea className={fieldClass} rows={4} maxLength={5000} value={popup.text} onChange={(event) => update("text", event.target.value)} />
               </label>
-              <label className={labelClass}>Gambar opsional
-                <input className={`${fieldClass} file:mr-3 file:bg-gray-200 file:px-2 file:py-1`} type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void upload(file);
-                  event.target.value = "";
-                }} />
-              </label>
+              <div className={labelClass}><span>Gambar opsional</span>
+                <label title="Unggah gambar popup" aria-label="Unggah gambar popup" className="grid size-11 cursor-pointer place-items-center bg-gray-800 text-2xl text-white hover:bg-gray-700">
+                  <i className={`bx ${uploading ? "bx-loader-alt motion-safe:animate-spin" : "bx-image-add"}`} aria-hidden="true" />
+                  <input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void upload(file);
+                    event.target.value = "";
+                  }} />
+                </label>
+              </div>
               {popup.image && <button type="button" className="justify-self-start text-sm text-red-700 underline" disabled={uploading} onClick={() => update("image", "")}>Hapus gambar</button>}
             </div>
             <div className="border-y border-rule p-5 sm:p-6">

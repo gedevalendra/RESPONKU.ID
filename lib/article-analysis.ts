@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import type { Article, ArticleBlock } from "@/lib/types";
+import { recordAiUsage } from "@/lib/ai-usage";
 
 export const analysisSchema = z.object({
   category: z.enum(["Ekonomi", "Teknologi", "Politik", "Olahraga", "Budaya"]),
@@ -48,6 +49,7 @@ export async function analyzeArticle(input: { title: string; dek: string; conten
     throw new Error(message);
   }
   const data = await response.json();
+  await recordAiUsage({ provider: "groq", model: env.groqModel, feature: "article_analysis", inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens, totalTokens: data.usage?.total_tokens });
   const result = analysisSchema.safeParse(JSON.parse(data.choices?.[0]?.message?.content || "{}"));
   if (!result.success) throw new Error("Hasil analisis Groq tidak valid. Coba lagi.");
   return result.data;
@@ -75,6 +77,7 @@ export async function reviewArticle(input: { title: string; dek: string; content
   });
   if (!response.ok) throw new Error(`Review Groq gagal (HTTP ${response.status}).`);
   const data = await response.json();
+  await recordAiUsage({ provider: "groq", model: env.groqModel, feature: "article_review", inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens, totalTokens: data.usage?.total_tokens });
   const result = editorialReviewSchema.safeParse(JSON.parse(data.choices?.[0]?.message?.content || "{}"));
   if (!result.success) throw new Error("Hasil review AI tidak valid. Artikel ditahan untuk review admin.");
   return result.data;

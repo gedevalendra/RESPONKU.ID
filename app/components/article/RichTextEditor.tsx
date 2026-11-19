@@ -76,12 +76,12 @@ export default function RichTextEditor({ value, onChange }: { value: RichTextVal
             aria-label={label}
             onMouseDown={preventFocusLoss}
             onClick={() => command === "createLink" ? openLinkDialog() : run(command)}
-            className="grid size-8 place-items-center text-lg text-gray-600 hover:bg-blue-100 hover:text-blue-600"
+            className="grid size-8 place-items-center text-lg text-gray-600 hover:bg-gray-200 hover:text-gray-800"
           >
             <i className={`bx ${icon}`} aria-hidden="true" />
           </button>
         ))}
-        <label title="Warna teks" className="grid size-8 cursor-pointer place-items-center text-lg text-gray-600 hover:bg-blue-100 hover:text-blue-600">
+        <label title="Warna teks" className="grid size-8 cursor-pointer place-items-center text-lg text-gray-600 hover:bg-gray-200 hover:text-gray-800">
           <i className="bx bx-palette" aria-hidden="true" />
           <input
             type="color"
@@ -92,7 +92,7 @@ export default function RichTextEditor({ value, onChange }: { value: RichTextVal
             className="sr-only"
           />
         </label>
-        <button type="button" title="Hapus format" aria-label="Hapus format" onMouseDown={preventFocusLoss} onClick={() => run("removeFormat")} className="grid size-8 place-items-center text-lg text-gray-600 hover:bg-blue-100 hover:text-blue-600">
+        <button type="button" title="Hapus format" aria-label="Hapus format" onMouseDown={preventFocusLoss} onClick={() => run("removeFormat")} className="grid size-8 place-items-center text-lg text-gray-600 hover:bg-gray-200 hover:text-gray-800">
           <i className="bx bx-eraser" aria-hidden="true" />
         </button>
       </div>
@@ -122,7 +122,7 @@ export default function RichTextEditor({ value, onChange }: { value: RichTextVal
             <p className="mt-2 text-xs text-mute">Gunakan alamat yang diawali https://.</p>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={() => setLinkDialogOpen(false)} className="px-4 py-2 text-sm text-mute hover:bg-gray-100">Batal</button>
-              <button type="submit" className="bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600">Terapkan</button>
+              <button type="submit" className="bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700">Terapkan</button>
             </div>
           </form>
         </div>

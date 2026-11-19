@@ -37,6 +37,9 @@ export type ArticleBlock =
   | { id: string; type: "heading"; text: string }
   | { id: string; type: "image"; url: string; alt: string; caption?: string }
   | { id: string; type: "quote"; text: string; attribution?: string }
+  | { id: string; type: "link"; text: string; url: string }
+  | { id: string; type: "button"; text: string; url: string }
+  | { id: string; type: "callout"; title?: string; text: string }
   | { id: string; type: "divider" };
 
 export type Comment = {

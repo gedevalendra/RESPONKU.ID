@@ -58,7 +58,7 @@ export default function UserArticleManager({
         onCancel={() => setEditing(null)}
       />
       {message && <PopupStatus message={message} />}
-      <section>
+      <section className="mx-auto w-full max-w-5xl">
         <div className="flex items-baseline justify-between border-b border-ink pb-3">
           <div>
             <p className="eyebrow">Riwayat pengajuan</p>

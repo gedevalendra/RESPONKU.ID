@@ -135,7 +135,7 @@ export default async function ArticlePage({
         <i className="bx bx-arrow-back mr-1" aria-hidden="true" /> Kembali ke Beranda
       </Link>
 
-      <div className="mt-6 max-w-3xl">
+      <div className="mt-6 max-w-5xl">
         {article.breaking && (
           <span className="mb-3 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest2 text-signal">
             <span
@@ -148,7 +148,7 @@ export default async function ArticlePage({
         <h1 className="mt-3 max-w-5xl font-display text-3xl font-bold leading-[1.1] sm:text-4xl lg:text-5xl">
           {article.title}
         </h1>
-        <p className="mt-4 text-lg text-mute">{article.dek}</p>
+        <p className="mt-4 max-w-4xl text-lg text-mute">{article.dek}</p>
         <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
         <div className="group relative flex w-fit flex-wrap items-center gap-x-2.5 gap-y-2">
           <a href={authorProfileHref ? `/akun/${authorProfileHref}` : "#"} className="flex items-center gap-2.5">

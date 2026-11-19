@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@keyframes youtube-start-cover {
+  0%, 72% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+.youtube-start-cover {
+  animation: youtube-start-cover 3.2s ease-out forwards;
+}
+
 @keyframes mobile-more-gradient {
   0% { background-position: 0% 50%; }
   100% { background-position: 100% 50%; }

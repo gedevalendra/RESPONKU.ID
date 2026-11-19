@@ -29,6 +29,18 @@ const block = z.discriminatedUnion("type", [
     text: z.string().min(1).max(2000),
     attribution: z.string().max(200).optional(),
   }),
+  z.object({
+    id: z.string().min(1).max(80),
+    type: z.enum(["link", "button"]),
+    text: z.string().min(1).max(200),
+    url: z.string().url().max(2000).refine((url) => url.startsWith("https://"), "URL harus menggunakan HTTPS"),
+  }),
+  z.object({
+    id: z.string().min(1).max(80),
+    type: z.literal("callout"),
+    title: z.string().max(120).optional(),
+    text: z.string().min(1).max(2000),
+  }),
   z.object({ id: z.string().min(1).max(80), type: z.literal("divider") }),
 ]);
 const input = z.object({

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getMongoDb } from "@/lib/mongodb";
 import type { Article } from "@/lib/types";
+import { getAiUsageSummary } from "@/lib/ai-usage";
+import AiUsagePanel from "@/app/components/dashboard/AiUsagePanel";
 
 type Overview = {
   totals: { _id: string; count: number; views: number }[];
@@ -11,13 +13,13 @@ type Overview = {
 export default async function EditorialOverview({ role }: { role: "admin" | "superadmin" }) {
   const base = `/${role}`;
   const db = await getMongoDb();
-  const data = await db?.collection("articles").aggregate<Overview>([
+  const [data, aiUsage] = await Promise.all([db?.collection("articles").aggregate<Overview>([
     { $facet: {
       totals: [{ $group: { _id: "$status", count: { $sum: 1 }, views: { $sum: "$views" } } }],
       queue: [{ $match: { status: "pending" } }, { $sort: { submittedAt: 1, _id: 1 } }, { $limit: 5 }, { $project: { id: 1, title: 1, author: 1 } }],
       popular: [{ $match: { status: "published" } }, { $sort: { views: -1, _id: 1 } }, { $limit: 5 }, { $project: { id: 1, title: 1, slug: 1, views: 1 } }],
     } },
-  ]).next().catch(() => null);
+  ]).next().catch(() => null), getAiUsageSummary(30)]);
   const published = data?.totals.find((row) => row._id === "published");
   const format = new Intl.NumberFormat("id-ID");
   const stats = [
@@ -44,6 +46,18 @@ export default async function EditorialOverview({ role }: { role: "admin" | "sup
           </div>
         ))}
       </dl>
+      <section className="border border-rule bg-paper p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-rule pb-4">
+            <div>
+              <p className="eyebrow">Pemakaian AI</p>
+              <h2 className="mt-1 font-display text-xl">Token 30 hari terakhir</h2>
+            </div>
+            <i className="bx bx-chip text-2xl text-mute" aria-hidden="true" />
+          </div>
+          {aiUsage ? (
+            <AiUsagePanel usage={aiUsage} />
+          ) : <p className="py-5 text-sm text-mute">Statistik AI belum dapat dimuat.</p>}
+      </section>
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="min-w-0 border border-rule bg-paper p-4 sm:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule pb-3">

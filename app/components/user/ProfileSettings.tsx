@@ -20,12 +20,8 @@ function ImageUpload({ kind, busy, onUpload }: {
 }) {
   return (
     <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/25 text-white transition-colors hover:bg-black/40 focus-within:ring-2 focus-within:ring-inset focus-within:ring-white">
-      <span className="flex items-center gap-2 rounded-full bg-gray-800/80 p-3 text-xs">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <path d="M3 7h4l2-3h6l2 3h4v13H3Z" />
-          <circle cx="12" cy="13" r="4" />
-        </svg>
-        {kind === "background" && <span>{busy ? "Mengunggah…" : "Ganti background"}</span>}
+      <span className="grid size-11 place-items-center rounded-full bg-gray-800/80 text-2xl">
+        <i className={`bx ${busy ? "bx-loader-alt motion-safe:animate-spin" : "bx-camera"}`} aria-hidden="true" />
       </span>
       <input
         type="file"

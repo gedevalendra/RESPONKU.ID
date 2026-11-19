@@ -63,7 +63,7 @@ export default function ArticleBody({
           return (
             <blockquote
               key={block.id}
-              className="border-l-4 border-blue-500 pl-5 font-display text-2xl leading-snug text-gray-800"
+              className="border-l-4 border-gray-800 pl-5 font-display text-2xl leading-snug text-gray-800"
             >
               “{block.text}”
               {block.attribution && (
@@ -72,6 +72,28 @@ export default function ArticleBody({
                 </cite>
               )}
             </blockquote>
+          );
+        if (block.type === "link")
+          return (
+            <a key={block.id} href={block.url} target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between gap-4 border border-rule px-4 py-3 text-base font-medium text-gray-800 transition-colors hover:border-gray-800 hover:bg-gray-50">
+              <span className="underline decoration-gray-300 underline-offset-4 group-hover:decoration-gray-800">{block.text}</span>
+              <i className="bx bx-link-external shrink-0 text-xl" aria-hidden="true" />
+            </a>
+          );
+        if (block.type === "button")
+          return (
+            <div key={block.id}>
+              <a href={block.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center bg-gray-800 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-700">
+                {block.text}
+              </a>
+            </div>
+          );
+        if (block.type === "callout")
+          return (
+            <aside key={block.id} className="border-l-4 border-gray-800 bg-gray-100 px-5 py-4 text-gray-800">
+              {block.title && <p className="mb-1 font-semibold">{block.title}</p>}
+              <p className="whitespace-pre-wrap text-base">{block.text}</p>
+            </aside>
           );
         return <hr key={block.id} className="border-rule" />;
       })}

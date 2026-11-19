@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getActor } from "@/lib/authz";
 import { env } from "@/lib/env";
+import { recordAiUsage } from "@/lib/ai-usage";
 
 const input = z.object({ imageUrl: z.string().url().max(3000) });
 
@@ -62,7 +63,9 @@ export async function POST(request: Request) {
     );
   const data = (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
+  await recordAiUsage({ provider: "groq", model: env.groqModel, feature: "image_caption", inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens, totalTokens: data.usage?.total_tokens });
   const caption = data.choices?.[0]?.message?.content?.trim();
   if (!caption)
     return NextResponse.json(
