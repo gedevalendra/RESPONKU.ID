@@ -29,7 +29,7 @@ export default function ReadingActivityMenu({ readingHistory }: { readingHistory
     return [...list].sort((a, b) => newest ? +new Date(b.updatedAt) - +new Date(a.updatedAt) : +new Date(a.updatedAt) - +new Date(b.updatedAt));
   }, [readingHistory, newest, tab]);
   return <>
-    <section className="grid grid-cols-4 gap-2" aria-label="Aktivitas akun">
+    <section className="grid grid-cols-2 md:grid-cols-4 gap-1" aria-label="Aktivitas akun">
       {(Object.keys(details) as Tab[]).slice(0, 4).map((key) => <button key={key} type="button" onClick={() => open(key)} className="group min-h-28 rounded-xl border border-rule bg-paper p-2 text-center sm:p-4 sm:text-left"><i className={`bx ${details[key].icon} text-xl text-gray-800 sm:text-2xl`} aria-hidden="true" /><p className="mt-3 text-xs font-medium sm:text-sm">{details[key].label}</p><p className="mt-1 hidden text-xs leading-4 text-mute sm:block">{key === "continue" ? `${readingHistory.filter((item) => item.progress < .96).length} belum selesai` : details[key].description}</p></button>)}
     </section>
     <dialog ref={dialog} onCancel={(event) => { event.preventDefault(); close(); }} onClick={(event) => { if (event.target === event.currentTarget) close(); }} onAnimationEnd={finishClose} className={`${closing ? "activity-sheet-closing" : "activity-sheet"} fixed inset-x-0 top-auto bottom-0 m-0 h-[80dvh] max-h-[80dvh] w-full max-w-none rounded-t-3xl bg-paper p-0 shadow-2xl backdrop:bg-black/40`}>

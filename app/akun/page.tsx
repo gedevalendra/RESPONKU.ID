@@ -4,8 +4,10 @@ import ProfileSettings from "@/app/components/user/ProfileSettings";
 import LogoutButton from "@/app/components/auth/LogoutButton";
 import { getActor } from "@/lib/authz";
 import ReadingActivityMenu from "@/app/components/user/ReadingActivityMenu";
+import GoogleIndexMenu from "@/app/components/user/GoogleIndexMenu";
 import { listArticleReadingHistory, listArticlesFromDatabase } from "@/lib/db";
 import { publicProfile } from "@/lib/community";
+import { articleUrl } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,12 @@ export default async function AccountPage() {
   if (!actor) redirect("/masuk?next=/akun");
   const [articles, readingHistory, profile] = await Promise.all([listArticlesFromDatabase({ authorId: actor.id }), listArticleReadingHistory(actor.id), publicProfile(actor.id).catch(() => null)]);
   const profileActor = { ...actor, avatarUrl: profile?.avatarUrl || actor.avatarUrl, backgroundUrl: profile?.backgroundUrl || actor.backgroundUrl, bio: profile?.bio || actor.bio, username: profile?.username || actor.username };
+  const publishedArticles = articles.filter((article) => article.status === "published").map((article) => {
+    const canonicalUrl = new URL(articleUrl(article.slug));
+    const googleSearchUrl = new URL("https://www.google.com/search");
+    googleSearchUrl.searchParams.set("q", `site:${canonicalUrl.host}${canonicalUrl.pathname}`);
+    return { title: article.title, googleSearchUrl: googleSearchUrl.toString() };
+  });
   const articleStats = {
     published: articles.filter((article) => article.status === "published").length,
     pending: articles.filter((article) => article.status === "pending").length,
@@ -22,9 +30,10 @@ export default async function AccountPage() {
   };
   return (
     <div className="wrap py-8 sm:py-12">
-      <div className="space-y-10">
+      <div className="space-y-4">
         <ProfileSettings initial={profileActor} articleStats={articleStats} />
         <ReadingActivityMenu readingHistory={readingHistory.map((item) => ({ ...item, updatedAt: new Date(item.updatedAt).toISOString() }))} />
+        <GoogleIndexMenu articles={publishedArticles} />
         <UserDashboard />
         <section aria-labelledby="account-menu-title" className="border-t border-rule pt-6">
           <div className="mb-4 flex items-end justify-between gap-3">
