@@ -8,7 +8,7 @@ const tokenEndpoint = "https://oauth2.googleapis.com/token";
 const inspectionEndpoint =
   "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect";
 
-const scope = "https://www.googleapis.com/auth/webmasters.readonly";
+const scope = "https://www.googleapis.com/auth/webmasters";
 
 type SearchConsoleConfig = {
   clientEmail: string;
