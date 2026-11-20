@@ -7,3 +7,4 @@ client_secret_*.json
 *.tsbuildinfo
 .DS_Store
 next-env.d.ts
+arched-osprey-515308-m4-7ff4f4ec433b.json

@@ -27,6 +27,18 @@ type Props = {
 };
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
+const BLOCK_META: Record<ArticleBlock["type"], { icon: string; label: string }> = {
+  text: { icon: "bx-text", label: "Teks" },
+  heading: { icon: "bx-heading", label: "Judul bagian" },
+  image: { icon: "bx-image", label: "Foto" },
+  quote: { icon: "bx-quote-alt-left", label: "Kutipan" },
+  link: { icon: "bx-link", label: "Tautan" },
+  button: { icon: "bx-pointer", label: "Tombol" },
+  callout: { icon: "bx-info-circle", label: "Sorotan" },
+  divider: { icon: "bx-minus", label: "Pemisah" },
+};
+const ADDABLE: ArticleBlock["type"][] = ["text", "heading", "image", "quote", "link", "button", "callout", "divider"];
+
 function id() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -92,6 +104,59 @@ export async function convertToWebp(file: File): Promise<Blob> {
   throw new Error("Foto masih lebih besar dari 2 MB setelah dikonversi");
 }
 
+/* ---------- Potongan UI kecil ---------- */
+
+function SectionHeader({
+  step,
+  title,
+  hint,
+  badge,
+}: {
+  step: number;
+  title: string;
+  hint?: string;
+  badge?: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="grid size-8 shrink-0 place-items-center bg-gray-800 font-mono text-xs text-white">
+        {String(step).padStart(2, "0")}
+      </span>
+      <div className="min-w-0">
+        <h3 className="flex flex-wrap items-center gap-2 font-display text-xl leading-8">
+          {title}
+          {badge && (
+            <span className="border border-rule px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest2 text-mute">
+              {badge}
+            </span>
+          )}
+        </h3>
+        {hint && <p className="mt-0.5 text-sm leading-6 text-mute">{hint}</p>}
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="text-xs font-medium text-gray-800">
+        {label}
+        {hint && <span className="ml-1 font-normal text-mute">{hint}</span>}
+      </span>
+      {children}
+    </label>
+  );
+}
+
 export default function ArticleComposer({
   article,
   authorName,
@@ -118,6 +183,7 @@ export default function ArticleComposer({
   const [formatBusy, setFormatBusy] = useState(false);
   const [formatProgress, setFormatProgress] = useState(0);
   const [formatMessage, setFormatMessage] = useState("");
+  const [mobileTab, setMobileTab] = useState<"editor" | "preview">("editor");
   const [analysisMessage, setAnalysisMessage] = useState("Kategori dan durasi baca ditentukan otomatis dari isi artikel.");
   const blockElements = useRef(new Map<string, HTMLDivElement>());
   const previousBlockPositions = useRef(new Map<string, DOMRect>());
@@ -193,6 +259,21 @@ export default function ArticleComposer({
         .filter(Boolean),
     [outputBlocks],
   );
+
+  /* Kelengkapan: hanya tampilan, aturan validasi sebenarnya tetap di submit() */
+  const checklist = useMemo(() => {
+    const hasContent = draft.blocks.some(
+      (block) => !(block.type === "divider" || ("text" in block && !block.text.trim())),
+    );
+    return [
+      { label: "Judul", done: draft.title.trim().length >= 5 },
+      { label: "Ringkasan", done: draft.dek.trim().length >= 10 },
+      { label: "Thumbnail", done: Boolean(draft.thumbnailUrl) },
+      { label: "Isi artikel", done: hasContent },
+    ];
+  }, [draft.title, draft.dek, draft.thumbnailUrl, draft.blocks]);
+  const doneCount = checklist.filter((item) => item.done).length;
+
   function update<K extends keyof ArticleDraft>(
     key: K,
     value: ArticleDraft[K],
@@ -484,9 +565,9 @@ export default function ArticleComposer({
     const rejected = submission?.status === "rejected";
     const headline = busy ? "Artikel sedang dikirim…" : published ? "Artikel diterbitkan" : rejected ? "Artikel tidak disetujui" : "Artikel dikirim untuk ditinjau";
     return (
-      <section ref={progressPanel} className="action-popup scroll-mt-40 border-y border-rule bg-paper px-5 py-12 sm:py-20">
+      <section ref={progressPanel} className="action-popup scroll-mt-40 border border-rule bg-white px-5 py-14 sm:py-20">
         <div role="status" className="mx-auto grid max-w-md justify-items-center gap-4 text-center">
-          <div className="grid size-16 place-items-center border border-rule text-3xl text-ink" aria-hidden="true">
+          <div className="grid size-16 place-items-center bg-gray-100 text-3xl text-gray-800" aria-hidden="true">
             <i className={`bx ${busy ? "bx-loader-alt motion-safe:animate-spin" : published ? "bx-check" : rejected ? "bx-info-circle" : "bx-paper-plane"}`} />
           </div>
           <h2 className="font-display text-3xl">{headline}</h2>
@@ -498,14 +579,14 @@ export default function ArticleComposer({
           </p>
         </div>
         {!busy && (
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button type="button" className="min-h-11 border border-rule px-4 text-sm hover:bg-gray-100" onClick={() => {
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <button type="button" className="min-h-11 border border-rule px-4 text-sm font-medium hover:bg-gray-100" onClick={() => {
               setDraft(initial(null, authorName));
               setSubmission(null);
               onSaved(headline);
             }}>Kembali ke kiriman</button>
             {published && submission?.slug && (
-              <Link className="inline-flex min-h-11 items-center bg-ink px-4 text-sm text-paper" href={`/artikel/${encodeURIComponent(submission.slug)}`}>
+              <Link className="inline-flex min-h-11 items-center bg-gray-800 px-4 text-sm font-medium text-white hover:bg-gray-700" href={`/artikel/${encodeURIComponent(submission.slug)}`}>
                 Lihat artikel
               </Link>
             )}
@@ -514,420 +595,560 @@ export default function ArticleComposer({
       </section>
     );
   }
+
+  const formatLabel = formatProgress < 25 ? "Membaca dan menyiapkan dokumen…"
+    : formatProgress < 55 ? "Mengirim naskah ke model AI…"
+      : formatProgress < 82 ? "AI sedang menyusun struktur artikel…"
+        : "Memeriksa dan menyiapkan hasil…";
+
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,7fr)] 2xl:gap-6">
-      <form
-        onSubmit={submit}
-        className="min-w-0 space-y-5 border border-rule bg-white p-5 sm:p-6 xl:p-7"
-      >
-        <div>
-          <p className="eyebrow">
-            {article ? "Edit kiriman" : "Editor artikel"}
-          </p>
-          <h2 className="mt-1 font-display text-2xl">Susun berita kamu</h2>
-          <p className="mt-2 text-sm text-mute">
-            Tambahkan bagian teks, foto, kutipan, dan judul sesuai alur cerita.
-          </p>
-        </div>
-        <section className="grid gap-3 border border-gray-200 bg-gray-100 p-4">
-          <div>
-            <p className="eyebrow text-gray-800">Format bebas dengan AI</p>
-            <p className="mt-1 text-sm text-gray-600">Tempel naskah apa pun. AI akan memisahkan judul, dek, lokasi, teks, heading, dan kutipan.</p>
-          </div>
-          <textarea
-            value={freeformSource}
-            onChange={(event) => { setFreeformSource(event.target.value); setSourceFile(null); }}
-            placeholder="Tempel naskah artikel di sini..."
-            className="min-h-28 w-full px-3 py-3 text-sm"
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <label title="Unggah dokumen" aria-label="Unggah dokumen" className="grid size-9 shrink-0 cursor-pointer place-items-center bg-white text-lg text-gray-800 ring-1 ring-gray-300 transition-colors hover:bg-gray-200">
-              <i className="bx bx-upload" aria-hidden="true" />
-              <input type="file" className="sr-only" onChange={(event) => {
-                const file = event.target.files?.[0] || null;
-                setSourceFile(file);
-                if (file) {
-                  setFreeformSource("");
-                  setFormatMessage(`${file.name} siap diproses (${(file.size / 1024 / 1024).toFixed(2)} MB).`);
-                }
-                event.target.value = "";
-              }} />
-            </label>
-            <button type="button" onClick={() => void formatFreeformArticle()} disabled={formatBusy} className="inline-flex h-9 items-center justify-center bg-gray-800 px-3 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-gray-700 disabled:opacity-50">
-              {formatBusy ? "Memformat…" : "Format dengan AI"}
-            </button>
-          </div>
-          {formatBusy && (
-            <div role="status" aria-live="polite" className="grid gap-2">
-              <div className="flex items-center justify-between gap-3 text-xs text-gray-600">
-                <span>{formatProgress < 25 ? "Membaca dan menyiapkan dokumen…"
-                  : formatProgress < 55 ? "Mengirim naskah ke model AI…"
-                    : formatProgress < 82 ? "AI sedang menyusun struktur artikel…"
-                      : "Memeriksa dan menyiapkan hasil…"}</span>
-                <span className="font-mono tabular-nums">{formatProgress}%</span>
+    <div className="grid gap-5">
+      {/* Tab editor / preview untuk layar kecil */}
+      <div role="tablist" aria-label="Tampilan editor" className="grid grid-cols-2 border border-rule bg-white lg:hidden">
+        {(["editor", "preview"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={mobileTab === tab}
+            onClick={() => setMobileTab(tab)}
+            className={`flex min-h-11 items-center justify-center gap-2 text-sm font-medium transition-colors ${mobileTab === tab ? "bg-gray-800 text-white" : "hover:bg-gray-100"}`}
+          >
+            <i className={`bx ${tab === "editor" ? "bx-edit-alt" : "bx-show"} text-lg`} aria-hidden="true" />
+            {tab === "editor" ? "Editor" : "Pratinjau"}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)] 2xl:gap-6">
+        <form
+          onSubmit={submit}
+          className={`min-w-0 border border-rule bg-white ${mobileTab === "preview" ? "hidden lg:block" : ""}`}
+        >
+          {/* Kepala + kelengkapan */}
+          <div className="border-b border-rule p-5 sm:p-6 xl:p-7">
+            <p className="eyebrow">{article ? "Edit kiriman" : "Editor artikel"}</p>
+            <h2 className="mt-1 font-display text-2xl sm:text-3xl">Susun berita kamu</h2>
+            <p className="mt-2 max-w-[56ch] text-sm leading-6 text-mute">
+              Isi bagian di bawah dari atas ke bawah. Pratinjau artikel diperbarui langsung.
+            </p>
+            <div className="mt-5" role="status" aria-live="polite">
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className="font-medium text-gray-800">Kelengkapan</span>
+                <span className="font-mono tabular-nums text-mute">{doneCount}/{checklist.length}</span>
               </div>
-              <div className="h-1.5 overflow-hidden bg-gray-200" aria-hidden="true">
+              <div className="mt-2 h-1 bg-gray-200" aria-hidden="true">
                 <div
-                  className="h-full bg-gray-800 transition-[width] duration-500 ease-out"
-                  style={{ width: `${formatProgress}%` }}
+                  className="h-full bg-blue-500 transition-[width] duration-500 ease-out"
+                  style={{ width: `${(doneCount / checklist.length) * 100}%` }}
                 />
               </div>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {checklist.map((item) => (
+                  <li
+                    key={item.label}
+                    className={`inline-flex items-center gap-1 border px-2 py-1 text-xs ${item.done ? "border-gray-800 bg-gray-800 text-white" : "border-rule text-mute"}`}
+                  >
+                    <i className={`bx ${item.done ? "bx-check" : "bx-circle"} text-sm`} aria-hidden="true" />
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
-          {!formatBusy && formatMessage && (
-            <p role="status" className="text-xs leading-5 text-mute">{formatMessage}</p>
-          )}
-        </section>
-        <div className="grid gap-3">
-          <input
-            required
-            minLength={5}
-            value={draft.title}
-            onChange={(event) => update("title", event.target.value)}
-            placeholder="Judul artikel"
-            className="px-3 py-3 text-sm"
-          />
-          <textarea
-            required
-            minLength={10}
-            value={draft.dek}
-            onChange={(event) => update("dek", event.target.value)}
-            placeholder="Ringkasan / dek"
-            className="min-h-24 px-3 py-3 text-sm"
-          />
-          <label className="grid gap-2 bg-gray-100 p-4">
-            <span className="eyebrow text-gray-800">Thumbnail utama · wajib</span>
-            <span className="text-sm text-gray-600">
-              Foto ini akan tampil di bawah judul artikel dan maksimal 2 MB.
-            </span>
-            <label title="Unggah thumbnail" aria-label="Unggah thumbnail" className="grid size-11 cursor-pointer place-items-center bg-gray-800 text-2xl text-white transition-colors hover:bg-gray-700">
-              <i className={`bx ${thumbnailBusy ? "bx-loader-alt motion-safe:animate-spin" : "bx-image-add"}`} aria-hidden="true" />
-              <input
-                type="file"
-                required={!draft.thumbnailUrl}
-                accept="image/png,image/jpeg,image/webp"
-                disabled={thumbnailBusy}
-                onChange={(event) => {
-                  void uploadThumbnail(event.target.files?.[0]);
-                  event.target.value = "";
-                }}
-                className="sr-only"
+          </div>
+
+          <div className="space-y-8 p-5 sm:p-6 xl:p-7">
+            {/* 1. Bahan dengan AI */}
+            <section className="grid gap-4" aria-labelledby="sec-ai">
+              <SectionHeader
+                step={1}
+                title="Format bebas dengan AI"
+                badge="Opsional"
+                hint="Tempel naskah apa pun. AI memisahkan judul, dek, lokasi, teks, heading, dan kutipan."
               />
-            </label>
-            {thumbnailBusy && (
-              <span className="font-mono text-xs text-mute">
-                Mengolah thumbnail...
-              </span>
-            )}
+              <div className="grid gap-3 border border-rule bg-gray-50 p-4">
+                <textarea
+                  value={freeformSource}
+                  onChange={(event) => { setFreeformSource(event.target.value); setSourceFile(null); }}
+                  placeholder="Tempel naskah artikel di sini..."
+                  aria-label="Naskah mentah"
+                  className="min-h-32 w-full px-3 py-3 text-sm"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex h-10 cursor-pointer items-center gap-2 border border-rule bg-white px-3 text-sm font-medium transition-colors hover:bg-gray-100">
+                    <i className="bx bx-upload text-lg" aria-hidden="true" /> Unggah dokumen
+                    <input type="file" className="sr-only" onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setSourceFile(file);
+                      if (file) {
+                        setFreeformSource("");
+                        setFormatMessage(`${file.name} siap diproses (${(file.size / 1024 / 1024).toFixed(2)} MB).`);
+                      }
+                      event.target.value = "";
+                    }} />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void formatFreeformArticle()}
+                    disabled={formatBusy}
+                    className="inline-flex h-10 items-center gap-2 bg-gray-800 px-4 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    <i className={`bx ${formatBusy ? "bx-loader-alt motion-safe:animate-spin" : "bx-sparkles"} text-lg`} aria-hidden="true" />
+                    {formatBusy ? "Memformat…" : "Format dengan AI"}
+                  </button>
+                  {sourceFile && !formatBusy && (
+                    <button
+                      type="button"
+                      onClick={() => { setSourceFile(null); setFormatMessage(""); }}
+                      className="inline-flex h-10 max-w-full items-center gap-2 border border-rule bg-white px-3 text-xs text-mute hover:bg-gray-100"
+                      title="Hapus dokumen"
+                    >
+                      <i className="bx bx-file" aria-hidden="true" />
+                      <span className="truncate">{sourceFile.name}</span>
+                      <i className="bx bx-x text-base" aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+                {formatBusy && (
+                  <div role="status" aria-live="polite" className="grid gap-2">
+                    <div className="flex items-center justify-between gap-3 text-xs text-gray-600">
+                      <span>{formatLabel}</span>
+                      <span className="font-mono tabular-nums">{formatProgress}%</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden bg-gray-200" aria-hidden="true">
+                      <div
+                        className="h-full bg-blue-500 transition-[width] duration-500 ease-out"
+                        style={{ width: `${formatProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {!formatBusy && formatMessage && (
+                  <p role="status" className="flex items-start gap-2 text-xs leading-5 text-mute">
+                    <i className="bx bx-info-circle mt-0.5 text-base" aria-hidden="true" /> {formatMessage}
+                  </p>
+                )}
+              </div>
+            </section>
+
+            {/* 2. Informasi utama */}
+            <section className="grid gap-4 border-t border-rule pt-8" aria-labelledby="sec-info">
+              <SectionHeader
+                step={2}
+                title="Informasi utama"
+                hint="Judul, ringkasan, dan foto yang tampil paling awal di artikel."
+              />
+              <div className="grid gap-4">
+                <Field label="Judul artikel" hint="· minimal 5 karakter">
+                  <input
+                    required
+                    minLength={5}
+                    value={draft.title}
+                    onChange={(event) => update("title", event.target.value)}
+                    placeholder="Contoh: Harga cabai turun di pasar tradisional"
+                    className="w-full px-3 py-3 text-sm"
+                  />
+                </Field>
+                <Field label="Ringkasan (dek)" hint="· satu atau dua kalimat pembuka">
+                  <textarea
+                    required
+                    minLength={10}
+                    value={draft.dek}
+                    onChange={(event) => update("dek", event.target.value)}
+                    placeholder="Gambaran singkat isi berita"
+                    className="min-h-24 w-full px-3 py-3 text-sm"
+                  />
+                </Field>
+
+                <div className="grid gap-2">
+                  <span className="text-xs font-medium text-gray-800">
+                    Thumbnail utama
+                    <span className="ml-1 font-normal text-mute">· wajib, maksimal 2 MB</span>
+                  </span>
+                  <label className="flex cursor-pointer items-center gap-4 border border-dashed border-gray-300 bg-gray-50 p-4 transition-colors hover:bg-gray-100">
+                    <span className="grid size-11 shrink-0 place-items-center bg-gray-800 text-2xl text-white">
+                      <i className={`bx ${thumbnailBusy ? "bx-loader-alt motion-safe:animate-spin" : "bx-image-add"}`} aria-hidden="true" />
+                    </span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {thumbnailBusy ? "Mengolah thumbnail…" : draft.thumbnailUrl ? "Ganti thumbnail" : "Pilih foto thumbnail"}
+                      <span className="mt-0.5 block text-xs font-normal text-mute">
+                        PNG, JPG, atau WebP. Otomatis dikonversi ke WebP.
+                      </span>
+                    </span>
+                    <input
+                      type="file"
+                      required={!draft.thumbnailUrl}
+                      accept="image/png,image/jpeg,image/webp"
+                      disabled={thumbnailBusy}
+                      onChange={(event) => {
+                        void uploadThumbnail(event.target.files?.[0]);
+                        event.target.value = "";
+                      }}
+                      className="sr-only"
+                    />
+                  </label>
+                  {draft.thumbnailUrl && (
+                    <img
+                      src={draft.thumbnailUrl}
+                      alt="Preview thumbnail utama"
+                      className="aspect-[16/9] w-full object-cover"
+                    />
+                  )}
+                </div>
+
+                <Field label="Penulis">
+                  <input
+                    required
+                    value={draft.author}
+                    readOnly
+                    aria-readonly="true"
+                    className="w-full cursor-not-allowed px-3 py-3 text-sm text-mute"
+                  />
+                </Field>
+                <p role="status" className="flex items-start gap-2 text-xs leading-5 text-mute">
+                  <i className="bx bx-bot mt-0.5 text-base" aria-hidden="true" /> {analysisMessage}
+                </p>
+              </div>
+            </section>
+
+            {/* 3. Isi artikel */}
+            <section className="grid gap-4 border-t border-rule pt-8" aria-labelledby="sec-body">
+              <SectionHeader
+                step={3}
+                title="Isi artikel"
+                hint="Susun bagian sesuai alur cerita. Gunakan panah untuk mengubah urutan."
+              />
+              <div className="space-y-3">
+                {draft.blocks.map((block, index) => {
+                  const meta = BLOCK_META[block.type];
+                  return (
+                    <div
+                      key={block.id}
+                      ref={(element) => {
+                        if (element) blockElements.current.set(block.id, element);
+                        else blockElements.current.delete(block.id);
+                      }}
+                      className="border border-rule bg-gray-50"
+                    >
+                      <div className="flex items-center justify-between gap-3 border-b border-rule bg-white px-3 py-2">
+                        <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-gray-800">
+                          <span className="grid size-7 shrink-0 place-items-center bg-gray-100 text-base">
+                            <i className={`bx ${meta.icon}`} aria-hidden="true" />
+                          </span>
+                          <span className="truncate">{meta.label}</span>
+                          <span className="font-mono text-xs font-normal text-mute">#{index + 1}</span>
+                        </span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <button
+                            type="button"
+                            title="Pindahkan bagian ke atas"
+                            aria-label="Pindahkan bagian ke atas"
+                            onClick={() => move(block.id, -1)}
+                            disabled={index === 0}
+                            className="grid size-9 place-items-center bg-gray-100 text-lg text-gray-800 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <i className="bx bx-up-arrow-alt" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Pindahkan bagian ke bawah"
+                            aria-label="Pindahkan bagian ke bawah"
+                            onClick={() => move(block.id, 1)}
+                            disabled={index === draft.blocks.length - 1}
+                            className="grid size-9 place-items-center bg-gray-100 text-lg text-gray-800 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <i className="bx bx-down-arrow-alt" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Hapus bagian"
+                            aria-label="Hapus bagian"
+                            onClick={() => remove(block.id)}
+                            className="grid size-9 place-items-center bg-gray-800 text-lg text-white transition-colors hover:bg-gray-700"
+                          >
+                            <i className="bx bx-trash" aria-hidden="true" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        {block.type === "text" && (
+                          <div className="grid gap-3">
+                            {index === 0 && (
+                              <div className="grid gap-2 border border-rule bg-white p-3">
+                                <Field label="Lokasi pembuka" hint="· tampil sebagai awalan berita">
+                                  <input
+                                    value={draft.location}
+                                    onChange={(event) => update("location", event.target.value)}
+                                    placeholder="Contoh: LAMPUNG"
+                                    className="w-full px-3 py-2.5 text-sm"
+                                  />
+                                </Field>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => void useCurrentLocation()}
+                                    disabled={locationBusy}
+                                    className="inline-flex h-9 items-center gap-1.5 border border-rule bg-white px-3 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-100 disabled:opacity-50"
+                                  >
+                                    <i className="bx bx-current-location text-base" aria-hidden="true" />
+                                    {locationBusy ? "Mencari lokasi…" : "Gunakan lokasi saya"}
+                                  </button>
+                                  {locationMessage && <span role="status" className="text-xs text-mute">{locationMessage}</span>}
+                                </div>
+                              </div>
+                            )}
+                            <RichTextEditor
+                              value={{ text: block.text, html: block.html }}
+                              onChange={(value) => updateBlock(block.id, value)}
+                            />
+                          </div>
+                        )}
+                        {block.type === "heading" && (
+                          <input
+                            value={block.text}
+                            onChange={(event) =>
+                              updateBlock(block.id, { text: event.target.value })
+                            }
+                            placeholder="Judul bagian"
+                            aria-label="Judul bagian"
+                            className="w-full px-3 py-3 text-sm"
+                          />
+                        )}
+                        {block.type === "image" && (
+                          <div className="grid gap-3">
+                            <label className="flex cursor-pointer items-center gap-4 border border-dashed border-gray-300 bg-white p-3 transition-colors hover:bg-gray-100">
+                              <span className="grid size-11 shrink-0 place-items-center bg-gray-800 text-2xl text-white">
+                                <i className={`bx ${imageBusy === block.id ? "bx-loader-alt motion-safe:animate-spin" : "bx-image-add"}`} aria-hidden="true" />
+                              </span>
+                              <span className="text-sm font-medium text-gray-800">
+                                {imageBusy === block.id ? "Mengolah foto…" : block.url ? "Ganti foto" : "Unggah foto"}
+                                <span className="mt-0.5 block text-xs font-normal text-mute">Otomatis WebP · maksimal 2 MB</span>
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                className="sr-only"
+                                disabled={imageBusy === block.id}
+                                onChange={(event) => {
+                                  void uploadImage(block.id, event.target.files?.[0]);
+                                  event.target.value = "";
+                                }}
+                              />
+                            </label>
+                            {block.url && (
+                              <img
+                                src={block.url}
+                                alt={block.alt}
+                                className="max-h-56 w-full object-cover"
+                              />
+                            )}
+                            <Field label="URL foto" hint="· atau unggah di atas">
+                              <input
+                                value={block.url}
+                                onChange={(event) =>
+                                  updateBlock(block.id, { url: event.target.value })
+                                }
+                                placeholder="https://..."
+                                className="w-full px-3 py-3 text-sm"
+                              />
+                            </Field>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <Field label="Deskripsi foto (alt text)">
+                                <input
+                                  value={block.alt}
+                                  onChange={(event) =>
+                                    updateBlock(block.id, { alt: event.target.value })
+                                  }
+                                  placeholder="Apa yang terlihat di foto"
+                                  className="w-full px-3 py-3 text-sm"
+                                />
+                              </Field>
+                              <Field label="Caption" hint="· opsional">
+                                <input
+                                  value={block.caption || ""}
+                                  onChange={(event) =>
+                                    updateBlock(block.id, { caption: event.target.value })
+                                  }
+                                  placeholder="Keterangan di bawah foto"
+                                  className="w-full px-3 py-3 text-sm"
+                                />
+                              </Field>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={imageBusy === block.id || !block.url}
+                              onClick={() => void generateCaption(block)}
+                              className="inline-flex h-9 w-fit items-center gap-1.5 bg-gray-800 px-3 text-xs font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+                            >
+                              <i className="bx bx-sparkles text-base" aria-hidden="true" />
+                              {imageBusy === block.id
+                                ? "Membuat caption…"
+                                : "Buat caption dengan AI"}
+                            </button>
+                          </div>
+                        )}
+                        {block.type === "quote" && (
+                          <div className="grid gap-3">
+                            <textarea
+                              value={block.text}
+                              onChange={(event) =>
+                                updateBlock(block.id, { text: event.target.value })
+                              }
+                              placeholder="Tulis kutipan..."
+                              aria-label="Kutipan"
+                              className="min-h-24 w-full px-3 py-3 text-sm"
+                            />
+                            <input
+                              value={block.attribution || ""}
+                              onChange={(event) =>
+                                updateBlock(block.id, { attribution: event.target.value })
+                              }
+                              placeholder="Sumber kutipan (opsional)"
+                              aria-label="Sumber kutipan"
+                              className="w-full px-3 py-3 text-sm"
+                            />
+                          </div>
+                        )}
+                        {(block.type === "link" || block.type === "button") && (
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <Field label={block.type === "button" ? "Teks tombol" : "Judul tautan"}>
+                              <input
+                                required
+                                value={block.text}
+                                onChange={(event) => updateBlock(block.id, { text: event.target.value })}
+                                placeholder={block.type === "button" ? "Contoh: Baca selengkapnya" : "Contoh: Sumber resmi"}
+                                className="w-full px-3 py-3 text-sm"
+                              />
+                            </Field>
+                            <Field label="URL" hint="· harus diawali https://">
+                              <input
+                                required
+                                type="url"
+                                pattern="https://.*"
+                                value={block.url}
+                                onChange={(event) => updateBlock(block.id, { url: event.target.value })}
+                                placeholder="https://contoh.com"
+                                className="w-full px-3 py-3 text-sm"
+                              />
+                            </Field>
+                          </div>
+                        )}
+                        {block.type === "callout" && (
+                          <div className="grid gap-3">
+                            <input
+                              value={block.title || ""}
+                              onChange={(event) => updateBlock(block.id, { title: event.target.value })}
+                              placeholder="Judul sorotan (opsional)"
+                              aria-label="Judul sorotan"
+                              className="w-full px-3 py-3 text-sm"
+                            />
+                            <textarea
+                              required
+                              value={block.text}
+                              onChange={(event) => updateBlock(block.id, { text: event.target.value })}
+                              placeholder="Isi informasi penting..."
+                              aria-label="Isi sorotan"
+                              className="min-h-24 w-full px-3 py-3 text-sm"
+                            />
+                          </div>
+                        )}
+                        {block.type === "divider" && (
+                          <p className="text-sm text-mute">Garis pemisah antarbagian.</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Palet tambah bagian */}
+              <div className="grid gap-2">
+                <span className="text-xs font-medium text-gray-800">Tambah bagian</span>
+                <div className="grid grid-cols-2 gap-px border border-rule bg-rule sm:grid-cols-4">
+                  {ADDABLE.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => add(type)}
+                      className="flex min-h-11 items-center gap-2 bg-white px-3 py-2.5 text-left text-sm transition-colors hover:bg-gray-800 hover:text-white"
+                    >
+                      <i className={`bx ${BLOCK_META[type].icon} text-lg`} aria-hidden="true" />
+                      {BLOCK_META[type].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <PopupStatus message={error} />
+
+          {/* Bar aksi yang selalu terlihat */}
+          <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-rule bg-white/95 px-5 py-3 backdrop-blur sm:px-6 xl:px-7">
+            <p className="text-xs text-mute" role="status">
+              {doneCount === checklist.length
+                ? "Semua bagian wajib sudah terisi."
+                : `${checklist.length - doneCount} bagian wajib belum lengkap.`}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {article && onCancel && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (await confirmAction("Batalkan pengeditan artikel?", "Batalkan edit")) onCancel();
+                  }}
+                  className="min-h-11 border border-rule px-4 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100"
+                >
+                  Batal edit
+                </button>
+              )}
+              <button
+                disabled={busy}
+                className="inline-flex min-h-11 items-center gap-2 bg-gray-800 px-5 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+              >
+                <i className="bx bx-paper-plane text-lg" aria-hidden="true" />
+                {busy
+                  ? "Mengirim..."
+                  : article
+                    ? "Ajukan ulang"
+                    : "Kirim untuk review"}
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <aside
+          className={`min-w-0 border border-rule bg-white lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:min-h-[calc(100vh-7rem)] lg:overflow-y-auto ${mobileTab === "editor" ? "hidden lg:block" : ""}`}
+        >
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-rule bg-white/95 px-5 py-3 backdrop-blur sm:px-7">
+            <span className="eyebrow">Live preview</span>
+            <span className="border border-rule px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest2 text-gray-800">Draft</span>
+          </div>
+          <article className="p-5 sm:p-7 xl:p-8">
+            <p className="eyebrow">{draft.category}</p>
+            <h1 className="mt-3 font-display text-3xl leading-tight text-gray-800 sm:text-4xl xl:text-5xl">
+              {draft.title || "Judul artikel kamu"}
+            </h1>
+            <p className="mt-5 max-w-[56ch] text-lg leading-8 text-mute">
+              {draft.dek || "Ringkasan artikel akan tampil di sini."}
+            </p>
+            <p className="mt-5 font-mono text-[11px] text-mute">
+              Oleh {draft.author || "Nama penulis"} · {draft.readTime} menit baca
+            </p>
             {draft.thumbnailUrl && (
               <img
                 src={draft.thumbnailUrl}
-                alt="Preview thumbnail utama"
-                className="max-h-56 w-full object-cover"
+                alt="Thumbnail utama artikel"
+                className="mt-8 aspect-[16/9] w-full object-cover"
               />
             )}
-          </label>
-          <div className="grid gap-3">
-            <input
-              required
-              value={draft.author}
-              readOnly
-              aria-readonly="true"
-              className="cursor-not-allowed px-3 py-3 text-sm text-mute"
-            />
-          </div>
-          <p role="status" className="text-xs text-mute">{analysisMessage}</p>
-        </div>
-        <div className="space-y-3">
-          {draft.blocks.map((block, index) => (
-            <div
-              key={block.id}
-              ref={(element) => {
-                if (element) blockElements.current.set(block.id, element);
-                else blockElements.current.delete(block.id);
-              }}
-              className="bg-gray-50 p-4"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <span className="eyebrow">
-                  Bagian {index + 1} · {block.type}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    title="Pindahkan bagian ke atas"
-                    aria-label="Pindahkan bagian ke atas"
-                    onClick={() => move(block.id, -1)}
-                    disabled={index === 0}
-                    className="grid size-8 place-items-center bg-gray-200 text-lg text-gray-800 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <i className="bx bx-up-arrow-alt" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Pindahkan bagian ke bawah"
-                    aria-label="Pindahkan bagian ke bawah"
-                    onClick={() => move(block.id, 1)}
-                    disabled={index === draft.blocks.length - 1}
-                    className="grid size-8 place-items-center bg-gray-200 text-lg text-gray-800 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <i className="bx bx-down-arrow-alt" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Hapus bagian"
-                    aria-label="Hapus bagian"
-                    onClick={() => remove(block.id)}
-                    className="grid size-8 place-items-center bg-gray-800 text-lg text-white transition-colors hover:bg-gray-700"
-                  >
-                    <i className="bx bx-trash" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-              {block.type === "text" && (
-                <div className="grid gap-2">
-                  {index === 0 && (
-                    <div className="grid gap-2">
-                      <label className="grid gap-2 text-xs text-mute">
-                        Lokasi pembuka
-                        <input
-                          value={draft.location}
-                          onChange={(event) => update("location", event.target.value)}
-                          placeholder="Contoh: LAMPUNG"
-                          className="w-full px-3 py-2.5 text-sm"
-                        />
-                      </label>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void useCurrentLocation()}
-                          disabled={locationBusy}
-                          className="bg-gray-200 px-3 py-2 font-mono text-xs text-gray-800 hover:bg-gray-300 disabled:opacity-50"
-                        >
-                          <i className="bx bx-current-location mr-1" aria-hidden="true" />
-                          {locationBusy ? "Mencari lokasi…" : "Gunakan lokasi saya"}
-                        </button>
-                        {locationMessage && <span role="status" className="text-xs text-mute">{locationMessage}</span>}
-                      </div>
-                    </div>
-                  )}
-                  <RichTextEditor
-                    value={{ text: block.text, html: block.html }}
-                    onChange={(value) => updateBlock(block.id, value)}
-                  />
-                </div>
-              )}
-              {block.type === "heading" && (
-                <input
-                  value={block.text}
-                  onChange={(event) =>
-                    updateBlock(block.id, { text: event.target.value })
-                  }
-                  placeholder="Judul bagian"
-                  className="w-full px-3 py-3 text-sm"
-                />
-              )}
-              {block.type === "image" && (
-                <div className="grid gap-2">
-                  <div className="flex items-center gap-3">
-                  <label title="Unggah foto artikel" aria-label="Unggah foto artikel" className="grid size-11 cursor-pointer place-items-center bg-gray-800 text-2xl text-white transition-colors hover:bg-gray-700">
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="sr-only"
-                      disabled={imageBusy === block.id}
-                      onChange={(event) => {
-                        void uploadImage(block.id, event.target.files?.[0]);
-                        event.target.value = "";
-                      }}
-                    />
-                    <i className={`bx ${imageBusy === block.id ? "bx-loader-alt motion-safe:animate-spin" : "bx-image-add"}`} aria-hidden="true" />
-                  </label>
-                  <span className="text-xs text-mute">Otomatis WebP · maksimal 2 MB</span>
-                  </div>
-                  <input
-                    value={block.url}
-                    onChange={(event) =>
-                      updateBlock(block.id, { url: event.target.value })
-                    }
-                    placeholder="Atau masukkan URL foto (https://...)"
-                    className="px-3 py-3 text-sm"
-                  />
-                  <input
-                    value={block.alt}
-                    onChange={(event) =>
-                      updateBlock(block.id, { alt: event.target.value })
-                    }
-                    placeholder="Deskripsi foto / alt text"
-                    className="px-3 py-3 text-sm"
-                  />
-                  <input
-                    value={block.caption || ""}
-                    onChange={(event) =>
-                      updateBlock(block.id, { caption: event.target.value })
-                    }
-                    placeholder="Caption foto (opsional)"
-                    className="px-3 py-3 text-sm"
-                  />
-                  <button
-                    type="button"
-                    disabled={imageBusy === block.id || !block.url}
-                    onClick={() => void generateCaption(block)}
-                    className="w-fit bg-gray-800 px-3 py-2 font-mono text-xs text-white hover:bg-gray-700 disabled:opacity-50"
-                  >
-                    {imageBusy === block.id
-                      ? "Membuat caption..."
-                      : "Generate caption with AI"}
-                  </button>
-                  {block.url && (
-                    <img
-                      src={block.url}
-                      alt={block.alt}
-                      className="max-h-48 w-full object-cover"
-                    />
-                  )}
-                </div>
-              )}
-              {block.type === "quote" && (
-                <div className="grid gap-2">
-                  <textarea
-                    value={block.text}
-                    onChange={(event) =>
-                      updateBlock(block.id, { text: event.target.value })
-                    }
-                    placeholder="Tulis kutipan..."
-                    className="min-h-24 px-3 py-3 text-sm"
-                  />
-                  <input
-                    value={block.attribution || ""}
-                    onChange={(event) =>
-                      updateBlock(block.id, { attribution: event.target.value })
-                    }
-                    placeholder="Sumber kutipan (opsional)"
-                    className="px-3 py-3 text-sm"
-                  />
-                </div>
-              )}
-              {(block.type === "link" || block.type === "button") && (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <input
-                    required
-                    value={block.text}
-                    onChange={(event) => updateBlock(block.id, { text: event.target.value })}
-                    placeholder={block.type === "button" ? "Teks tombol" : "Judul tautan"}
-                    className="px-3 py-3 text-sm"
-                  />
-                  <input
-                    required
-                    type="url"
-                    pattern="https://.*"
-                    value={block.url}
-                    onChange={(event) => updateBlock(block.id, { url: event.target.value })}
-                    placeholder="https://contoh.com"
-                    className="px-3 py-3 text-sm"
-                  />
-                </div>
-              )}
-              {block.type === "callout" && (
-                <div className="grid gap-2">
-                  <input
-                    value={block.title || ""}
-                    onChange={(event) => updateBlock(block.id, { title: event.target.value })}
-                    placeholder="Judul sorotan (opsional)"
-                    className="px-3 py-3 text-sm"
-                  />
-                  <textarea
-                    required
-                    value={block.text}
-                    onChange={(event) => updateBlock(block.id, { text: event.target.value })}
-                    placeholder="Isi informasi penting..."
-                    className="min-h-24 px-3 py-3 text-sm"
-                  />
-                </div>
-              )}
-              {block.type === "divider" && (
-                <p className="text-sm text-mute">Garis pemisah antarbagian.</p>
-              )}
+            <div className="mt-8">
+              <ArticleBody content={textContent} contentBlocks={outputBlocks} />
             </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="w-full eyebrow">Tambah bagian</span>
-          {(
-            [
-              ["text", "Teks"],
-              ["heading", "Judul bagian"],
-              ["image", "Foto"],
-              ["quote", "Kutipan"],
-              ["link", "Tautan"],
-              ["button", "Tombol"],
-              ["callout", "Sorotan"],
-              ["divider", "Pemisah"],
-            ] as const
-          ).map(([type, label]) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => add(type)}
-              className="bg-gray-200 px-3 py-2 font-mono text-xs text-gray-800 transition-colors hover:bg-gray-800 hover:text-white"
-            >
-              + {label}
-            </button>
-          ))}
-        </div>
-        <PopupStatus message={error} />
-        <div className="flex flex-wrap gap-3">
-          <button
-            disabled={busy}
-            className="bg-gray-800 px-5 py-3 font-mono text-xs uppercase tracking-widest2 text-white hover:bg-gray-700 disabled:opacity-50"
-          >
-            {busy
-              ? "Mengirim..."
-              : article
-                ? "Ajukan ulang"
-                : "Kirim untuk review"}
-          </button>
-          {article && onCancel && (
-            <button
-              type="button"
-              onClick={async () => {
-                if (await confirmAction("Batalkan pengeditan artikel?", "Batalkan edit")) onCancel();
-              }}
-              className="px-5 py-3 font-mono text-xs text-gray-800 hover:bg-gray-100"
-            >
-              Batal edit
-            </button>
-          )}
-        </div>
-      </form>
-      <aside className="min-w-0 border border-rule bg-white p-5 sm:p-7 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:min-h-[calc(100vh-7rem)] lg:overflow-y-auto xl:p-8">
-        <div className="mb-8 flex items-center justify-between">
-          <span className="eyebrow">Live preview</span>
-          <span className="font-mono text-[10px] text-gray-800">DRAFT</span>
-        </div>
-        <article>
-          <p className="eyebrow">{draft.category}</p>
-          <h1 className="mt-3 font-display text-4xl leading-tight text-gray-800 sm:text-5xl">
-            {draft.title || "Judul artikel kamu"}
-          </h1>
-          <p className="mt-5 text-lg text-mute">
-            {draft.dek || "Ringkasan artikel akan tampil di sini."}
-          </p>
-          <p className="mt-5 font-mono text-[11px] text-mute">
-            Oleh {draft.author || "Nama penulis"} · {draft.readTime} menit baca
-          </p>
-          {draft.thumbnailUrl && (
-            <img
-              src={draft.thumbnailUrl}
-              alt="Thumbnail utama artikel"
-              className="mt-8 aspect-[16/9] w-full object-cover"
-            />
-          )}
-          <div className="mt-8">
-            <ArticleBody content={textContent} contentBlocks={outputBlocks} />
-          </div>
-        </article>
-      </aside>
+          </article>
+        </aside>
+      </div>
     </div>
   );
 }

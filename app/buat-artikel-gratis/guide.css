@@ -1,0 +1,116 @@
+/* Tambahan untuk halaman panduan. Kelas dasar (.hero-fade, .hero-mask,
+   .hero-rule, .reveal) datang dari motion.css (about.css yang dipindah). */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Bar "teks" di kartu hasil AI terisi satu per satu */
+  .bar-fill {
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: bar-fill 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation-delay: var(--d, 0s);
+  }
+  @keyframes bar-fill {
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  /* Konektor putus-putus yang mengalir ke bawah */
+  .flow-line {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      #9ca3af 0 4px,
+      transparent 4px 9px
+    );
+    background-size: 1px 9px;
+    background-repeat: repeat-y;
+    animation: flow 0.9s linear infinite;
+  }
+  @keyframes flow {
+    to {
+      background-position: 0 9px;
+    }
+  }
+
+  /* Ikon centang "pop" saat daftar terlihat */
+  .check-pop {
+    transform: scale(0);
+  }
+  .is-visible .check-pop {
+    animation: check-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) forwards;
+    animation-delay: calc(var(--d, 0ms) + 150ms);
+  }
+  @keyframes check-pop {
+    to {
+      transform: scale(1);
+    }
+  }
+}
+
+/* Tanpa gerak: flow-line tetap tampil statis */
+@media (prefers-reduced-motion: reduce) {
+  .flow-line {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      #9ca3af 0 4px,
+      transparent 4px 9px
+    );
+  }
+}
+
+/* ---------- Interaksi ---------- */
+.step-card {
+  transition: background-color 0.25s ease;
+}
+.step-card:hover {
+  background-color: #f9fafb;
+}
+.step-card .step-icon {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.step-card:hover .step-icon {
+  background-color: #1f2937;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.ai-chip {
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.25s ease;
+}
+.ai-chip:hover {
+  transform: translateY(-3px);
+  border-color: #1f2937;
+}
+
+.guide-btn {
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+.guide-btn:hover {
+  transform: translateY(-2px);
+}
+.guide-btn:active {
+  transform: translateY(0);
+}
+.guide-btn:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 3px;
+}
+
+.guide-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0 1px;
+  transition: background-size 0.3s ease;
+}
+.guide-link:hover,
+.guide-link:focus-visible {
+  background-size: 100% 1px;
+}
