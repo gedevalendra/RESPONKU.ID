@@ -35,8 +35,22 @@ export default function MobileNav({
     const transform = getComputedStyle(panel.current).transform;
     const opacity = getComputedStyle(backdrop.current).opacity;
     animations.current.forEach((animation) => animation.cancel());
-    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : open ? 320 : 240;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = reduce ? 0 : open ? 320 : 240;
+    // Animasi muncul: isi menu masuk bergantian dari bawah saat menu dibuka.
+    const itemAnimations: Animation[] = [];
+    if (open && !reduce) {
+      panel.current.querySelectorAll<HTMLElement>("[data-menu-item]").forEach((element, index) => {
+        itemAnimations.push(
+          element.animate([
+            { opacity: 0, transform: "translate3d(0,20px,0) scale(0.94)" },
+            { opacity: 1, transform: "translate3d(0,0,0) scale(1)" },
+          ], { duration: 460, delay: 120 + index * 45, easing: "cubic-bezier(0.34, 1.4, 0.64, 1)", fill: "backwards" }),
+        );
+      });
+    }
     animations.current = [
+      ...itemAnimations,
       panel.current.animate([
         { transform },
         { transform: open ? "translate3d(0,0,0)" : "translate3d(0,100%,0)" },
@@ -182,7 +196,7 @@ export default function MobileNav({
         <div ref={backdrop} aria-hidden="true" onClick={closeMenu} className="absolute inset-0 bg-black/40 opacity-0" />
         <section ref={panel} aria-labelledby="mobile-more-title" style={{ transform: "translate3d(0,100%,0)" }} className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[80dvh] max-w-xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl will-change-transform">
           <div className="shrink-0 px-5 pt-4">
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300" />
+            <div data-menu-item="" className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300" />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
@@ -191,7 +205,7 @@ export default function MobileNav({
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-white px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 text-center">
-            <button type="button" onClick={closeMenu} className="w-full py-2 font-mono text-xs uppercase tracking-widest text-gray-600 transition-colors hover:bg-gray-800/5 hover:text-gray-800">
+            <button data-menu-item="" type="button" onClick={closeMenu} className="w-full py-2 font-mono text-xs uppercase tracking-widest text-gray-600 transition-colors hover:bg-gray-800/5 hover:text-gray-800">
               Keluar
             </button>
           </div>
@@ -214,10 +228,10 @@ function MenuGroup({
 
   return (
     <section className="border-t border-gray-400 py-4 first:border-t-0 first:pt-1">
-      <h3 className="mb-2 font-mono text-[11px] uppercase tracking-widest text-mute">{title}</h3>
+      <h3 data-menu-item="" className="mb-2 font-mono text-[11px] uppercase tracking-widest text-mute">{title}</h3>
       <div className="grid grid-cols-2 gap-1">
         {items.map(([href, label, icon]) => (
-          <Link key={href} href={href} onClick={onNavigate} className="flex min-h-14 items-center gap-3 px-3 py-3 text-sm transition-colors hover:bg-gray-800/5">
+          <Link key={href} href={href} data-menu-item="" onClick={onNavigate} className="flex min-h-14 items-center gap-3 px-3 py-3 text-sm transition-colors hover:bg-gray-800/5">
             <i className={`bx ${icon} text-xl text-gray-800`} aria-hidden="true" />
             <span>{href === "/tentang" ? <>Tentang <BrandLogo /></> : label}</span>
           </Link>
