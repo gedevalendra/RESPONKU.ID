@@ -42,7 +42,7 @@ export default function CookieConsent() {
           <div>
             <h2 id="cookie-title" className="font-display text-xl text-ink">Pilihan cookie kamu</h2>
             <p className="mt-1 max-w-xl text-sm leading-6 text-mute">
-              Penyimpanan browser membantu login dan mengingat reaksimu. Jika kamu setuju, kami juga menghitung kunjungan untuk statistik artikel.
+              Penyimpanan browser membantu login dan mengingat reaksimu. Total bacaan artikel dihitung secara anonim tanpa menyimpan cookie pelacakan.
             </p>
           </div>
         </div>

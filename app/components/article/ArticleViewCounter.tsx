@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cookiePreferenceChange, getCookiePreference } from "@/lib/cookie-preferences";
 
 export default function ArticleViewCounter({
   articleSlug,
@@ -27,7 +26,7 @@ export default function ArticleViewCounter({
     };
 
     function recordView() {
-      if (recorded || getCookiePreference() !== "accept") return;
+      if (recorded) return;
       recorded = true;
       void fetch(`/api/articles/${encodeURIComponent(articleSlug)}/view`, {
         method: "POST",
@@ -44,13 +43,11 @@ export default function ArticleViewCounter({
 
     recordView();
     refreshViews();
-    window.addEventListener(cookiePreferenceChange, recordView);
     document.addEventListener("visibilitychange", refreshViews);
     const refreshInterval = window.setInterval(refreshViews, 15_000);
     return () => {
       cancelled = true;
       window.clearInterval(refreshInterval);
-      window.removeEventListener(cookiePreferenceChange, recordView);
       document.removeEventListener("visibilitychange", refreshViews);
     };
   }, [articleSlug]);
