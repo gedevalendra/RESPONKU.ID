@@ -1,0 +1,57 @@
+/* Tempel ke globals.css (ganti definisi .activity-sheet / .activity-sheet-closing lama) */
+
+.activity-sheet,
+.activity-sheet-closing {
+  --sheet-ease: cubic-bezier(0.22, 1, 0.36, 1); /* melambat halus di akhir, terasa seperti pegas ringan */
+  --drag: 0px;
+  transform: translateY(var(--drag));
+  will-change: transform;
+}
+
+/* ---------- Buka ---------- */
+.activity-sheet {
+  animation: sheet-in 0.5s var(--sheet-ease) backwards;
+}
+.activity-sheet::backdrop {
+  animation: sheet-fade-in 0.35s ease-out both;
+}
+
+/* ---------- Tutup (mulai dari posisi geser terakhir) ---------- */
+.activity-sheet-closing {
+  animation: sheet-out 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.activity-sheet-closing::backdrop {
+  animation: sheet-fade-out 0.28s ease-in forwards;
+}
+
+/* ---------- Item muncul bertahap setelah sheet naik ---------- */
+.sheet-item {
+  animation: sheet-item-in 0.4s var(--sheet-ease) backwards;
+  animation-delay: calc(0.14s + var(--i, 0) * 38ms);
+}
+
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(var(--drag)); }
+}
+@keyframes sheet-out {
+  from { transform: translateY(var(--drag)); }
+  to   { transform: translateY(100%); }
+}
+@keyframes sheet-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheet-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sheet-item-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-sheet,
+  .activity-sheet::backdrop,
+  .activity-sheet-closing,
+  .activity-sheet-closing::backdrop,
+  .sheet-item {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+  }
+}
