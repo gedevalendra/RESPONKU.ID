@@ -57,6 +57,18 @@ Jika FunikIn belum memiliki OAuth/OIDC, perlu dibuat dulu endpoint standar terse
 
 Google dan FunikIn sekarang menggunakan direct OAuth hybrid melalui `/auth/google` dan `/auth/funikin`; login email/password tetap menggunakan Supabase Auth. Direct OAuth memerlukan `OAUTH_SESSION_SECRET`, kredensial Google server-side, serta endpoint OAuth FunikIn di `.env.local`. Callback direct-nya adalah `/auth/google/callback` dan `/auth/funikin/callback`.
 
+### Pemeriksaan indeks Google
+
+Menu artikel terindeks menggunakan URL Inspection API dari Google Search Console. Aktifkan Search Console API di Google Cloud, tambahkan email akun layanan sebagai pengguna properti Search Console, lalu isi variabel berikut di `.env.local`:
+
+```text
+GOOGLE_SEARCH_CONSOLE_CLIENT_EMAIL=email-akun-layanan
+GOOGLE_SEARCH_CONSOLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+GOOGLE_SEARCH_CONSOLE_PROPERTY=sc-domain:responku.id
+```
+
+`GOOGLE_SEARCH_CONSOLE_PROPERTY` harus sama persis dengan properti di Search Console. Gunakan `sc-domain:responku.id` untuk properti domain atau URL-prefix seperti `https://www.responku.id/` untuk properti URL. Jangan commit private key. Menu hanya menampilkan artikel yang verdict URL Inspection-nya `PASS`.
+
 ## Konsep desain
 
 - **Palet**: nyaris monokrom murni — `ink #111110`, `paper #FAFAF7`, `rule #DEDDD5` (garis tipis), `mute #6E6D66` (teks sekunder). Satu-satunya aksen warna adalah `signal #C6402A`, dipakai sangat terbatas hanya untuk label "Breaking" — konvensi tinta merah kantor berita klasik, bukan dekorasi.
