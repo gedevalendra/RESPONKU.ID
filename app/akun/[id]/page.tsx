@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import ScrollingName from "@/app/components/auth/ScrollingName";
 import { publicProfile } from "@/lib/community";
-import { listArticlesFromDatabase } from "@/lib/db";
+import { listArticleReadingHistory, listArticlesFromDatabase } from "@/lib/db";
 import { getActor } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,9 @@ export default async function Page({
     listArticlesFromDatabase({ authorId: profile.id, status: "published" }),
     getActor(),
   ]);
+  const isOwnProfile = actor?.id === profile.id;
+  const readingHistory = isOwnProfile ? await listArticleReadingHistory(profile.id) : [];
+  const unfinishedReading = readingHistory.filter((item) => item.progress < 0.96);
   const showAll = searchParams.semua === "1";
   const visibleArticles = showAll ? articles : articles.slice(0, 3);
   const views = articles.reduce((total, article) => total + article.views, 0);
@@ -74,6 +77,11 @@ export default async function Page({
         </div>
       </section>
 
+      {isOwnProfile && <section className="grid gap-5 lg:grid-cols-2">
+        <ReadingList title="Lanjutkan membaca" items={unfinishedReading} empty="Belum ada bacaan yang belum selesai." />
+        <ReadingList title="Semua bacaan" items={readingHistory} empty="Belum ada riwayat bacaan." />
+      </section>}
+
       <section id="riwayat" className="pt-6">
         <div className="flex items-baseline justify-between border-b border-rule pb-3">
           <h2 className="font-display text-display-md">Riwayat Publish</h2>
@@ -102,4 +110,11 @@ export default async function Page({
       </section>
     </div>
   );
+}
+
+function ReadingList({ title, items, empty }: { title: string; items: Awaited<ReturnType<typeof listArticleReadingHistory>>; empty: string }) {
+  return <section className="min-w-0 rounded-t-xl border border-rule bg-paper p-5 shadow-sm">
+    <h2 className="border-b border-rule pb-3 font-display text-xl">{title}</h2>
+    {items.length ? <ul className="divide-y divide-rule">{items.slice(0, 5).map((item) => <li key={item.article.slug} className="py-3"><Link href={`/artikel/${encodeURIComponent(item.article.slug)}`} className="group flex gap-3"><div className="min-w-0 flex-1"><p className="line-clamp-2 text-sm font-medium group-hover:underline">{item.article.title}</p><p className="mt-1 text-xs text-mute">{Math.floor(item.progress * 100)}% dibaca{item.anchorText ? ` · “${item.anchorText.slice(0, 54)}…”` : ""}</p></div>{item.article.thumbnailUrl && <img src={item.article.thumbnailUrl} alt="" className="size-12 shrink-0 object-cover" />}</Link></li>)}</ul> : <p className="py-5 text-sm text-mute">{empty}</p>}
+  </section>;
 }

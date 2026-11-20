@@ -7,12 +7,14 @@ import { getRelated, formatDate } from "@/lib/data";
 import ArticleCard from "../../components/landing/ArticleCard";
 import Sidebar from "../../components/layout/Sidebar";
 import ArticleEngagement from "../../components/article/ArticleEngagement";
-import { getArticleFromDatabase, getReactionSummary, listComments } from "@/lib/db";
+import { getArticleFromDatabase, getArticleReadingProgress, getReactionSummary, listComments } from "@/lib/db";
 import ArticleBody from "@/app/components/article/ArticleBody";
 import ShareArticleButton from "@/app/components/article/ShareArticleButton";
 import ArticleViewCounter from "@/app/components/article/ArticleViewCounter";
+import ArticleReaderTools from "@/app/components/article/ArticleReaderTools";
 import { publicProfile } from "@/lib/community";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { getActor } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +63,7 @@ export default async function ArticlePage({
 }) {
   const article = await getPublicArticle(params.slug);
   if (!article) notFound();
+  const actor = await getActor();
 
   const related = await getRelated(article, 3);
   const profileDb = getSupabaseAdmin();
@@ -110,9 +113,10 @@ export default async function ArticlePage({
   const isUserArticle = ["reader", "author", "user"].includes(authorRole);
   const authorAvatar = authorProfile?.avatar_url || linkedProfile?.avatarUrl;
   const authorProfileHref = article.authorId || authorProfile?.id;
-  const [reactionSummary, articleComments] = await Promise.all([
+  const [reactionSummary, articleComments, readingProgress] = await Promise.all([
     getReactionSummary(article.slug).catch(() => ({ like: 0, insightful: 0, celebrate: 0 })),
     listComments(article.slug).catch(() => []),
+    actor ? getArticleReadingProgress(actor.id, article.slug).catch(() => ({ progress: 0, anchorText: "" })) : Promise.resolve({ progress: 0, anchorText: "" }),
   ]);
 
   const url = articleUrl(article.slug);
@@ -214,11 +218,9 @@ export default async function ArticlePage({
 
       <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-8">
+          {actor && <ArticleReaderTools articleSlug={article.slug} initialProgress={readingProgress.progress} initialAnchorText={readingProgress.anchorText} />}
           <div className="flex flex-col gap-5 text-base leading-relaxed sm:text-lg">
-            <ArticleBody
-              content={article.content}
-              contentBlocks={article.contentBlocks}
-            />
+            <div id="article-content"><ArticleBody content={article.content} contentBlocks={article.contentBlocks} /></div>
           </div>
 
           <ArticleEngagement articleSlug={article.slug} />
@@ -238,7 +240,7 @@ export default async function ArticlePage({
         </div>
 
         <div className="lg:col-span-4">
-          <Sidebar />
+          <Sidebar compactAd currentArticleSlug={article.slug} />
         </div>
       </div>
     </article>

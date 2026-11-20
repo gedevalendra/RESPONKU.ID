@@ -27,6 +27,10 @@ client
           { createdAt: 1 },
           { expireAfterSeconds: 60 * 60 * 24 * 730 },
         ),
+      db.collection("article_reading_progress").createIndex(
+        { userId: 1, articleSlug: 1 },
+        { unique: true },
+      ),
       db
         .collection("oauth_users")
         .createIndex({ provider: 1, providerUserId: 1 }, { unique: true }),

@@ -613,6 +613,36 @@ export async function getArticleViewCount(slug: string) {
   return article ? Number(article.views || 0) : null;
 }
 
+export async function getArticleReadingProgress(userId: string, articleSlug: string) {
+  const db = await getMongoDb();
+  if (!db) return { progress: 0, anchorText: "" };
+  const row = await db.collection<{ progress?: number; anchorText?: string }>("article_reading_progress")
+    .findOne({ userId, articleSlug }, { projection: { progress: 1, anchorText: 1 } });
+  return { progress: Math.max(0, Math.min(1, Number(row?.progress || 0))), anchorText: String(row?.anchorText || "") };
+}
+
+export async function saveArticleReadingProgress(userId: string, articleSlug: string, progress: number, anchorText?: string) {
+  const db = await getMongoDb();
+  if (!db) return false;
+  await db.collection("article_reading_progress").updateOne(
+    { userId, articleSlug },
+    { $set: { progress: Math.max(0, Math.min(1, progress)), ...(anchorText ? { anchorText: anchorText.slice(0, 240) } : {}), updatedAt: new Date() }, $setOnInsert: { userId, articleSlug, createdAt: new Date() } },
+    { upsert: true },
+  );
+  return true;
+}
+
+export async function listArticleReadingHistory(userId: string, limit = 30) {
+  const db = await getMongoDb();
+  if (!db) return [];
+  return db.collection("article_reading_progress").aggregate<{ articleSlug: string; progress: number; anchorText?: string; updatedAt: Date; article: Pick<Article, "id" | "slug" | "title" | "thumbnailUrl"> }>([
+    { $match: { userId } }, { $sort: { updatedAt: -1 } }, { $limit: limit },
+    { $lookup: { from: "articles", localField: "articleSlug", foreignField: "slug", as: "article" } },
+    { $unwind: "$article" }, { $match: { "article.status": "published" } },
+    { $project: { _id: 0, articleSlug: 1, progress: 1, anchorText: 1, updatedAt: 1, "article.id": 1, "article.slug": 1, "article.title": 1, "article.thumbnailUrl": 1 } },
+  ]).toArray();
+}
+
 export function isObjectId(value: string) {
   return ObjectId.isValid(value);
 }

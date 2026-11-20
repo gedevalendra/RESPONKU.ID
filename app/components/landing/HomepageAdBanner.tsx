@@ -34,7 +34,7 @@ function youtubeEmbedUrl(value: string) {
   return null;
 }
 
-export default function HomepageAdBanner({ ad, fitRow = false, compact = false, variant = "horizontal", fillAvailableHeight = false, fillColumnHeight = false }: { ad: HomepageAd; fitRow?: boolean; compact?: boolean; variant?: "horizontal" | "sidebar"; fillAvailableHeight?: boolean; fillColumnHeight?: boolean }) {
+export default function HomepageAdBanner({ ad, fitRow = false, compact = false, variant = "horizontal", fillAvailableHeight = false, fillColumnHeight = false, sidebarCompact = false }: { ad: HomepageAd; fitRow?: boolean; compact?: boolean; variant?: "horizontal" | "sidebar"; fillAvailableHeight?: boolean; fillColumnHeight?: boolean; sidebarCompact?: boolean }) {
   const youtubeEmbed = ad.mediaType === "video" ? youtubeEmbedUrl(ad.videoUrl) : null;
   const sidebar = variant === "sidebar";
   const fillClass = fitRow
@@ -43,9 +43,9 @@ export default function HomepageAdBanner({ ad, fitRow = false, compact = false, 
   const mediaFillClass = fitRow
     ? "md:aspect-auto md:max-h-none md:min-h-0 md:flex-1"
     : fillAvailableHeight ? "lg:aspect-auto lg:max-h-none lg:min-h-0 lg:flex-1" : "";
-  const mediaClass = sidebar ? "aspect-video min-h-0 w-full lg:aspect-auto lg:flex-1" : `${compact ? "aspect-[6/1] max-h-28" : "aspect-[3/1]"} ${mediaFillClass}`;
+  const mediaClass = sidebar ? (sidebarCompact ? "aspect-video w-full md:min-h-0 md:flex-1 md:aspect-auto" : "aspect-video min-h-0 w-full lg:aspect-auto lg:flex-1") : `${compact ? "aspect-[6/1] max-h-28" : "aspect-[3/1]"} ${mediaFillClass}`;
   return (
-    <div className={`min-w-0 border border-rule bg-paper ${sidebar ? `flex flex-col lg:aspect-[1/2] ${fillColumnHeight ? "lg:aspect-auto lg:min-h-0 lg:flex-1" : ""}` : ""} ${fillClass}`}>
+    <div className={`min-w-0 border border-rule bg-paper ${sidebar ? `flex flex-col ${sidebarCompact ? "overflow-hidden md:h-80 md:max-h-80" : "lg:aspect-[1/2]"} ${fillColumnHeight ? "lg:aspect-auto lg:min-h-0 lg:flex-1" : ""}` : ""} ${fillClass}`}>
       <span className="block shrink-0 px-3 py-2 font-mono text-xs uppercase tracking-wide text-mute">Iklan</span>
       <a href={ad.destination} target="_blank" rel="sponsored noopener noreferrer" className={`block focus-visible:outline-2 focus-visible:outline-offset-2 ${sidebar ? "flex min-h-0 flex-1 flex-col" : ""} ${fitRow ? "md:flex md:min-h-0 md:flex-1 md:flex-col" : ""} ${fillAvailableHeight ? "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" : ""}`}>
         {ad.mediaType === "video" ? (
