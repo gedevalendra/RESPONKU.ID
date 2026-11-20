@@ -5,5 +5,6 @@ export async function GET(request: Request) {
   response.cookies.delete("responku_oauth_session");
   response.cookies.delete("responku_oauth_state");
   response.cookies.delete("responku_oauth_verifier");
+  response.cookies.delete("responku_google_accounts");
   return response;
 }

@@ -11,7 +11,7 @@ export async function GET(
       { status: 404 },
     );
   try {
-    return beginOAuth(params.provider as OAuthProvider, request);
+    return await beginOAuth(params.provider as OAuthProvider, request);
   } catch (error) {
     return NextResponse.redirect(
       new URL(

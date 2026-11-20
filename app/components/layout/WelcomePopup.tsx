@@ -103,8 +103,8 @@ export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
   }, [admin]);
 
   useEffect(() => {
-    if (admin || !popup.enabled || /^\/(admin|superadmin)(\/|$)/.test(location.pathname)) return;
-    if (localStorage.getItem("responku-popup") !== popup.version && !dialog.current?.open) {
+    if (admin || !popup.enabled || location.pathname !== "/") return;
+    if (!dialog.current?.open) {
       const modal = dialog.current;
       modal?.showModal();
       modal?.focus({ preventScroll: true });
@@ -113,7 +113,6 @@ export default function WelcomePopup({ admin = false }: { admin?: boolean }) {
 
   function close() {
     dialog.current?.close();
-    localStorage.setItem("responku-popup", popup.version);
   }
 
   async function save(event: React.FormEvent<HTMLFormElement>) {

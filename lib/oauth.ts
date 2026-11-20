@@ -9,6 +9,7 @@ import { connectOAuthProfiles, findVerifiedPasswordProfile } from "@/lib/account
 import { getMongoDb } from "@/lib/mongodb";
 
 export type OAuthProvider = "google" | "funikin";
+export const googleAccountsCookie = "responku_google_accounts";
 
 const cookieBase = {
   httpOnly: true,
@@ -56,6 +57,23 @@ function secret() {
   if (!value) throw new Error("OAUTH_SESSION_SECRET belum diisi");
   return new TextEncoder().encode(value);
 }
+async function tokenUserId(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, secret());
+    return String(payload.userId || payload.sub || "");
+  } catch { return ""; }
+}
+
+export async function storedGoogleSessions() {
+  const raw = cookies().get(googleAccountsCookie)?.value;
+  if (!raw) return [] as Array<{ id: string; token: string }>;
+  try {
+    const tokens = JSON.parse(raw) as unknown;
+    if (!Array.isArray(tokens)) return [];
+    const sessions = await Promise.all(tokens.slice(0, 2).filter((value): value is string => typeof value === "string").map(async (token) => ({ id: await tokenUserId(token), token })));
+    return sessions.filter((session) => session.id);
+  } catch { return []; }
+}
 function verifier() {
   return randomBytes(32).toString("base64url");
 }
@@ -63,13 +81,17 @@ function challenge(value: string) {
   return createHash("sha256").update(value).digest("base64url");
 }
 
-export function beginOAuth(provider: OAuthProvider, request: Request) {
+export async function beginOAuth(provider: OAuthProvider, request: Request) {
   const current = config(provider);
   if (!current.clientId || !current.clientSecret || !current.authorizationUrl)
     throw new Error(`${provider} OAuth belum dikonfigurasi`);
   const state = randomBytes(24).toString("hex");
   const codeVerifier = verifier();
   const url = new URL(current.authorizationUrl);
+  if (provider === "google" && new URL(request.url).searchParams.get("add") === "1") {
+    if ((await storedGoogleSessions()).length >= 2) throw new Error("Maksimal dua akun Google tersimpan. Hapus salah satu akun terlebih dahulu.");
+    url.searchParams.set("prompt", "select_account");
+  }
   url.searchParams.set("client_id", current.clientId);
   url.searchParams.set("redirect_uri", redirectUri(provider, request));
   url.searchParams.set("response_type", "code");
@@ -146,6 +168,11 @@ async function completeOAuthLogin(provider: OAuthProvider, request: Request, use
     ...cookieBase,
     maxAge: 60 * 60 * 24 * 30,
   });
+  if (provider === "google") {
+    const sessions = await storedGoogleSessions();
+    const next = [jwt, ...sessions.filter((session) => session.id !== actor.id).map((session) => session.token)].slice(0, 2);
+    response.cookies.set(googleAccountsCookie, JSON.stringify(next), { ...cookieBase, maxAge: 60 * 60 * 24 * 30 });
+  }
   response.cookies.delete("responku_oauth_state");
   response.cookies.delete("responku_oauth_verifier");
   return response;
@@ -227,6 +254,7 @@ export async function getOAuthActor(): Promise<Profile | null> {
           role: password.role as UserRole,
           emailConfirmed: true,
           linkedOAuth: true,
+          provider: payload.provider === "google" || payload.provider === "funikin" ? payload.provider : undefined,
         };
       }
     }

@@ -36,11 +36,12 @@ export default function ArticleReaderTools({ articleSlug, initialProgress, initi
     };
     calculate();
     window.addEventListener("scroll", calculate, { passive: true });
+    const saveTouchSelection = () => window.setTimeout(saveSelection, 180);
     document.addEventListener("mouseup", saveSelection);
-    document.addEventListener("touchend", saveSelection);
+    document.addEventListener("touchend", saveTouchSelection);
     window.addEventListener("pagehide", saveOnExit);
     const interval = window.setInterval(save, 8_000);
-    return () => { window.removeEventListener("scroll", calculate); document.removeEventListener("mouseup", saveSelection); document.removeEventListener("touchend", saveSelection); window.removeEventListener("pagehide", saveOnExit); window.clearInterval(interval); save(); };
+    return () => { window.removeEventListener("scroll", calculate); document.removeEventListener("mouseup", saveSelection); document.removeEventListener("touchend", saveTouchSelection); window.removeEventListener("pagehide", saveOnExit); window.clearInterval(interval); save(); };
   }, [articleSlug]);
 
   const resume = () => {
@@ -79,5 +80,5 @@ export default function ArticleReaderTools({ articleSlug, initialProgress, initi
     </div>
     <button type="button" onClick={createSummary} disabled={loading} className="mt-3 inline-flex min-h-9 items-center gap-2 border border-rule bg-white px-3 text-xs font-medium transition-colors hover:border-ink disabled:cursor-wait disabled:opacity-60 sm:mt-0"><i className="bx bx-sparkles text-base text-blue-600" aria-hidden="true" />{loading ? "Merangkum…" : "Inti berita"}</button>
     {(summary || error) && <div className="w-full border-t border-rule pt-3 text-sm leading-6"><p className="font-medium">Inti berita</p><p className={error ? "mt-1 text-red-700" : "mt-1 whitespace-pre-line text-mute"}>{error || summary}</p></div>}
-  </aside>{selection && <div className="fixed z-[110] flex items-center gap-1 rounded-lg border border-gray-700 bg-ink p-1 shadow-xl" style={{ left: selection.x, top: selection.y }} role="toolbar" aria-label="Aksi teks dipilih"><button type="button" onClick={saveSelectedPoint} className="inline-flex min-h-8 items-center gap-1.5 rounded px-2 text-xs font-medium text-white hover:bg-white/15"><i className="bx bx-bookmark-plus text-base" aria-hidden="true" />Tandai titik baca</button></div>}{savedNotice && <span role="status" className="fixed bottom-5 left-1/2 z-[110] -translate-x-1/2 rounded-full bg-ink px-3 py-1.5 text-xs text-white shadow-lg">Titik baca disimpan</span>}</>;
+  </aside>{selection && <><div className="fixed z-[110] hidden items-center gap-1 rounded-lg border border-gray-700 bg-ink p-1 shadow-xl sm:flex" style={{ left: selection.x, top: selection.y }} role="toolbar" aria-label="Aksi teks dipilih"><button type="button" onClick={saveSelectedPoint} className="inline-flex min-h-8 items-center gap-1.5 rounded px-2 text-xs font-medium text-white hover:bg-white/15"><i className="bx bx-bookmark-plus text-base" aria-hidden="true" />Tandai titik baca</button></div><div className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[110] flex justify-center sm:hidden"><button type="button" onClick={saveSelectedPoint} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white shadow-xl active:scale-95"><i className="bx bx-bookmark-plus text-lg" aria-hidden="true" />Tandai titik baca</button></div></>}{savedNotice && <span role="status" className="fixed bottom-5 left-1/2 z-[110] -translate-x-1/2 rounded-full bg-ink px-3 py-1.5 text-xs text-white shadow-lg">Titik baca disimpan</span>}</>;
 }

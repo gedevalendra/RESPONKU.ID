@@ -4,10 +4,12 @@ import TickerBar from "../../components/landing/TickerBar";
 import MobileNav from "./MobileNav";
 import { getActor } from "@/lib/authz";
 import AccountMenu from "@/app/components/auth/AccountMenu";
+import MobileProfileMenu from "@/app/components/auth/MobileProfileMenu";
 import { countUnreadNotifications } from "@/lib/db";
 import NotificationSync from "@/app/components/notifications/NotificationSync";
 import ArticleNavMenu from "./ArticleNavMenu";
 import { listArticleCategories, listTickerHeadlines } from "@/lib/db";
+import { publicProfile } from "@/lib/community";
 
 function todayLabel(): string {
   return new Intl.DateTimeFormat("id-ID", {
@@ -25,15 +27,17 @@ export default async function Header() {
     listTickerHeadlines(),
   ]);
   const unreadCount = actor ? await countUnreadNotifications(actor.id).catch(() => 0) : 0;
+  const profile = actor ? await publicProfile(actor.id).catch(() => null) : null;
+  const accountActor = actor ? { ...actor, avatarUrl: profile?.avatarUrl || actor.avatarUrl } : null;
   return (
     <header className="sticky top-0 bg-white z-100">
-      {actor && <NotificationSync key={actor.id} unreadCount={unreadCount} />}
+      {accountActor && <NotificationSync key={accountActor.id} unreadCount={unreadCount} />}
       <div className="wrap flex items-center gap-5 border-b border-gray-100 py-4 sm:py-5 lg:gap-8">
         <Link
           href="/"
           className="shrink-0"
         >
-          <BrandLogo className="block h-10 sm:h-12" />
+          <BrandLogo className="block h-7 sm:h-9 md:h-10 lg:h-11 xl:h-12" />
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-5 xl:gap-8 lg:flex">
@@ -72,8 +76,8 @@ export default async function Header() {
             >
               Dukungan
             </Link>
-            {actor ? (
-              <AccountMenu actor={actor} unreadCount={unreadCount} />
+            {accountActor ? (
+              <AccountMenu actor={accountActor} unreadCount={unreadCount} />
             ) : (
               <Link
                 href="/akun"
@@ -99,10 +103,11 @@ export default async function Header() {
               Masuk
             </Link>
           )}
+          {accountActor && <MobileProfileMenu actor={accountActor} />}
           <MobileNav
             unreadCount={unreadCount}
-            authenticated={Boolean(actor)}
-            role={actor?.role}
+            authenticated={Boolean(accountActor)}
+            role={accountActor?.role}
           />
         </div>
       </div>

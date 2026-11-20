@@ -3,16 +3,17 @@ import UserDashboard from "@/app/components/user/UserDashboard";
 import ProfileSettings from "@/app/components/user/ProfileSettings";
 import LogoutButton from "@/app/components/auth/LogoutButton";
 import { getActor } from "@/lib/authz";
-import Link from "next/link";
+import ReadingActivityMenu from "@/app/components/user/ReadingActivityMenu";
 import { listArticleReadingHistory, listArticlesFromDatabase } from "@/lib/db";
+import { publicProfile } from "@/lib/community";
 
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   const actor = await getActor();
   if (!actor) redirect("/masuk?next=/akun");
-  const [articles, readingHistory] = await Promise.all([listArticlesFromDatabase({ authorId: actor.id }), listArticleReadingHistory(actor.id)]);
-  const unfinishedReading = readingHistory.filter((item) => item.progress < 0.96);
+  const [articles, readingHistory, profile] = await Promise.all([listArticlesFromDatabase({ authorId: actor.id }), listArticleReadingHistory(actor.id), publicProfile(actor.id).catch(() => null)]);
+  const profileActor = { ...actor, avatarUrl: profile?.avatarUrl || actor.avatarUrl, backgroundUrl: profile?.backgroundUrl || actor.backgroundUrl, bio: profile?.bio || actor.bio, username: profile?.username || actor.username };
   const articleStats = {
     published: articles.filter((article) => article.status === "published").length,
     pending: articles.filter((article) => article.status === "pending").length,
@@ -22,35 +23,31 @@ export default async function AccountPage() {
   return (
     <div className="wrap py-8 sm:py-12">
       <div className="space-y-10">
-        <ProfileSettings initial={actor} articleStats={articleStats} />
-        <section className="grid gap-5 lg:grid-cols-2">
-          <ReadingList title="Lanjutkan membaca" items={unfinishedReading} empty="Belum ada bacaan yang belum selesai." />
-          <ReadingList title="Semua bacaan" items={readingHistory} empty="Belum ada riwayat bacaan." />
-        </section>
+        <ProfileSettings initial={profileActor} articleStats={articleStats} />
+        <ReadingActivityMenu readingHistory={readingHistory.map((item) => ({ ...item, updatedAt: new Date(item.updatedAt).toISOString() }))} />
         <UserDashboard />
-        <nav aria-label="Menu akun" className="divide-y divide-rule border-y border-rule text-center">
-          {[
-            ["/akun/pengaturan", "Pengaturan akun & organisasi"],
-            [`/akun/${encodeURIComponent(actor.username || actor.id)}`, "Lihat profil publik"],
-            ["/akun/artikel", "Kelola artikel"],
-            ["mailto:admin@responku.id?subject=Laporan%20masalah", "Laporkan masalah"],
-            ["/dukungan", "Dukungan"],
-            ["/faq", "FAQ"],
-          ].map(([href, label]) => (
-            <a key={href} href={href} className="block px-6 py-4 text-sm text-mute transition-colors hover:bg-gray-800/5 hover:text-ink">
-              {label}
-            </a>
-          ))}
-          <div className="px-6 py-4 transition-colors hover:bg-gray-800/5"><LogoutButton /></div>
-        </nav>
+        <section aria-labelledby="account-menu-title" className="border-t border-rule pt-6">
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div><p className="eyebrow">Pusat akun</p></div>
+            <span className="hidden text-xs text-mute sm:block">Pilih menu untuk melanjutkan</span>
+          </div>
+          <nav aria-label="Menu akun" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["/akun/pengaturan", "Pengaturan", "Akun & organisasi", "bx-cog"],
+              ["mailto:admin@responku.id?subject=Laporan%20masalah", "Laporkan masalah", "Beri tahu kami", "bx-error-circle"],
+              ["/dukungan", "Dukungan", "Bantu ResponKu berkembang", "bx-heart"],
+              ["/faq", "FAQ", "Jawaban cepat", "bx-help-circle"],
+            ].map(([href, label, description, icon]) => (
+              <a key={href} href={href} className="group flex min-h-20 items-center gap-3 border border-rule bg-paper p-3 transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-gray-100 text-gray-800 "><i className={`bx ${icon} text-xl`} aria-hidden="true" /></span>
+                <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-ink">{label}</span><span className="mt-0.5 block truncate text-xs text-mute">{description}</span></span>
+                <i className="bx bx-chevron-right text-xl text-mute transition-transform group-hover:translate-x-0.5 group-hover:text-ink" aria-hidden="true" />
+              </a>
+            ))}
+          </nav>
+          {/* <div className="mt-4 border-t border-rule pt-4 text-center"><LogoutButton label="Keluar dari akun" /></div> */}
+        </section>
       </div>
     </div>
   );
-}
-
-function ReadingList({ title, items, empty }: { title: string; items: Awaited<ReturnType<typeof listArticleReadingHistory>>; empty: string }) {
-  return <section className="min-w-0 rounded-t-xl border border-rule bg-paper p-5 shadow-sm">
-    <h2 className="border-b border-rule pb-3 font-display text-xl">{title}</h2>
-    {items.length ? <ul className="divide-y divide-rule">{items.slice(0, 5).map((item) => <li key={item.article.slug} className="py-3"><Link href={`/artikel/${encodeURIComponent(item.article.slug)}`} className="group flex gap-3"><div className="min-w-0 flex-1"><p className="line-clamp-2 text-sm font-medium group-hover:underline">{item.article.title}</p><p className="mt-1 text-xs text-mute">{Math.floor(item.progress * 100)}% dibaca{item.anchorText ? ` · “${item.anchorText.slice(0, 54)}…”` : ""}</p></div>{item.article.thumbnailUrl && <img src={item.article.thumbnailUrl} alt="" className="size-12 shrink-0 object-cover" />}</Link></li>)}</ul> : <p className="py-5 text-sm text-mute">{empty}</p>}
-  </section>;
 }

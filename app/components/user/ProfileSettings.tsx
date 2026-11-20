@@ -13,6 +13,8 @@ type ProfileForm = Profile & {
   emailConfirmed: boolean;
 };
 
+const profileCacheLifetime = 5 * 60 * 1000;
+
 function normalizeUsername(value: string) {
   return value.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9_.-]/g, "");
 }
@@ -64,13 +66,22 @@ export default function ProfileSettings({
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   useEffect(() => {
+    const cacheKey = `responku:profile:${initial.id}`;
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null") as { expiresAt?: number; profile?: Partial<ProfileForm> } | null;
+      if (cached?.profile && Number(cached.expiresAt) > Date.now()) {
+        setProfile((current) => ({ ...current, ...cached.profile }));
+        return;
+      }
+    } catch { /* Cache invalid akan diganti data baru. */ }
     fetch("/api/profile", { cache: "no-store" }).then(async (response) => {
       const data = await response.json();
-      if (response.ok)
+      if (response.ok) {
         setProfile((current) => ({ ...current, ...data.profile }));
-      else setMessage(data.error || "Profil gagal dimuat.");
+        sessionStorage.setItem(cacheKey, JSON.stringify({ profile: data.profile, expiresAt: Date.now() + profileCacheLifetime }));
+      } else setMessage(data.error || "Profil gagal dimuat.");
     });
-  }, []);
+  }, [initial.id]);
   function update<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) {
     setProfile((current) => ({ ...current, [key]: value }));
   }
@@ -138,6 +149,7 @@ export default function ProfileSettings({
       return;
     }
     setProfile((current) => ({ ...current, ...data.profile }));
+    sessionStorage.setItem(`responku:profile:${initial.id}`, JSON.stringify({ profile: data.profile, expiresAt: Date.now() + profileCacheLifetime }));
     setPassword("");
     setConfirmPassword("");
     setMessage("Profil berhasil diperbarui.");
