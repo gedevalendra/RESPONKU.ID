@@ -18,7 +18,7 @@ function configure() {
 
 export async function sendPushToUser(
   userId: string,
-  payload: { title: string; body: string; href?: string },
+  payload: { title: string; body: string; href?: string; image?: string },
 ): Promise<{ configured: boolean; subscriptions: number; sent: number; failed: number; reason?: string }> {
   if (!configure()) return { configured: false, subscriptions: 0, sent: 0, failed: 0, reason: "VAPID belum dikonfigurasi" };
   const subscriptions = await listPushSubscriptions(userId);

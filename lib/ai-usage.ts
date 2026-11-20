@@ -64,6 +64,7 @@ export async function getAiUsageSummary(days: number | null = 30): Promise<AiUsa
   const jakartaDate = Object.fromEntries(jakartaParts.map((part) => [part.type, part.value]));
   const todayKey = `${jakartaDate.year}-${jakartaDate.month}-${jakartaDate.day}`;
   const todayStart = new Date(`${todayKey}T00:00:00+07:00`);
+  const jakartaHour = Number(new Intl.DateTimeFormat("en-US", { hour: "2-digit", hourCycle: "h23", timeZone: "Asia/Jakarta" }).format(today));
   const since = days === null ? null : new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - days + 1));
   const result = await db.collection("ai_usage").aggregate<{
     totals: Array<{ requests: number; inputTokens: number; outputTokens: number; totalTokens: number }>;
@@ -161,7 +162,8 @@ export async function getAiUsageSummary(days: number | null = 30): Promise<AiUsa
   const daily = fillDaily(result.daily);
   const fillHourlyToday = (source: typeof result.hourlyToday) => {
     const rows = new Map(source.map((row) => [row.hour, row]));
-    return Array.from({ length: 12 }, (_, index) => {
+    const bucketCount = Math.floor(jakartaHour / 2) + 1;
+    return Array.from({ length: bucketCount }, (_, index) => {
       const hour = index * 2;
       return rows.get(hour) || { date: todayKey, hour, requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 };
     });

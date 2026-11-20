@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookiePreferenceName } from "@/lib/cookie-preferences";
 import crypto from "node:crypto";
-import { recordArticleView } from "@/lib/db";
+import { getArticleViewCount, recordArticleView } from "@/lib/db";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: { slug: string } },
+) {
+  const views = await getArticleViewCount(params.slug);
+  if (views === null) return NextResponse.json({ error: "Artikel tidak ditemukan" }, { status: 404 });
+  return NextResponse.json({ views }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+}
 
 export async function POST(
   request: NextRequest,
@@ -18,5 +27,5 @@ export async function POST(
     ipHash,
     userAgent: request.headers.get("user-agent") || undefined,
   });
-  return NextResponse.json({ recorded });
+  return NextResponse.json(recorded, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }

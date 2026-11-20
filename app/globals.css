@@ -9,6 +9,42 @@
   animation: youtube-start-cover 3.2s ease-out forwards;
 }
 
+@keyframes not-found-number-enter {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); letter-spacing: 0.12em; }
+  to { opacity: 1; transform: translateY(0) scale(1); letter-spacing: -0.075em; }
+}
+
+@keyframes not-found-number-shift {
+  0%, 100% { transform: translate3d(7px, 7px, 0); }
+  50% { transform: translate3d(12px, 2px, 0); }
+}
+
+@keyframes not-found-orb-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(18px, -24px, 0) scale(1.08); }
+}
+
+@keyframes not-found-signal-pulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.55; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+.not-found-page { background: linear-gradient(135deg, #fff 0%, #f8fbff 52%, #f4f7fb 100%); }
+.not-found-grid { background-image: linear-gradient(rgba(31, 41, 55, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(31, 41, 55, 0.045) 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(to bottom, transparent, black 14%, black 82%, transparent); }
+.not-found-orb { position: absolute; z-index: -2; border-radius: 9999px; pointer-events: none; filter: blur(4px); animation: not-found-orb-drift 8s ease-in-out infinite; }
+.not-found-orb-one { top: 8%; left: 7%; width: 18rem; height: 18rem; background: radial-gradient(circle, rgba(56, 189, 248, 0.19), rgba(56, 189, 248, 0) 68%); }
+.not-found-orb-two { right: 7%; bottom: 3%; width: 22rem; height: 22rem; background: radial-gradient(circle, rgba(96, 165, 250, 0.16), rgba(96, 165, 250, 0) 68%); animation-delay: -4s; }
+.not-found-number { min-height: 10rem; display: grid; place-items: center; }
+.not-found-number-main, .not-found-number-shadow { grid-area: 1 / 1; font-family: var(--font-display, Georgia, serif); font-size: clamp(7rem, 20vw, 13rem); font-weight: 700; line-height: 0.75; letter-spacing: -0.075em; }
+.not-found-number-main { color: #1f2937; animation: not-found-number-enter 720ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+.not-found-number-shadow { color: #bfdbfe; user-select: none; animation: not-found-number-shift 4.5s ease-in-out infinite; }
+.not-found-signal { position: absolute; right: clamp(6%, 8vw, 18%); top: 8%; display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 1px solid #bfdbfe; border-radius: 9999px; background: rgba(255, 255, 255, 0.86); color: #2563eb; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12); animation: not-found-signal-pulse 2.8s ease-in-out infinite; }
+.not-found-content { animation: not-found-number-enter 650ms 100ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .not-found-orb, .not-found-number-main, .not-found-number-shadow, .not-found-signal, .not-found-content { animation: none; }
+}
+
 @keyframes mobile-more-orb-drift {
   0% { transform: translate3d(-12%, -8%, 0) rotate(-8deg) scale(1.05); }
   45% { transform: translate3d(10%, 4%, 0) rotate(12deg) scale(1.18); }

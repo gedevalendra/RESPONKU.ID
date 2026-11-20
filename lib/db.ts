@@ -585,13 +585,14 @@ export async function recordArticleView(
   metadata: { ipHash?: string; userAgent?: string },
 ) {
   const db = await getMongoDb();
-  if (!db) return false;
+  if (!db) return { recorded: false, views: 0 };
   const [articleUpdate] = await Promise.all([
     db
       .collection("articles")
-      .updateOne(
+      .findOneAndUpdate(
         { slug },
         { $inc: { views: 1 }, $set: { updatedAt: new Date() } },
+        { returnDocument: "after", projection: { views: 1 } },
       ),
     db
       .collection("article_events")
@@ -602,7 +603,14 @@ export async function recordArticleView(
         createdAt: new Date(),
       }),
   ]);
-  return articleUpdate.matchedCount > 0;
+  return { recorded: Boolean(articleUpdate), views: Number(articleUpdate?.views || 0) };
+}
+
+export async function getArticleViewCount(slug: string) {
+  const db = await getMongoDb();
+  if (!db) return null;
+  const article = await db.collection("articles").findOne({ slug }, { projection: { views: 1 } });
+  return article ? Number(article.views || 0) : null;
 }
 
 export function isObjectId(value: string) {

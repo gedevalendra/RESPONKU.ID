@@ -14,6 +14,17 @@ export default function ArticleViewCounter({
 
   useEffect(() => {
     let recorded = false;
+    let cancelled = false;
+
+    const refreshViews = () => {
+      if (document.visibilityState !== "visible") return;
+      void fetch(`/api/articles/${encodeURIComponent(articleSlug)}/view`, { cache: "no-store", credentials: "same-origin" })
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => {
+          if (!cancelled && Number.isFinite(data?.views)) setViews(data.views);
+        })
+        .catch(() => null);
+    };
 
     function recordView() {
       if (recorded || getCookiePreference() !== "accept") return;
@@ -24,7 +35,7 @@ export default function ArticleViewCounter({
       })
         .then((response) => response.ok ? response.json() : null)
         .then((data) => {
-          if (data?.recorded) setViews((current) => current + 1);
+          if (!cancelled && data?.recorded && Number.isFinite(data.views)) setViews(data.views);
         })
         .catch(() => {
           recorded = false;
@@ -32,9 +43,19 @@ export default function ArticleViewCounter({
     }
 
     recordView();
+    refreshViews();
     window.addEventListener(cookiePreferenceChange, recordView);
-    return () => window.removeEventListener(cookiePreferenceChange, recordView);
+    document.addEventListener("visibilitychange", refreshViews);
+    const refreshInterval = window.setInterval(refreshViews, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener(cookiePreferenceChange, recordView);
+      document.removeEventListener("visibilitychange", refreshViews);
+    };
   }, [articleSlug]);
+
+  useEffect(() => setViews(initialViews), [initialViews]);
 
   return (
     <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-mute">
