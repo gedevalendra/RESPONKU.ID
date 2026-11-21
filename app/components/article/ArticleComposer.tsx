@@ -88,21 +88,52 @@ function applyLocation(blocks: ArticleBlock[], location: string) {
 /* ---------- Hasil format AI -> blok editor ---------- */
 
 type RawBlock = Record<string, unknown>;
-const URL_PATTERN = /\bhttps?:\/\/[^\s<>"']+|\bwww\.[^\s<>"']+/gi;
+
+/**
+ * Daftar domain tingkat atas yang dikenali untuk tautan TANPA "https://" / "www.".
+ * Urutan: yang lebih panjang (co.id) ditulis lebih dulu. Tambahkan sesuai kebutuhan.
+ */
+const TLDS =
+  "co\\.id|ac\\.id|go\\.id|or\\.id|web\\.id|sch\\.id|my\\.id|biz\\.id|com|net|org|edu|gov|info|id|io|app|dev|me|link|ly|xyz|site|online|store|shop|ai|tv|co";
+
+/** Menangkap: https://..., http://..., www...., dan domain polos seperti tautkan.com/promo atau bit.ly/abc. */
+const URL_PATTERN = new RegExp(
+  `(?:https?:\\/\\/|www\\.)[^\\s<>"']+|(?:[a-z0-9-]+\\.)+(?:${TLDS})(?![a-z0-9@-])(?:[/?#][^\\s<>"']*)?`,
+  "gi",
+);
+/** Seluruh string adalah domain polos (tanpa skema). */
+const BARE_DOMAIN = new RegExp(`^(?:[a-z0-9-]+\\.)+(?:${TLDS})(?:[/?#].*)?$`, "i");
+const TRAILING_PUNCTUATION = /[.,;:!?)\]}'"”’]+$/;
+
 const BLOCK_LABELS: Partial<Record<ArticleBlock["type"], string>> = {
   link: "tautan", button: "tombol", callout: "sorotan", image: "foto",
   quote: "kutipan", heading: "judul bagian", divider: "pemisah",
 };
 
 const asString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+/** Mengembalikan string tak kosong pertama. Berbeda dengan `??`, string kosong "" dilewati. */
+const firstString = (...values: unknown[]) => {
+  for (const value of values) {
+    const text = asString(value);
+    if (text) return text;
+  }
+  return "";
+};
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] || character);
 
-/** Hanya menerima URL https yang valid (http otomatis dinaikkan ke https, "www.x.com" dilengkapi). */
+/**
+ * Hanya menerima URL https yang valid.
+ * - "https://x.com" dan "http://x.com" diterima (http dinaikkan ke https)
+ * - "www.x.com" dan domain polos ("tautkan.com/promo", "bit.ly/abc") dilengkapi https://
+ * - Teks biasa seperti "selesai.Besok" ditolak karena akhirannya bukan domain yang dikenali
+ */
 function toHttpsUrl(value: unknown): string {
   const raw = asString(value);
-  if (!raw) return "";
-  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+  if (!raw || /\s/.test(raw)) return "";
+  const hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw);
+  if (!hasScheme && !/^www\./i.test(raw) && !BARE_DOMAIN.test(raw)) return "";
+  const candidate = hasScheme ? raw : `https://${raw}`;
   try {
     const url = new URL(candidate.replace(/^http:\/\//i, "https://"));
     return url.protocol === "https:" && url.hostname.includes(".") ? url.toString() : "";
@@ -112,23 +143,109 @@ function toHttpsUrl(value: unknown): string {
 }
 const hostLabel = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 
+/** Cari URL pertama di dalam teks. Mengembalikan "" jika tidak ada. */
+function extractUrl(text: string): string {
+  for (const match of text.matchAll(URL_PATTERN)) {
+    const start = match.index ?? 0;
+    const trailing = match[0].match(TRAILING_PUNCTUATION)?.[0] || "";
+    const raw = trailing ? match[0].slice(0, -trailing.length) : match[0];
+    const isBare = !/^(?:https?:\/\/|www\.)/i.test(raw);
+    if (isBare && /[@\w]/.test(text[start - 1] || "")) continue; // bagian dari email / kata lain
+    const href = toHttpsUrl(raw);
+    if (href) return href;
+  }
+  return "";
+}
+
 /** Ubah URL di dalam paragraf menjadi tautan yang bisa diklik. Mengembalikan undefined jika tidak ada URL. */
 function autolink(text: string): string | undefined {
   let html = "";
   let last = 0;
   let found = false;
   for (const match of text.matchAll(URL_PATTERN)) {
-    const trailing = match[0].match(/[.,;:!?)\]]+$/)?.[0] || "";
+    const start = match.index ?? 0;
+    if (start < last) continue;
+    const trailing = match[0].match(TRAILING_PUNCTUATION)?.[0] || "";
     const raw = trailing ? match[0].slice(0, -trailing.length) : match[0];
+    const isBare = !/^(?:https?:\/\/|www\.)/i.test(raw);
+    if (isBare && /[@\w]/.test(text[start - 1] || "")) continue; // email atau kata yang menempel
     const href = toHttpsUrl(raw);
     if (!href) continue;
-    const start = match.index ?? 0;
     html += `${escapeHtml(text.slice(last, start))}<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(raw)}</a>`;
     last = start + raw.length;
     found = true;
   }
   if (!found) return undefined;
   return `${html}${escapeHtml(text.slice(last))}`.replace(/\n/g, "<br>");
+}
+
+/** Blok teks biasa dengan tautan otomatis. Dipakai di semua jalur fallback. */
+function textBlock(text: string) {
+  const html = autolink(text);
+  return { type: "text", text, ...(html ? { html } : {}) };
+}
+
+/**
+ * AI sering mengirim baris ajakan seperti
+ *   "Baca selengkapnya tentang program ini: https://..."
+ *   "Daftar Sekarang -> bit.ly/daftar-umkm"
+ *   "[Tombol] Daftar Sekarang -> bit.ly/daftar-umkm"
+ * sebagai blok "text" biasa, bukan "link"/"button". Fungsi ini mengubah baris seperti itu
+ * menjadi blok tautan/tombol. Syaratnya ketat supaya kalimat biasa tidak ikut berubah:
+ *   - hanya ada SATU URL dan URL itu berada di akhir baris
+ *   - ada penanda ([Tombol], [Tautan]) ATAU pemisah label (":", "->", "→", "-") sebelum URL
+ *   - label pendek (maks. 10 kata) dan bukan beberapa kalimat
+ */
+const LINE_MARKER = /^\s*(?:\[\s*(tombol|button|tautan|link)\s*\]\s*[:\-–]?|(tombol|button)\s*:)\s*/i;
+const LABEL_SEPARATOR = /\s*(?:->|=>|→|—|–|:|-)\s*$/;
+const BUTTON_LABEL =
+  /^(daftar|klik|unduh|download|beli|pesan|hubungi|gabung|bergabung|coba|mulai|isi|ikuti|registrasi|donasi|dukung|langganan|berlangganan)\b|\bsekarang\b/i;
+
+function promoteLinkLine(line: string): { type: "link" | "button"; text: string; url: string } | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+  const marker = trimmed.match(LINE_MARKER);
+  const body = marker ? trimmed.slice(marker[0].length) : trimmed;
+
+  const urls: { start: number; end: number; href: string }[] = [];
+  for (const match of body.matchAll(URL_PATTERN)) {
+    const start = match.index ?? 0;
+    const trailing = match[0].match(TRAILING_PUNCTUATION)?.[0] || "";
+    const raw = trailing ? match[0].slice(0, -trailing.length) : match[0];
+    const isBare = !/^(?:https?:\/\/|www\.)/i.test(raw);
+    if (isBare && /[@\w]/.test(body[start - 1] || "")) continue;
+    const href = toHttpsUrl(raw);
+    if (href) urls.push({ start, end: start + raw.length, href });
+  }
+  if (urls.length !== 1) return null;
+  const found = urls[0];
+  if (body.slice(found.end).replace(/[\s.,;:!?)\]}'"”’]+/g, "")) return null; // masih ada teks setelah URL
+
+  const before = body.slice(0, found.start);
+  const hasSeparator = LABEL_SEPARATOR.test(before);
+  if (!marker && !hasSeparator) return null;
+  const label = before.replace(LABEL_SEPARATOR, "").trim();
+  if (label.length > 80 || label.split(/\s+/).filter(Boolean).length > 10 || /[.!?]\s/.test(label)) return null;
+
+  const markerType = (marker?.[1] || marker?.[2] || "").toLowerCase();
+  const type: "link" | "button" = markerType
+    ? /tombol|button/.test(markerType) ? "button" : "link"
+    : BUTTON_LABEL.test(label) ? "button" : "link";
+  return { type, text: label || hostLabel(found.href), url: found.href };
+}
+
+/** Buang tanda kutip pembungkus dan pisahkan atribusi ("..., kata Andi Saputra.") dari isi kutipan. */
+function cleanQuote(text: string, attribution: string) {
+  let body = text.trim();
+  let source = attribution;
+  const attributed = body.match(
+    /^["“]([\s\S]+?)[,.]?["”]\s*,?\s*(?:kata|ujar|tutur|ungkap|papar|jelas|ucap)\s+([^"“”]+?)\.?$/i,
+  );
+  if (attributed) {
+    body = attributed[1];
+    if (!source) source = attributed[2].trim();
+  }
+  return { text: body.replace(/^["“”„‘’']+|["“”„‘’']+$/g, "").trim(), attribution: source };
 }
 
 /**
@@ -146,7 +263,8 @@ function normalizeBlocks(raw: unknown): ArticleBlock[] {
     const type = asString(item.type).toLowerCase();
     const text = asString(item.text);
     const title = asString(item.title);
-    const url = toHttpsUrl(item.url ?? item.href ?? item.link);
+    // Ambil URL dari field mana pun yang terisi (string kosong dilewati).
+    const url = toHttpsUrl(firstString(item.url, item.href, item.link, item.src));
 
     switch (type) {
       case "divider":
@@ -156,13 +274,21 @@ function normalizeBlocks(raw: unknown): ArticleBlock[] {
         if (text) push({ type: "heading", text });
         break;
       case "quote":
-        if (text) push({ type: "quote", text, attribution: asString(item.attribution ?? item.source) });
+        if (text) {
+          const quote = cleanQuote(text, firstString(item.attribution, item.source));
+          if (quote.text) push({ type: "quote", ...quote });
+        }
         break;
       case "link":
-      case "button":
-        if (url) push({ type, text: text || title || hostLabel(url), url });
-        else if (text) push({ type: "text", text });
+      case "button": {
+        // Jika url kosong, coba ambil dari teks (AI kadang menaruh URL di field text).
+        const found = url || extractUrl(text) || extractUrl(title);
+        if (found) {
+          const textIsUrl = Boolean(text) && toHttpsUrl(text) !== "";
+          push({ type, text: (!textIsUrl && text) || (!toHttpsUrl(title) && title) || hostLabel(found), url: found });
+        } else if (text) push(textBlock(text));
         break;
+      }
       case "callout":
         if (text || title) push({ type: "callout", title: text ? title : "", text: text || title });
         break;
@@ -171,12 +297,27 @@ function normalizeBlocks(raw: unknown): ArticleBlock[] {
         break;
       default: {
         if (!text) break;
-        const bareUrl = !/\s/.test(text) ? toHttpsUrl(text) : "";
-        if (bareUrl) push({ type: "link", text: hostLabel(bareUrl), url: bareUrl });
-        else {
-          const html = autolink(text);
-          push({ type: "text", text, ...(html ? { html } : {}) });
+        // Satu baris yang isinya hanya URL menjadi blok tautan.
+        const bareUrl = toHttpsUrl(text);
+        if (bareUrl) {
+          push({ type: "link", text: hostLabel(bareUrl), url: bareUrl });
+          break;
         }
+        // Baris ajakan ("Label: URL", "Label -> URL", "[Tombol] Label -> URL") menjadi tautan/tombol.
+        let buffer: string[] = [];
+        const flush = () => {
+          if (buffer.length) push(textBlock(buffer.join("\n")));
+          buffer = [];
+        };
+        for (const line of text.split(/\n+/)) {
+          if (!line.trim()) continue;
+          const promoted = promoteLinkLine(line);
+          if (promoted) {
+            flush();
+            push(promoted);
+          } else buffer.push(line);
+        }
+        flush();
       }
     }
   }
