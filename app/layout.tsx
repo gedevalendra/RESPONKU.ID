@@ -1,6 +1,12 @@
+
 import type { Metadata } from "next";
 import "./globals.css";
-import { homepageDescription, homepageTitle, publicPageMetadata, siteIconPath } from "@/lib/seo";
+import {
+  homepageDescription,
+  homepageTitle,
+  publicPageMetadata,
+} from "@/lib/seo";
+
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import WelcomePopup from "./components/layout/WelcomePopup";
@@ -10,9 +16,17 @@ import CopyAttribution from "./components/layout/CopyAttribution";
 
 export const metadata: Metadata = {
   ...publicPageMetadata("/", homepageTitle, homepageDescription),
+
   // Canonical URLs are declared by each indexable page.
   alternates: undefined,
-  icons: { icon: { url: siteIconPath, type: "image/png", sizes: "144x144" } },
+
+  // Favicon
+  icons: {
+    icon: {
+      url: "/favicon.ico?v=2",
+      type: "image/x-icon",
+    },
+  },
 };
 
 export default function RootLayout({
@@ -23,14 +37,24 @@ export default function RootLayout({
   return (
     <html lang="id">
       <head>
-        <link rel="icon" href="/icon.png"/>
-        <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
+        <link rel="icon" href="/favicon.ico?v=2" type="image/x-icon"/>
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css"
+        />
       </head>
+
       <body className="flex min-h-screen flex-col">
         <CopyAttribution />
+
         <Header />
-        <main className="flex-1">{children}</main>
+
+        <main className="flex-1">
+          {children}
+        </main>
+
         <Footer />
+
         <WelcomePopup />
         <ActionConfirmation />
         <CookieConsent />

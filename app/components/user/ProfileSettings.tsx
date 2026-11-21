@@ -232,15 +232,16 @@ export default function ProfileSettings({
       <section className="w-full overflow-hidden rounded-b-xl bg-white shadow-sm">
         <div className="h-28 bg-blue-50 bg-cover bg-center sm:h-36" style={profile.backgroundUrl ? { backgroundImage: `url(${profile.backgroundUrl})` } : undefined} />
         <div className="px-6 pb-6 sm:px-8">
-          <div className="-mt-10 flex items-end justify-between gap-4">
-            <div className="grid size-20 shrink-0 place-items-center overflow-hidden shadow-sm  rounded-full bg-blue-50 text-blue-500 shadow-sm ring-4 ring-white">
-              {profile.avatarUrl ? <img src={profile.avatarUrl} alt={profile.displayName} className="size-full object-cover" /> : <i className="bx bxs-user text-3xl" aria-hidden="true" />}
+          {/* Avatar naik menimpa banner; tombol Edit profil sepenuhnya di bawah banner */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="-mt-10 grid size-20 shrink-0 place-items-center overflow-hidden shadow-lg rounded-full bg-blue-50 text-blue-500 ring-4 ring-white">
+              {profile.avatarUrl ? <img src={profile.avatarUrl} alt={profile.displayName} className=" size-full object-cover" /> : <i className="bx bxs-user text-3xl" aria-hidden="true" />}
             </div>
-            <button type="button" onClick={open} aria-haspopup="dialog" className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-rule px-4 py-2 text-sm font-medium text-ink transition hover:bg-gray-50 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+            <button type="button" onClick={open} aria-haspopup="dialog" className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-rule bg-white px-4 py-2 text-sm font-medium text-ink transition hover:bg-gray-50 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
               <i className="bx bx-edit-alt" aria-hidden="true" />Edit profil
             </button>
           </div>
-          <div className="mt-3 min-w-0">
+          <div className="mt-2 min-w-0">
             <h2 className="break-words text-xl font-semibold leading-tight text-ink">{profile.displayName} {profile.verified && <i className="bx bxs-badge-check align-middle text-blue-500" role="img" aria-label="Terverifikasi" />}</h2>
             <p className="mt-1 truncate text-sm text-mute">{profile.username ? `@${profile.username}` : profile.email}</p>
           </div>

@@ -85,6 +85,113 @@ function applyLocation(blocks: ArticleBlock[], location: string) {
     : block);
 }
 
+/* ---------- Hasil format AI -> blok editor ---------- */
+
+type RawBlock = Record<string, unknown>;
+const URL_PATTERN = /\bhttps?:\/\/[^\s<>"']+|\bwww\.[^\s<>"']+/gi;
+const BLOCK_LABELS: Partial<Record<ArticleBlock["type"], string>> = {
+  link: "tautan", button: "tombol", callout: "sorotan", image: "foto",
+  quote: "kutipan", heading: "judul bagian", divider: "pemisah",
+};
+
+const asString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] || character);
+
+/** Hanya menerima URL https yang valid (http otomatis dinaikkan ke https, "www.x.com" dilengkapi). */
+function toHttpsUrl(value: unknown): string {
+  const raw = asString(value);
+  if (!raw) return "";
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const url = new URL(candidate.replace(/^http:\/\//i, "https://"));
+    return url.protocol === "https:" && url.hostname.includes(".") ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+const hostLabel = (url: string) => new URL(url).hostname.replace(/^www\./, "");
+
+/** Ubah URL di dalam paragraf menjadi tautan yang bisa diklik. Mengembalikan undefined jika tidak ada URL. */
+function autolink(text: string): string | undefined {
+  let html = "";
+  let last = 0;
+  let found = false;
+  for (const match of text.matchAll(URL_PATTERN)) {
+    const trailing = match[0].match(/[.,;:!?)\]]+$/)?.[0] || "";
+    const raw = trailing ? match[0].slice(0, -trailing.length) : match[0];
+    const href = toHttpsUrl(raw);
+    if (!href) continue;
+    const start = match.index ?? 0;
+    html += `${escapeHtml(text.slice(last, start))}<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(raw)}</a>`;
+    last = start + raw.length;
+    found = true;
+  }
+  if (!found) return undefined;
+  return `${html}${escapeHtml(text.slice(last))}`.replace(/\n/g, "<br>");
+}
+
+/**
+ * Mengubah keluaran AI menjadi blok editor untuk semua jenis bagian:
+ * teks, judul, foto, kutipan, tautan, tombol, sorotan, dan pemisah.
+ * Bagian yang tidak valid (mis. tautan tanpa URL https) diturunkan menjadi teks agar tidak menggagalkan pengiriman.
+ */
+function normalizeBlocks(raw: unknown): ArticleBlock[] {
+  if (!Array.isArray(raw)) return [];
+  const blocks: ArticleBlock[] = [];
+  const push = (block: Record<string, unknown>) => { blocks.push({ id: id(), ...block } as ArticleBlock); };
+
+  for (const item of raw as RawBlock[]) {
+    if (!item || typeof item !== "object") continue;
+    const type = asString(item.type).toLowerCase();
+    const text = asString(item.text);
+    const title = asString(item.title);
+    const url = toHttpsUrl(item.url ?? item.href ?? item.link);
+
+    switch (type) {
+      case "divider":
+        push({ type: "divider" });
+        break;
+      case "heading":
+        if (text) push({ type: "heading", text });
+        break;
+      case "quote":
+        if (text) push({ type: "quote", text, attribution: asString(item.attribution ?? item.source) });
+        break;
+      case "link":
+      case "button":
+        if (url) push({ type, text: text || title || hostLabel(url), url });
+        else if (text) push({ type: "text", text });
+        break;
+      case "callout":
+        if (text || title) push({ type: "callout", title: text ? title : "", text: text || title });
+        break;
+      case "image":
+        if (url) push({ type: "image", url, alt: asString(item.alt) || asString(item.caption), caption: asString(item.caption) });
+        break;
+      default: {
+        if (!text) break;
+        const bareUrl = !/\s/.test(text) ? toHttpsUrl(text) : "";
+        if (bareUrl) push({ type: "link", text: hostLabel(bareUrl), url: bareUrl });
+        else {
+          const html = autolink(text);
+          push({ type: "text", text, ...(html ? { html } : {}) });
+        }
+      }
+    }
+  }
+  return blocks;
+}
+
+function describeBlocks(blocks: ArticleBlock[]) {
+  const counts = new Map<string, number>();
+  blocks.forEach((block) => {
+    const label = BLOCK_LABELS[block.type];
+    if (label) counts.set(label, (counts.get(label) || 0) + 1);
+  });
+  return Array.from(counts, ([label, count]) => `${count} ${label}`).join(", ");
+}
+
 export async function convertToWebp(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height));
@@ -184,6 +291,41 @@ export default function ArticleComposer({
   const [formatProgress, setFormatProgress] = useState(0);
   const [formatMessage, setFormatMessage] = useState("");
   const [mobileTab, setMobileTab] = useState<"editor" | "preview">("editor");
+  const formRef = useRef<HTMLFormElement>(null);
+  const [bottomInset, setBottomInset] = useState(0);
+
+  /* Di layar kecil, ukur elemen fixed di dasar layar (navbar mobile) agar bar kirim berada tepat di atasnya. */
+  useEffect(() => {
+    const measure = () => {
+      if (window.matchMedia("(min-width: 1024px)").matches) { setBottomInset(0); return; }
+      const stack = document.elementsFromPoint(window.innerWidth / 2, window.innerHeight - 2);
+      for (const element of stack) {
+        if (formRef.current?.contains(element)) continue;
+        let node: Element | null = element;
+        while (node && node !== document.body) {
+          if (getComputedStyle(node).position === "fixed") {
+            const rect = node.getBoundingClientRect();
+            if (rect.height > 0 && rect.height < window.innerHeight / 2 && rect.bottom >= window.innerHeight - 4) {
+              setBottomInset(Math.round(window.innerHeight - rect.top));
+              return;
+            }
+            break;
+          }
+          node = node.parentElement;
+        }
+      }
+      setBottomInset(0);
+    };
+    measure();
+    const timer = window.setTimeout(measure, 400);
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, []);
   const [analysisMessage, setAnalysisMessage] = useState("Kategori dan durasi baca ditentukan otomatis dari isi artikel.");
   const blockElements = useRef(new Map<string, HTMLDivElement>());
   const previousBlockPositions = useRef(new Map<string, DOMRect>());
@@ -310,14 +452,7 @@ export default function ArticleComposer({
       setFormatProgress(94);
       const data = await response.json().catch(() => ({ error: "Server tidak mengirim respons yang dapat dibaca." }));
       if (!response.ok) throw new Error(data.error || "Format artikel gagal.");
-      const formattedBlocks = Array.isArray(data.blocks) && data.blocks.length
-        ? data.blocks.map((block: { type: ArticleBlock["type"]; text?: string; attribution?: string }, index: number) => ({
-            id: id(),
-            type: block.type,
-            ...(block.type === "divider" ? {} : { text: block.text || "" }),
-            ...(block.type === "quote" ? { attribution: block.attribution || "" } : {}),
-          })) as ArticleBlock[]
-        : undefined;
+      const formattedBlocks = normalizeBlocks(data.blocks);
       setDraft((current) => ({
         ...current,
         ...(data.title ? { title: data.title } : {}),
@@ -325,10 +460,11 @@ export default function ArticleComposer({
         ...(data.location ? { location: data.location } : {}),
         ...(data.category ? { category: data.category } : {}),
         ...(data.readTime ? { readTime: data.readTime } : {}),
-        ...(formattedBlocks ? { blocks: formattedBlocks } : {}),
+        ...(formattedBlocks.length ? { blocks: formattedBlocks } : {}),
       }));
       setFormatProgress(100);
-      setFormatMessage(`${data.sourceFileName ? `${data.sourceFileName} berhasil dibaca. ` : ""}Struktur artikel sudah diisi AI. Periksa hasilnya sebelum dikirim.`);
+      const detected = describeBlocks(formattedBlocks);
+      setFormatMessage(`${data.sourceFileName ? `${data.sourceFileName} berhasil dibaca. ` : ""}Struktur artikel sudah diisi AI${detected ? ` (terdeteksi ${detected})` : ""}. Periksa hasilnya sebelum dikirim.`);
     } catch (formatError) {
       setFormatMessage(formatError instanceof Error ? formatError.message : "Format artikel gagal.");
     } finally {
@@ -612,7 +748,7 @@ export default function ArticleComposer({
             role="tab"
             aria-selected={mobileTab === tab}
             onClick={() => setMobileTab(tab)}
-            className={`flex min-h-11 items-center justify-center gap-2 text-sm font-medium transition-colors ${mobileTab === tab ? "bg-gray-800 text-white" : "hover:bg-gray-100"}`}
+            className={`flex min-h-8 items-center justify-center gap-2 text-sm font-medium transition-colors ${mobileTab === tab ? "bg-gray-800 text-white" : "hover:bg-gray-100"}`}
           >
             <i className={`bx ${tab === "editor" ? "bx-edit-alt" : "bx-show"} text-lg`} aria-hidden="true" />
             {tab === "editor" ? "Editor" : "Pratinjau"}
@@ -620,8 +756,9 @@ export default function ArticleComposer({
         ))}
       </div>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)] 2xl:gap-6">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)] 2xl:gap-6">
         <form
+          ref={formRef}
           onSubmit={submit}
           className={`min-w-0 border border-rule bg-white ${mobileTab === "preview" ? "hidden lg:block" : ""}`}
         >
@@ -1085,13 +1222,19 @@ export default function ArticleComposer({
           <PopupStatus message={error} />
 
           {/* Bar aksi yang selalu terlihat */}
-          <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-rule bg-white/95 px-5 py-3 backdrop-blur sm:px-6 xl:px-7">
-            <p className="text-xs text-mute" role="status">
-              {doneCount === checklist.length
-                ? "Semua bagian wajib sudah terisi."
-                : `${checklist.length - doneCount} bagian wajib belum lengkap.`}
+          <div
+            className={`sticky bottom-[var(--composer-bottom,0px)] z-10 flex items-center justify-between gap-2 border-t border-rule bg-white/95 px-4 pt-2.5 shadow-[0_-8px_16px_-12px_rgba(0,0,0,.25)] backdrop-blur sm:gap-3 sm:px-6 sm:shadow-none lg:bottom-0 xl:px-7 ${bottomInset === 0 ? "pb-[max(0.625rem,env(safe-area-inset-bottom))]" : "pb-2.5"}`}
+            style={{ "--composer-bottom": `${bottomInset}px` } as React.CSSProperties}
+          >
+            <p className="min-w-0 text-xs text-mute" role="status">
+              <span className="sm:hidden">{doneCount}/{checklist.length} lengkap</span>
+              <span className="hidden sm:inline">
+                {doneCount === checklist.length
+                  ? "Semua bagian wajib sudah terisi."
+                  : `${checklist.length - doneCount} bagian wajib belum lengkap.`}
+              </span>
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex shrink-0 flex-wrap justify-end gap-2">
               {article && onCancel && (
                 <button
                   type="button"
@@ -1105,7 +1248,7 @@ export default function ArticleComposer({
               )}
               <button
                 disabled={busy}
-                className="inline-flex min-h-11 items-center gap-2 bg-gray-800 px-5 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+                className="inline-flex min-h-8 items-center gap-2 bg-gray-800 px-2 text-xs font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
               >
                 <i className="bx bx-paper-plane text-lg" aria-hidden="true" />
                 {busy
