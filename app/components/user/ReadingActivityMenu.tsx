@@ -128,7 +128,6 @@ export default function ReadingActivityMenu({ readingHistory }: { readingHistory
             <div className="flex justify-center pb-1 pt-3" aria-hidden="true"><span className="h-1.5 w-10 rounded-full bg-gray-300" /></div>
             <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-2 sm:px-8">
               <div className="flex items-center gap-3">
-                <span className="grid size-10 place-items-center rounded-full bg-blue-50 text-blue-700"><i className={`bx ${details[tab].icon} text-xl`} aria-hidden="true" /></span>
                 <div>
                   <h2 id="reading-sheet-title" className="font-display text-xl leading-6">{details[tab].label}</h2>
                   <p className="text-xs text-mute">{details[tab].hint}</p>

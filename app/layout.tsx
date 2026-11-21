@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="id">
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="144x144" />
+        <link rel="icon" href="/icon.png"/>
         <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
       </head>
       <body className="flex min-h-screen flex-col">
