@@ -125,7 +125,7 @@ export default function ReadingActivityMenu({ readingHistory }: { readingHistory
         <div className="flex h-full flex-col">
           {/* Area geser: handle + header */}
           <div onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} className="shrink-0 cursor-grab touch-none select-none border-b border-rule active:cursor-grabbing">
-            <div className="flex justify-center pb-1 pt-3" aria-hidden="true"><span className="h-1.5 w-10 rounded-full bg-gray-300" /></div>
+            <div className="flex justify-center pb-1 pt-3 lg:hidden" aria-hidden="true"><span className="h-1.5 w-10 rounded-full bg-gray-300" /></div>
             <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-2 sm:px-8">
               <div className="flex items-center gap-3">
                 <div>

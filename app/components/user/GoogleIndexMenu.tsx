@@ -8,21 +8,54 @@ type IndexedArticle = {
   lastCrawlTime?: string;
   inspectionResultLink?: string;
 };
-type IndexResponse = { articles?: IndexedArticle[]; checked?: number; error?: string };
+type IndexResponse = { articles?: IndexedArticle[]; checked?: number; checkedAt?: string; refreshDue?: boolean; error?: string };
 
 const dateFormat = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" });
+const checkedFormat = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" });
 const DISMISS_DISTANCE = 120; // px
 const DISMISS_VELOCITY = 0.6; // px/ms
+const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+function googleSearchUrl(articleUrl: string) {
+  const articlePath = new URL(articleUrl).pathname;
+  return `https://www.google.com/search?q=${encodeURIComponent(`site:responku.id${articlePath}`)}`;
+}
 
 export default function GoogleIndexMenu() {
   const [closing, setClosing] = useState(false);
   const [articles, setArticles] = useState<IndexedArticle[]>([]);
   const [checked, setChecked] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [refreshError, setRefreshError] = useState("");
+  const [checkedAt, setCheckedAt] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
+  const refreshRef = useRef<(force?: boolean) => Promise<void>>(async () => {});
   const drag = useRef({ active: false, startY: 0, lastY: 0, lastT: 0, velocity: 0, dy: 0 });
+
+  const refresh = async (force = false) => {
+    setRefreshing(true);
+    setRefreshError("");
+    try {
+      const response = await fetch("/api/account/google-index", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force }),
+      });
+      const data = (await response.json()) as IndexResponse;
+      if (!response.ok) throw new Error(data.error || "Pembaruan status indeks gagal.");
+      setArticles(data.articles || []);
+      setChecked(data.checked || 0);
+      setCheckedAt(data.checkedAt || "");
+    } catch (cause) {
+      setRefreshError(cause instanceof Error ? cause.message : "Pembaruan status indeks gagal.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  refreshRef.current = refresh;
 
   const load = async () => {
     setLoading(true);
@@ -33,7 +66,9 @@ export default function GoogleIndexMenu() {
       if (!response.ok) throw new Error(data.error || "Pemeriksaan indeks Google gagal.");
       setArticles(data.articles || []);
       setChecked(data.checked || 0);
+      setCheckedAt(data.checkedAt || "");
       setLoaded(true);
+      if (data.refreshDue) void refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Pemeriksaan indeks Google gagal.");
     } finally {
@@ -66,6 +101,11 @@ export default function GoogleIndexMenu() {
   };
 
   useEffect(() => () => { document.body.style.overflow = ""; }, []);
+  useEffect(() => {
+    if (!loaded) return;
+    const timer = window.setInterval(() => { void refreshRef.current(); }, REFRESH_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [loaded]);
 
   /* ---------- Geser ke bawah untuk menutup ---------- */
   const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
@@ -106,9 +146,6 @@ export default function GoogleIndexMenu() {
           aria-haspopup="dialog"
           className="group flex w-full items-center gap-3 rounded-2xl border border-rule bg-paper p-4 text-left transition duration-200 hover:border-gray-300 hover:bg-gray-50 active:scale-[.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
         >
-          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gray-100 text-gray-800 transition-colors group-hover:bg-blue-50 group-hover:text-blue-700">
-            <i className="bxl bx-google text-xl" aria-hidden="true" />
-          </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium">Artikel terindeks di Google</span>
             <span className="mt-0.5 block text-xs text-mute">{loaded ? `${articles.length} artikel terindeks` : "Periksa status Search Console"}</span>
@@ -134,18 +171,17 @@ export default function GoogleIndexMenu() {
         <div className="flex h-full flex-col">
           {/* Area geser: handle + header */}
           <div onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} className="shrink-0 cursor-grab touch-none select-none border-b border-rule active:cursor-grabbing">
-            <div className="flex justify-center pb-1 pt-3" aria-hidden="true"><span className="h-1.5 w-10 rounded-full bg-gray-300" /></div>
+            <div className="flex justify-center pb-1 pt-3 lg:hidden" aria-hidden="true"><span className="h-1.5 w-10 rounded-full bg-gray-300" /></div>
             <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-2 sm:px-8">
               <div className="flex items-center gap-3">
-                <span className="grid size-10 place-items-center rounded-full bg-blue-50 text-blue-700"><i className="bxl bx-google text-xl" aria-hidden="true" /></span>
                 <div>
                   <h2 id="google-index-title" className="font-display text-xl leading-6">Artikel terindeks</h2>
                   <p className="text-xs text-mute">Google Search Console</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button type="button" onClick={() => void load()} disabled={loading} aria-label="Periksa ulang" title="Periksa ulang" className="grid size-10 place-items-center rounded-full transition hover:bg-gray-100 active:scale-90 disabled:opacity-50">
-                  <i className={`bx bx-refresh text-xl ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
+                <button type="button" onClick={() => void refresh(true)} disabled={loading || refreshing} aria-label="Periksa ulang" title="Periksa ulang" className="grid size-10 place-items-center rounded-full transition hover:bg-gray-100 active:scale-90 disabled:opacity-50">
+                  <i className={`bx bx-refresh text-xl ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
                 </button>
                 <button type="button" onClick={close} aria-label="Tutup" className="grid size-10 place-items-center rounded-full transition hover:bg-gray-100 active:scale-90">
                   <i className="bx bx-x text-2xl" aria-hidden="true" />
@@ -158,6 +194,9 @@ export default function GoogleIndexMenu() {
             <p className="mb-3 text-xs leading-5 text-mute">
               Hanya artikel yang dilaporkan Search Console sudah terindeks yang ditampilkan di sini.
               {loaded && !loading && !error && checked > 0 && <> <span className="font-medium text-gray-800">{articles.length} dari {checked}</span> artikel terbit terindeks.</>}
+              {checkedAt && <> Pemeriksaan terakhir {checkedFormat.format(new Date(checkedAt))}.</>}
+              {refreshing && <> Status sedang diperbarui di latar belakang.</>}
+              {!refreshing && refreshError && <> Pembaruan gagal; data tersimpan tetap ditampilkan.</>}
             </p>
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]">
@@ -196,11 +235,9 @@ export default function GoogleIndexMenu() {
                               : "Terindeks di Google"}
                           </p>
                         </div>
-                        {article.inspectionResultLink && (
-                          <a href={article.inspectionResultLink} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-rule px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-50 active:scale-95">
-                            Detail <i className="bx bx-link-external" aria-hidden="true" />
-                          </a>
-                        )}
+                        <a href={googleSearchUrl(article.url)} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-rule px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-50 active:scale-95">
+                          Detail <i className="bx bx-link-external" aria-hidden="true" />
+                        </a>
                       </div>
                     </li>
                   ))}

@@ -274,7 +274,7 @@ export default function ProfileSettings({
       >
         <div className="flex h-full flex-col">
           <div onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} className="shrink-0 cursor-grab touch-none select-none border-b border-rule active:cursor-grabbing">
-            <div className="flex justify-center pb-1 pt-3" aria-hidden="true"><span className="h-1.5 w-10 rounded-full bg-gray-300" /></div>
+            <div className="flex justify-center pb-1 pt-3 lg:hidden" aria-hidden="true"><span className="h-1.5 w-10 rounded-full bg-gray-300" /></div>
             <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-2 sm:px-8">
               <div className="flex items-center gap-3">
                 <div>
@@ -307,11 +307,11 @@ export default function ProfileSettings({
                 </label>
 
                 <div className="sheet-item grid gap-4 sm:grid-cols-2" style={{ "--i": 2 } as React.CSSProperties}>
-                  <label className={field}>
+                  <label className={`${field} content-start`}>
                     <span className={label}>Nama lengkap</span>
                     <input required value={profile.displayName} onChange={(event) => update("displayName", event.target.value)} className="px-3 py-3" />
                   </label>
-                  <label className={field}>
+                  <label className={`${field} content-start`}>
                     <span className={label}>Username</span>
                     <input
                       required
