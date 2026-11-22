@@ -192,7 +192,7 @@ export default function GoogleIndexMenu() {
 
           <div className="flex min-h-0 flex-1 flex-col px-5 pt-4 sm:px-8">
             <p className="mb-3 text-xs leading-5 text-mute">
-              Hanya artikel yang dilaporkan Search Console sudah terindeks yang ditampilkan di sini.
+              Hanya artikel yang sudah tampil di pencarian google yang ditampilkan di sini.
               {loaded && !loading && !error && checked > 0 && <> <span className="font-medium text-gray-800">{articles.length} dari {checked}</span> artikel terbit terindeks.</>}
               {checkedAt && <> Pemeriksaan terakhir {checkedFormat.format(new Date(checkedAt))}.</>}
               {refreshing && <> Status sedang diperbarui di latar belakang.</>}

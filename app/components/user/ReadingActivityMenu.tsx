@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Reading = { articleSlug: string; progress: number; anchorText?: string; updatedAt: string; article: { slug: string; title: string; thumbnailUrl: string } };
+type LikedArticle = { articleSlug: string; createdAt: string; article: { slug: string; title: string; thumbnailUrl: string } };
+type UserComment = { id: string; articleSlug: string; body: string; createdAt: string; status: string; article: { slug: string; title: string; thumbnailUrl: string } };
 type Tab = "continue" | "history" | "liked" | "comments";
 
 const details: Record<Tab, { label: string; icon: string; description: string; hint: string; empty: string }> = {
@@ -17,7 +19,15 @@ const dateFormat = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeS
 const DISMISS_DISTANCE = 120; // px
 const DISMISS_VELOCITY = 0.6; // px/ms
 
-export default function ReadingActivityMenu({ readingHistory }: { readingHistory: Reading[] }) {
+export default function ReadingActivityMenu({
+  readingHistory,
+  likedArticles = [],
+  userComments = [],
+}: {
+  readingHistory: Reading[];
+  likedArticles?: LikedArticle[];
+  userComments?: UserComment[];
+}) {
   const [tab, setTab] = useState<Tab | null>(null);
   const [newest, setNewest] = useState(true);
   const [closing, setClosing] = useState(false);
@@ -53,10 +63,20 @@ export default function ReadingActivityMenu({ readingHistory }: { readingHistory
   // Pastikan scroll halaman kembali normal jika komponen dilepas saat sheet terbuka
   useEffect(() => () => { document.body.style.overflow = ""; }, []);
 
-  const items = useMemo(() => {
+  const readingItems = useMemo(() => {
     const list = tab === "continue" ? unfinished : tab === "history" ? readingHistory : [];
     return [...list].sort((a, b) => (newest ? +new Date(b.updatedAt) - +new Date(a.updatedAt) : +new Date(a.updatedAt) - +new Date(b.updatedAt)));
   }, [readingHistory, unfinished, newest, tab]);
+
+  const sortedLikedArticles = useMemo(() => {
+    return [...likedArticles].sort((a, b) => (newest ? +new Date(b.createdAt) - +new Date(a.createdAt) : +new Date(a.createdAt) - +new Date(b.createdAt)));
+  }, [likedArticles, newest]);
+
+  const sortedUserComments = useMemo(() => {
+    return [...userComments].sort((a, b) => (newest ? +new Date(b.createdAt) - +new Date(a.createdAt) : +new Date(a.createdAt) - +new Date(b.createdAt)));
+  }, [userComments, newest]);
+
+  const currentCount = tab === "continue" ? unfinished.length : tab === "history" ? readingHistory.length : tab === "liked" ? likedArticles.length : tab === "comments" ? userComments.length : 0;
 
   /* ---------- Geser ke bawah untuk menutup ---------- */
   const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
@@ -89,27 +109,48 @@ export default function ReadingActivityMenu({ readingHistory }: { readingHistory
     window.setTimeout(() => el.style.removeProperty("transition"), 360);
   };
 
+  const getCount = (key: Tab) => {
+    if (key === "continue") return unfinished.length;
+    if (key === "history") return readingHistory.length;
+    if (key === "liked") return likedArticles.length;
+    if (key === "comments") return userComments.length;
+    return 0;
+  };
+
+  const getSubLabel = (key: Tab) => {
+    const count = getCount(key);
+    const item = details[key];
+    if (key === "continue") return count > 0 ? `${count} belum selesai` : "Tidak ada bacaan tertunda";
+    if (key === "history") return count > 0 ? `${count} dibaca` : item.description;
+    if (key === "liked") return count > 0 ? `${count} disukai` : item.description;
+    if (key === "comments") return count > 0 ? `${count} komentar` : item.description;
+    return item.description;
+  };
+
   return <>
     <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Aktivitas akun">
-      {(Object.keys(details) as Tab[]).map((key) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => open(key)}
-          className="group flex min-h-28 flex-col items-center gap-2 rounded-2xl border border-rule bg-paper p-3 text-center transition duration-200 hover:border-gray-300 hover:bg-gray-50 active:scale-[.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:items-start sm:p-4 sm:text-left"
-        >
-          <span className="relative grid size-10 place-items-center rounded-full bg-gray-100 text-gray-800 transition-colors group-hover:bg-blue-50 group-hover:text-blue-700">
-            <i className={`bx ${details[key].icon} text-xl`} aria-hidden="true" />
-            {key === "continue" && unfinished.length > 0 && (
-              <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-5 text-white">{unfinished.length}</span>
-            )}
-          </span>
-          <span>
-            <span className="block text-xs font-medium sm:text-sm">{details[key].label}</span>
-            <span className="mt-1 hidden text-xs leading-4 text-mute sm:block">{key === "continue" ? `${unfinished.length} belum selesai` : details[key].description}</span>
-          </span>
-        </button>
-      ))}
+      {(Object.keys(details) as Tab[]).map((key) => {
+        const count = getCount(key);
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => open(key)}
+            className="group flex min-h-28 flex-col items-center gap-2 rounded-2xl border border-rule bg-paper p-3 text-center transition duration-200 hover:border-gray-300 hover:bg-gray-50 active:scale-[.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:items-start sm:p-4 sm:text-left"
+          >
+            <span className="relative grid size-10 place-items-center rounded-full bg-gray-100 text-gray-800 transition-colors group-hover:bg-blue-50 group-hover:text-blue-700">
+              <i className={`bx ${details[key].icon} text-xl`} aria-hidden="true" />
+              {count > 0 && (
+                <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-5 text-white">{count}</span>
+              )}
+            </span>
+            <span>
+              <span className="block text-xs font-medium sm:text-sm">{details[key].label}</span>
+              <span className="mt-1 hidden text-xs leading-4 text-mute sm:block">{getSubLabel(key)}</span>
+            </span>
+          </button>
+        );
+      })}
     </section>
 
     <dialog
@@ -138,50 +179,91 @@ export default function ReadingActivityMenu({ readingHistory }: { readingHistory
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col px-5 pt-4 sm:px-8">
-            {(tab === "continue" || tab === "history") && (
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-xs text-mute">{items.length} artikel</p>
-                <div className="inline-flex rounded-full bg-gray-100 p-0.5 text-xs font-medium" role="group" aria-label="Urutkan">
-                  {[{ v: true, l: "Terbaru" }, { v: false, l: "Terlama" }].map((o) => (
-                    <button key={o.l} type="button" aria-pressed={newest === o.v} onClick={() => setNewest(o.v)} className={`rounded-full px-3 py-1 transition ${newest === o.v ? "bg-paper text-gray-900 shadow-sm" : "text-mute hover:text-gray-900"}`}>{o.l}</button>
-                  ))}
-                </div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-mute">{currentCount} {tab === "comments" ? "komentar" : "artikel"}</p>
+              <div className="inline-flex rounded-full bg-gray-100 p-0.5 text-xs font-medium" role="group" aria-label="Urutkan">
+                {[{ v: true, l: "Terbaru" }, { v: false, l: "Terlama" }].map((o) => (
+                  <button key={o.l} type="button" aria-pressed={newest === o.v} onClick={() => setNewest(o.v)} className={`rounded-full px-3 py-1 transition ${newest === o.v ? "bg-paper text-gray-900 shadow-sm" : "text-mute hover:text-gray-900"}`}>{o.l}</button>
+                ))}
               </div>
-            )}
+            </div>
 
             <div key={tab} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-              {items.length ? (
-                <ul className="space-y-2">
-                  {items.map((item, i) => (
-                    <li key={item.articleSlug} className="sheet-item" style={{ "--i": Math.min(i, 8) } as React.CSSProperties}>
-                      <Link href={`/artikel/${encodeURIComponent(item.article.slug)}`} onClick={close} className="flex items-center gap-3 rounded-2xl p-2.5 transition hover:bg-gray-50 active:bg-gray-100">
-                        {item.article.thumbnailUrl
-                          ? <img src={item.article.thumbnailUrl} alt="" loading="lazy" className="size-16 shrink-0 rounded-xl object-cover" />
-                          : <span className="grid size-16 shrink-0 place-items-center rounded-xl bg-gray-100 text-gray-400"><i className="bx bx-image text-2xl" aria-hidden="true" /></span>}
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-sm font-medium leading-5">{item.article.title}</p>
-                          {item.anchorText && <p className="mt-0.5 line-clamp-1 text-xs italic text-mute">“{item.anchorText}”</p>}
-                          <div className="mt-2 flex items-center gap-2">
-                            <div className="h-1 flex-1 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-valuenow={Math.floor(item.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-                              <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.min(100, Math.floor(item.progress * 100))}%` }} />
+              {(tab === "continue" || tab === "history") && (
+                readingItems.length ? (
+                  <ul className="space-y-2">
+                    {readingItems.map((item, i) => (
+                      <li key={item.articleSlug} className="sheet-item" style={{ "--i": Math.min(i, 8) } as React.CSSProperties}>
+                        <Link href={`/artikel/${encodeURIComponent(item.article.slug)}`} onClick={close} className="flex items-center gap-3 rounded-2xl p-2.5 transition hover:bg-gray-50 active:bg-gray-100">
+                          {item.article.thumbnailUrl
+                            ? <img src={item.article.thumbnailUrl} alt="" loading="lazy" className="size-16 shrink-0 rounded-xl object-cover" />
+                            : <span className="grid size-16 shrink-0 place-items-center rounded-xl bg-gray-100 text-gray-400"><i className="bx bx-image text-2xl" aria-hidden="true" /></span>}
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 text-sm font-medium leading-5">{item.article.title}</p>
+                            {item.anchorText && <p className="mt-0.5 line-clamp-1 text-xs italic text-mute">“{item.anchorText}”</p>}
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="h-1 flex-1 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-valuenow={Math.floor(item.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+                                <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.min(100, Math.floor(item.progress * 100))}%` }} />
+                              </div>
+                              <span className="text-[11px] tabular-nums text-mute">{Math.floor(item.progress * 100)}%</span>
                             </div>
-                            <span className="text-[11px] tabular-nums text-mute">{Math.floor(item.progress * 100)}%</span>
+                            <p className="mt-1 text-[11px] text-mute">{dateFormat.format(new Date(item.updatedAt))}</p>
                           </div>
-                          <p className="mt-1 text-[11px] text-mute">{dateFormat.format(new Date(item.updatedAt))}</p>
-                        </div>
-                        <i className="bx bx-chevron-right text-xl text-gray-400" aria-hidden="true" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="grid h-full place-items-center py-10 text-center">
-                  <div className="max-w-xs">
-                    <span className="mx-auto grid size-14 place-items-center rounded-full bg-gray-100 text-gray-500"><i className={`bx ${details[tab].icon} text-2xl`} aria-hidden="true" /></span>
-                    <p className="mt-4 text-sm font-medium">Belum ada aktivitas</p>
-                    <p className="mt-1 text-sm text-mute">{details[tab].empty}</p>
-                  </div>
-                </div>
+                          <i className="bx bx-chevron-right text-xl text-gray-400" aria-hidden="true" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyState tab={tab} />
+                )
+              )}
+
+              {tab === "liked" && (
+                sortedLikedArticles.length ? (
+                  <ul className="space-y-2">
+                    {sortedLikedArticles.map((item, i) => (
+                      <li key={item.articleSlug} className="sheet-item" style={{ "--i": Math.min(i, 8) } as React.CSSProperties}>
+                        <Link href={`/artikel/${encodeURIComponent(item.article.slug)}`} onClick={close} className="flex items-center gap-3 rounded-2xl p-2.5 transition hover:bg-gray-50 active:bg-gray-100">
+                          {item.article.thumbnailUrl
+                            ? <img src={item.article.thumbnailUrl} alt="" loading="lazy" className="size-16 shrink-0 rounded-xl object-cover" />
+                            : <span className="grid size-16 shrink-0 place-items-center rounded-xl bg-gray-100 text-gray-400"><i className="bx bx-image text-2xl" aria-hidden="true" /></span>}
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 text-sm font-medium leading-5">{item.article.title}</p>
+                            <p className="mt-1 text-[11px] text-mute">Disukai pada {dateFormat.format(new Date(item.createdAt))}</p>
+                          </div>
+                          <i className="bx bx-chevron-right text-xl text-gray-400" aria-hidden="true" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyState tab={tab} />
+                )
+              )}
+
+              {tab === "comments" && (
+                sortedUserComments.length ? (
+                  <ul className="space-y-2">
+                    {sortedUserComments.map((item, i) => (
+                      <li key={item.id} className="sheet-item" style={{ "--i": Math.min(i, 8) } as React.CSSProperties}>
+                        <Link href={`/artikel/${encodeURIComponent(item.article.slug)}`} onClick={close} className="flex items-center gap-3 rounded-2xl p-2.5 transition hover:bg-gray-50 active:bg-gray-100">
+                          {item.article.thumbnailUrl
+                            ? <img src={item.article.thumbnailUrl} alt="" loading="lazy" className="size-16 shrink-0 rounded-xl object-cover" />
+                            : <span className="grid size-16 shrink-0 place-items-center rounded-xl bg-gray-100 text-gray-400"><i className="bx bx-image text-2xl" aria-hidden="true" /></span>}
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-1 text-xs font-semibold text-gray-500">{item.article.title}</p>
+                            <p className="mt-0.5 line-clamp-2 text-sm text-gray-800">“{item.body}”</p>
+                            <p className="mt-1 text-[11px] text-mute">{dateFormat.format(new Date(item.createdAt))}</p>
+                          </div>
+                          <i className="bx bx-chevron-right text-xl text-gray-400" aria-hidden="true" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyState tab={tab} />
+                )
               )}
             </div>
           </div>
@@ -189,4 +271,18 @@ export default function ReadingActivityMenu({ readingHistory }: { readingHistory
       )}
     </dialog>
   </>;
+}
+
+function EmptyState({ tab }: { tab: Tab }) {
+  return (
+    <div className="grid h-full place-items-center py-10 text-center">
+      <div className="max-w-xs">
+        <span className="mx-auto grid size-14 place-items-center rounded-full bg-gray-100 text-gray-500">
+          <i className={`bx ${details[tab].icon} text-2xl`} aria-hidden="true" />
+        </span>
+        <p className="mt-4 text-sm font-medium">Belum ada aktivitas</p>
+        <p className="mt-1 text-sm text-mute">{details[tab].empty}</p>
+      </div>
+    </div>
+  );
 }

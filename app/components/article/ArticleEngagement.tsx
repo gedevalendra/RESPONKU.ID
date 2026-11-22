@@ -257,31 +257,139 @@ export default function ArticleEngagement({
     return result;
   }
 
-  function renderComment(comment: Comment, depth = 0, visibleReplies?: Set<string>): ReactNode {
-    const replies = comments
-      .filter((item) => item.parentId === comment.id && (!visibleReplies || visibleReplies.has(item.id)))
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    const roles = { reader: "Pembaca", author: "Penulis", admin: "Admin", superadmin: "Superadmin" };
-    return <article key={comment.id} className="comment-node relative pt-5">
+const MAX_REPLY_DEPTH = 2; // 0 = komentar utama, 1 = balasan, 2 = balasan dari balasan (paling dalam)
+
+function renderComment(
+  comment: Comment,
+  depth = 0,
+  visibleReplies?: Set<string>,
+  isLastReply = false
+): ReactNode {
+  const isVisible = (item: Comment) => !visibleReplies || visibleReplies.has(item.id);
+  const byTime = (a: Comment, b: Comment) => a.createdAt.localeCompare(b.createdAt);
+
+  // Semua turunan (balasan, balasan dari balasan, dst) diratakan
+  const collectDescendants = (id: string): Comment[] =>
+    comments
+      .filter((item) => item.parentId === id && isVisible(item))
+      .flatMap((item) => [item, ...collectDescendants(item.id)]);
+
+  // depth 0 -> balasan langsung (jalur 1)
+  // depth 1 -> semua turunannya diratakan jadi jalur 2 (maks)
+  // depth 2 -> tidak ada jalur lagi
+  const replies: Comment[] =
+    depth >= MAX_REPLY_DEPTH
+      ? []
+      : depth === MAX_REPLY_DEPTH - 1
+        ? collectDescendants(comment.id).sort(byTime)
+        : comments.filter((item) => item.parentId === comment.id && isVisible(item)).sort(byTime);
+
+  const hasReplies = replies.length > 0;
+  const replyingTo = comment.parentId ? comments.find((item) => item.id === comment.parentId) : undefined;
+  const roles = { reader: "Pembaca", author: "Penulis", admin: "Admin", superadmin: "Superadmin" };
+
+  return (
+    <article key={comment.id} className="relative pt-4">
+      {/* Konektor ke avatar balasan */}
+      {depth > 0 && (
+        <>
+          {/* Garis lanjutan ke balasan berikutnya (penuh, supaya tidak putus) */}
+          {!isLastReply && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -left-[33px] bottom-0 top-0 w-0.5 bg-gray-200"
+            />
+          )}
+          {/* Lengkungan masuk ke avatar */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -left-[33px] top-0 h-9 w-[33px] rounded-bl-2xl border-b-2 border-l-2 border-gray-200"
+          />
+        </>
+      )}
+
       <div className="flex gap-3">
-        <div className="relative z-10 grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-gray-100 ring-4 ring-white">
-          {comment.avatarUrl ? <img src={comment.avatarUrl} alt="" className="size-full object-cover" /> : <i className="bx bxs-user text-xl text-mute" />}
+        {/* Kolom avatar + garis thread ke balasannya */}
+        <div className="flex w-10 shrink-0 flex-col items-center">
+          <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-gray-100">
+            {comment.avatarUrl ? (
+              <img src={comment.avatarUrl} alt="" className="size-full object-cover" />
+            ) : (
+              <i className="bx bxs-user text-xl text-mute" />
+            )}
+          </div>
+          {hasReplies && <span aria-hidden className="mt-1 w-0.5 flex-1 rounded-full bg-gray-200" />}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold">{comment.displayName}</h3><span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">{roles[comment.role || "reader"]}</span><time className="text-xs text-mute">{commentTime(comment.createdAt)}</time></div>
-          {depth > 0 && <p className="mt-1 text-xs text-mute">Membalas {comments.find((item) => item.id === comment.parentId)?.displayName}</p>}
-          <p className="mt-2 break-words whitespace-pre-wrap text-sm leading-6">{comment.body}</p>
+
+        <div className="min-w-0 flex-1 pb-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold">{comment.displayName}</h3>
+            <span className="bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+              {roles[comment.role || "reader"]}
+            </span>
+            <time className="text-xs text-mute">{commentTime(comment.createdAt)}</time>
+          </div>
+
+          {depth > 0 && replyingTo && (
+            <p className="mt-0.5 text-[11px] leading-4 text-mute">
+              Membalas <span className="font-medium text-gray-600">{replyingTo.displayName}</span>
+            </p>
+          )}
+
+          <p className="mt-1.5 break-words whitespace-pre-wrap text-sm leading-6">{comment.body}</p>
+
           <div className="mt-2 flex gap-2 text-xs">
-            {(["like", "dislike"] as const).map((vote) => <button key={vote} type="button" aria-label={vote === "like" ? "Sukai komentar" : "Tidak menyukai komentar"} aria-pressed={comment.viewerReaction === vote} onClick={(event) => { if (comment.viewerReaction !== vote) { animateVote(event, vote === "dislike"); if (vote === "like") burstLike(event); } void reactComment(comment.id, vote); }} className={`inline-flex min-h-10 items-center gap-2 rounded-full px-3 transition-colors ${comment.viewerReaction === vote ? "text-gray-800" : "text-mute hover:text-ink"}`}>{vote === "like" ? <LikeEffect><VoteArrow active={comment.viewerReaction === vote} /></LikeEffect> : <VoteArrow down active={comment.viewerReaction === vote} />}{vote === "like" ? comment.likes : comment.dislikes}</button>)}
-            <button type="button" onClick={() => { setReplyTo(comment.id); setBody(""); }} className="rounded-full px-3 text-mute hover:bg-gray-100">Balas</button>
+            {(["like", "dislike"] as const).map((vote) => (
+              <button
+                key={vote}
+                type="button"
+                aria-label={vote === "like" ? "Sukai komentar" : "Tidak menyukai komentar"}
+                aria-pressed={comment.viewerReaction === vote}
+                onClick={(event) => {
+                  if (comment.viewerReaction !== vote) {
+                    animateVote(event, vote === "dislike");
+                    if (vote === "like") burstLike(event);
+                  }
+                  void reactComment(comment.id, vote);
+                }}
+                className={`inline-flex min-h-10 items-center gap-2 rounded-full px-3 transition-colors ${
+                  comment.viewerReaction === vote ? "text-gray-800" : "text-mute hover:text-ink"
+                }`}
+              >
+                {vote === "like" ? (
+                  <LikeEffect>
+                    <VoteArrow active={comment.viewerReaction === vote} />
+                  </LikeEffect>
+                ) : (
+                  <VoteArrow down active={comment.viewerReaction === vote} />
+                )}
+                {vote === "like" ? comment.likes : comment.dislikes}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setReplyTo(comment.id);
+                setBody("");
+              }}
+              className="rounded-full px-3 text-mute hover:bg-gray-100"
+            >
+              Balas
+            </button>
           </div>
         </div>
       </div>
-      {replies.length > 0 && <div className={`comment-children ${depth === 0 ? "comment-indent" : depth === 1 ? "comment-indent-desktop" : ""}`}>
-        {replies.map((reply) => renderComment(reply, depth + 1, visibleReplies))}
-      </div>}
-    </article>;
-  }
+
+      {hasReplies && (
+        <div className="pl-[52px]">
+          {replies.map((reply, index) =>
+            renderComment(reply, depth + 1, visibleReplies, index === replies.length - 1)
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
 
   function commentTime(value: string) {
     const seconds = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 1000));

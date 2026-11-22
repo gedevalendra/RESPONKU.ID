@@ -643,6 +643,116 @@ export async function listArticleReadingHistory(userId: string, limit = 30) {
   ]).toArray();
 }
 
+export async function listUserLikedArticles(userId: string, limit = 50) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+  const userIds = await linkedAccountIds(userId);
+  
+  // Ambil juga visitor id dari cookies jika ada (misal cookie responku-visitor-id atau sejenisnya)
+  let visitorIds = [...userIds];
+  try {
+    const { cookies } = await import("next/headers");
+    const visitorCookie = cookies().get("responku_visitor_id")?.value;
+    if (visitorCookie && !visitorIds.includes(visitorCookie)) {
+      visitorIds.push(visitorCookie);
+    }
+  } catch {
+    // Abaikan jika cookies() dipanggil di luar konteks request
+  }
+
+  const { data, error } = await supabase
+    .from("article_reactions")
+    .select("article_slug,created_at")
+    .eq("reaction", "like")
+    .in("visitor_id", visitorIds)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error || !data?.length) return [];
+
+  const db = await getMongoDb();
+  if (!db) return [];
+  const slugs = [...new Set(data.map((item) => item.article_slug))];
+  const articles = await db.collection<Article>("articles")
+    .find({ slug: { $in: slugs }, status: "published" }, { projection: { id: 1, slug: 1, title: 1, thumbnailUrl: 1 } })
+    .toArray();
+  const articleMap = new Map(articles.map((a) => [a.slug, { id: String(a.id || a._id), slug: a.slug, title: a.title, thumbnailUrl: a.thumbnailUrl || "" }]));
+
+  const seenSlugs = new Set<string>();
+  return data.flatMap((item) => {
+    if (seenSlugs.has(item.article_slug)) return [];
+    seenSlugs.add(item.article_slug);
+    const article = articleMap.get(item.article_slug);
+    return article ? [{ articleSlug: item.article_slug, createdAt: item.created_at, article }] : [];
+  });
+}
+
+export async function listUserComments(userId: string, limit = 50) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+  const userIds = await linkedAccountIds(userId);
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const validUuids = userIds.filter((id) => uuidRegex.test(id));
+
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const displayName = profileData?.display_name;
+
+  const queries = [];
+  if (validUuids.length) {
+    queries.push(
+      supabase
+        .from("comments")
+        .select("id,article_slug,body,created_at,status")
+        .in("author_id", validUuids)
+    );
+  }
+  if (userIds.length) {
+    queries.push(
+      supabase
+        .from("comments")
+        .select("id,article_slug,body,created_at,status")
+        .in("oauth_author_id", userIds)
+    );
+  }
+  if (displayName) {
+    queries.push(
+      supabase
+        .from("comments")
+        .select("id,article_slug,body,created_at,status")
+        .eq("display_name", displayName)
+    );
+  }
+
+  const results = await Promise.all(queries);
+  const commentMap = new Map<string, { id: string; article_slug: string; body: string; created_at: string; status: string }>();
+  for (const res of results) {
+    if (!res.error && res.data) {
+      for (const row of res.data) {
+        commentMap.set(String(row.id), row);
+      }
+    }
+  }
+
+  const data = Array.from(commentMap.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, limit);
+  if (!data.length) return [];
+
+  const db = await getMongoDb();
+  if (!db) return [];
+  const slugs = [...new Set(data.map((item) => item.article_slug))];
+  const articles = await db.collection<Article>("articles")
+    .find({ slug: { $in: slugs } }, { projection: { id: 1, slug: 1, title: 1, thumbnailUrl: 1 } })
+    .toArray();
+  const articleMap = new Map(articles.map((a) => [a.slug, { id: String(a.id || a._id), slug: a.slug, title: a.title, thumbnailUrl: a.thumbnailUrl || "" }]));
+
+  return data.flatMap((item) => {
+    const article = articleMap.get(item.article_slug);
+    return article ? [{ id: String(item.id), articleSlug: item.article_slug, body: item.body, createdAt: item.created_at, status: item.status, article }] : [];
+  });
+}
+
 export function isObjectId(value: string) {
   return ObjectId.isValid(value);
 }

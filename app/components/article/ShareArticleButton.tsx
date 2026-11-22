@@ -232,16 +232,12 @@ export default function ShareArticleButton({
     let x = padding;
 
     drawPosterIcon(context, "like", x, iconTop, iconSize, "#6b7280");
-    x += iconSize + 12;
+    x += iconSize + gap;
     const likeText = `${new Intl.NumberFormat("id-ID").format(likeCount)} suka`;
-    context.fillText(likeText, x, y);
-    x += context.measureText(likeText).width + gap;
 
     drawPosterIcon(context, "comment", x, iconTop, iconSize, "#6b7280");
-    x += iconSize + 12;
+    x += iconSize + gap;
     const commentText = `${new Intl.NumberFormat("id-ID").format(commentCount)} komentar`;
-    context.fillText(commentText, x, y);
-    x += context.measureText(commentText).width + gap;
 
     drawPosterIcon(context, "repost", x, iconTop, iconSize, "#6b7280");
     x += iconSize + gap;
@@ -366,11 +362,9 @@ export default function ShareArticleButton({
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-mute">
             <span className="inline-flex items-center gap-1.5">
               <i className="bx bx-like text-lg" aria-hidden="true" />
-              {new Intl.NumberFormat("id-ID").format(likeCount)} suka
             </span>
             <span className="inline-flex items-center gap-1.5">
               <i className="bx bx-comment-detail text-lg" aria-hidden="true" />
-              {new Intl.NumberFormat("id-ID").format(commentCount)} komentar
             </span>
             <span className="inline-flex items-center" aria-label="Posting ulang">
               <i className="bx bx-repost text-lg" aria-hidden="true" />
