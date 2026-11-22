@@ -15,6 +15,47 @@ type ShareArticleButtonProps = {
   commentCount: number;
 };
 
+// Ikon vektor (viewBox 24x24) untuk poster canvas, supaya tidak tergantung font perangkat
+const POSTER_ICONS = {
+  like: [
+    "M7 10v12",
+    "M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z",
+  ],
+  comment: ["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"],
+  repost: [
+    "m17 2 4 4-4 4",
+    "M3 11v-1a4 4 0 0 1 4-4h14",
+    "m7 22-4-4 4-4",
+    "M21 13v1a4 4 0 0 1-4 4H3",
+  ],
+  share: [
+    "M21 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
+    "M9 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
+    "M21 19a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
+    "M8.59 13.51l6.83 3.98",
+    "M15.41 6.51l-6.82 3.98",
+  ],
+} as const;
+
+function drawPosterIcon(
+  context: CanvasRenderingContext2D,
+  name: keyof typeof POSTER_ICONS,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+) {
+  context.save();
+  context.translate(x, y);
+  context.scale(size / 24, size / 24);
+  context.strokeStyle = color;
+  context.lineWidth = 2;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  for (const d of POSTER_ICONS[name]) context.stroke(new Path2D(d));
+  context.restore();
+}
+
 export default function ShareArticleButton({
   slug,
   title,
@@ -100,7 +141,7 @@ export default function ShareArticleButton({
     scratch.font = "400 30px Arial, sans-serif";
     const dekLines = wrapCanvasText(scratch, dek, width - padding * 2, 4);
     const imageHeight = imageUrl ? 536 : 0;
-    const height = 212 + titleLines.length * 64 + 34 + dekLines.length * 43 + (imageUrl ? imageHeight + 42 : 18) + 230;
+    const height = 212 + titleLines.length * 64 + 34 + dekLines.length * 43 + (imageUrl ? imageHeight + 42 : 18) + 306;
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -181,10 +222,32 @@ export default function ShareArticleButton({
       y += 28;
     }
 
+    // Baris aksi: suka, komentar, posting ulang, bagikan (ikon vektor, bukan karakter teks)
     context.fillStyle = "#6b7280";
     context.font = "400 25px Arial, sans-serif";
-    context.fillText(`♡  ${new Intl.NumberFormat("id-ID").format(likeCount)} suka`, padding, y);
-    context.fillText(`▢  ${new Intl.NumberFormat("id-ID").format(commentCount)} komentar`, padding + 220, y);
+    context.textAlign = "left";
+    const iconSize = 30;
+    const iconTop = y - 25;
+    const gap = 44;
+    let x = padding;
+
+    drawPosterIcon(context, "like", x, iconTop, iconSize, "#6b7280");
+    x += iconSize + 12;
+    const likeText = `${new Intl.NumberFormat("id-ID").format(likeCount)} suka`;
+    context.fillText(likeText, x, y);
+    x += context.measureText(likeText).width + gap;
+
+    drawPosterIcon(context, "comment", x, iconTop, iconSize, "#6b7280");
+    x += iconSize + 12;
+    const commentText = `${new Intl.NumberFormat("id-ID").format(commentCount)} komentar`;
+    context.fillText(commentText, x, y);
+    x += context.measureText(commentText).width + gap;
+
+    drawPosterIcon(context, "repost", x, iconTop, iconSize, "#6b7280");
+    x += iconSize + gap;
+
+    drawPosterIcon(context, "share", x, iconTop, iconSize, "#6b7280");
+
     y += 46;
     context.strokeStyle = "#e5e7eb";
     context.lineWidth = 2;
@@ -308,6 +371,12 @@ export default function ShareArticleButton({
             <span className="inline-flex items-center gap-1.5">
               <i className="bx bx-comment-detail text-lg" aria-hidden="true" />
               {new Intl.NumberFormat("id-ID").format(commentCount)} komentar
+            </span>
+            <span className="inline-flex items-center" aria-label="Posting ulang">
+              <i className="bx bx-repost text-lg" aria-hidden="true" />
+            </span>
+            <span className="inline-flex items-center" aria-label="Bagikan">
+              <i className="bx bx-share-alt text-lg" aria-hidden="true" />
             </span>
           </div>
 
