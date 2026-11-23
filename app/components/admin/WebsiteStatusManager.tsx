@@ -96,28 +96,31 @@ export default function WebsiteStatusManager() {
       <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Status website">
         {options.map((option) => {
           const selected = status === option.value;
-
           return (
-            <button
+            <label
               key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              disabled={busy}
-              onClick={() => {
-                if (!selected) void save(option.value);
-              }}
-              className={`min-h-20 rounded-xl border p-4 text-left ${
-                busy ? "cursor-wait opacity-70" : "cursor-pointer"
-              } ${
-                selected
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-rule hover:bg-gray-50"
+              className={`rounded-xl border p-4 ${busy ? "cursor-wait opacity-70" : "cursor-pointer"} ${
+                selected ? "border-blue-500 bg-blue-50" : "border-rule hover:bg-gray-50"
               }`}
             >
-              <span className="block font-semibold">{option.label}</span>
-              <span className="mt-1 block text-sm text-mute">{option.description}</span>
-            </button>
+              <span className="flex items-start gap-3">
+                <input
+                  type="radio"
+                  name="website-status"
+                  value={option.value}
+                  checked={selected}
+                  disabled={busy}
+                  onChange={() => {
+                    if (!selected) void save(option.value);
+                  }}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-semibold">{option.label}</span>
+                  <span className="mt-1 block text-sm text-mute">{option.description}</span>
+                </span>
+              </span>
+            </label>
           );
         })}
       </div>
