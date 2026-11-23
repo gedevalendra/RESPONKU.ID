@@ -13,6 +13,7 @@ import WelcomePopup from "./components/layout/WelcomePopup";
 import ActionConfirmation from "./components/layout/ActionFeedback";
 import CookieConsent from "./components/layout/CookieConsent";
 import CopyAttribution from "./components/layout/CopyAttribution";
+import { getWebsiteStatus } from "@/lib/website-status";
 
 export const metadata: Metadata = {
   ...publicPageMetadata("/", homepageTitle, homepageDescription),
@@ -29,11 +30,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const websiteStatus = await getWebsiteStatus();
+  const popupsEnabled = websiteStatus.status === "online";
   return (
     <html lang="id">
       <head>
@@ -55,9 +58,9 @@ export default function RootLayout({
 
         <Footer />
 
-        <WelcomePopup />
-        <ActionConfirmation />
-        <CookieConsent />
+        {popupsEnabled && <WelcomePopup />}
+        {popupsEnabled && <ActionConfirmation />}
+        {popupsEnabled && <CookieConsent />}
       </body>
     </html>
   );
