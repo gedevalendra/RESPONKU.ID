@@ -29,7 +29,7 @@ function buildGroups(role: Role): Group[] {
       items: [
         { href: `${base}/pengguna`, label: "Daftar pengguna" },
         { href: `${base}/organisasi`, label: "Organisasi & verifikasi" },
-        ...(role === "superadmin" ? [{ href: "/superadmin/api/secret", label: "Secret ID API" }] : []),
+        ...(role === "superadmin" ? [{ href: "/superadmin/api/secret", label: "Secret ID API" }, { href: "/superadmin/status-website", label: "Status website" }] : []),
       ],
     },
     {

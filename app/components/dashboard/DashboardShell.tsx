@@ -45,12 +45,6 @@ export default function DashboardShell({
               <span className="text-ink">{breadcrumb}</span>
             </p>
             <div className="ml-auto flex shrink-0 items-center gap-3">
-            <Link
-              href="/"
-              className="shrink-0 font-mono text-xs uppercase tracking-widest2 text-mute transition-colors hover:text-accent"
-            >
-              Lihat situs ↗
-            </Link>
             <button type="button" aria-label="Buka menu dashboard" aria-expanded={sidebarOpen} aria-controls="dashboard-sidebar" onClick={() => setSidebarOpen(true)} className="flex h-11 w-11 items-center justify-center text-ink hover:bg-gray-800/5 lg:hidden">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>

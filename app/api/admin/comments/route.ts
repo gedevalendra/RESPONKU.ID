@@ -14,6 +14,16 @@ export async function GET() {
   return error ? NextResponse.json({ error: "Komentar gagal dimuat" }, { status: 503 }) : NextResponse.json({ comments: data });
 }
 
+export async function DELETE() {
+  const actor = await getActor();
+  if (!actor || !isStaff(actor.role)) return NextResponse.json({ error: "Tidak berwenang" }, { status: 403 });
+  const db = getSupabaseAdmin();
+  if (!db) return NextResponse.json({ error: "Database belum tersedia" }, { status: 503 });
+  const { error, count } = await db.from("comments").delete({ count: "exact" }).neq("id", "00000000-0000-0000-0000-000000000000");
+  if (error) return NextResponse.json({ error: "Komentar gagal dihapus" }, { status: 503 });
+  return NextResponse.json({ ok: true, deleted: count ?? 0 });
+}
+
 export async function PATCH(request: Request) {
   const actor = await getActor();
   if (!actor || !isStaff(actor.role)) return NextResponse.json({ error: "Tidak berwenang" }, { status: 403 });
