@@ -67,44 +67,24 @@ export default function WebsiteStatusView({ status, message, pathname }: Props) 
     >
       <div className="wrap py-12 sm:py-16 lg:py-24">
         {/* Hero */}
-        <header className="mb-16 sm:mb-20 lg:mb-24">
-          <p className="font-mono text-xs uppercase tracking-widest2 text-mute">
-            Status layanan
-          </p>
+        <header className="">
           <h1 className="mt-4 font-display text-5xl font-normal leading-[1.02] tracking-tight text-gray-800 sm:text-7xl lg:text-8xl">
             <span className="block">Website sedang</span>
             <span className={`block ${copy.text}`}>{copy.word}</span>
           </h1>
-          <div aria-hidden="true" className="mt-12 h-px w-full bg-gray-300" />
-        </header>
-
-        <div className="grid gap-14 w-full lg:gap-20">
-          <main className="space-y-16 text-base leading-relaxed sm:text-lg">
-            <section className={`relative p-7 sm:p-10 ${copy.soft}`}>
-              <span
-                aria-hidden="true"
-                className={`absolute inset-y-0 left-0 w-1 ${copy.bar}`}
-              />
-              <h2 className="mt-3 max-w-[28ch] font-display text-2xl font-normal tracking-tight text-gray-800 sm:text-3xl lg:text-4xl">
-                {copy.title}
-              </h2>
-              <div className="mt-6 max-w-[68ch] space-y-5 text-gray-600">
-                <p>{copy.hint}</p>
-              </div>
-              <a
+          <a
                 href={pathname ?? ""}
                 className={`mt-5 inline-flex items-center gap-2 px-4 py-3 font-mono text-xs uppercase tracking-widest2 text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800 ${copy.button}`}
               >
                 <i className="bx bx-refresh text-base" aria-hidden="true" />
                 Muat ulang
               </a>
-            </section>
+        </header>
 
+        <div className="grid gap-14 w-full lg:gap-20">
+          <main className=" text-base leading-relaxed sm:text-lg">
             <section className="relative pt-10">
-              <span
-                aria-hidden="true"
-                className="absolute inset-x-0 top-0 h-px bg-gray-300"
-              />
+          
               <p className="font-mono text-xs uppercase tracking-widest2 text-mute">
                 Sambil menunggu
               </p>
@@ -126,14 +106,7 @@ export default function WebsiteStatusView({ status, message, pathname }: Props) 
           </main>
         </div>
 
-        <footer className="mt-24 border-t border-rule pt-8 text-sm leading-relaxed text-mute">
-          <p>
-            <BrandLogo /> — bagian dari FunikIn.
-          </p>
-          <p className="mt-2 max-w-[68ch]">
-            Terima kasih atas kesabaran Anda selagi kami menjaga layanan tetap andal.
-          </p>
-        </footer>
+      
       </div>
     </section>
   );
