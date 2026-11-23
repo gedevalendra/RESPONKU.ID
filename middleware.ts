@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
-  const bypass = pathname.startsWith("/api") || pathname.startsWith("/admin") || pathname.startsWith("/superadmin") || pathname.startsWith("/masuk") || pathname.startsWith("/_next") || pathname === "/status-website";
+  const bypass = pathname.startsWith("/api") || pathname.startsWith("/admin") || pathname.startsWith("/superadmin") || pathname.startsWith("/masuk") || pathname.startsWith("/_next") || pathname.startsWith("/auth/google")|| pathname === "/status-website";
   if (!bypass) {
     try {
       const statusResponse = await fetch(new URL("/api/public/website-status", request.url).toString(), { cache: "no-store" });
