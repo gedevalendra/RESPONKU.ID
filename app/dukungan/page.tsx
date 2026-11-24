@@ -12,7 +12,6 @@ export const metadata: Metadata = {
 function getSaweriaUrl(value?: string) {
   value = value?.trim();
   if (!value) return null;
-  // as
   try {
     const url = new URL(value);
     if (url.origin === "https://saweria.co" && !url.username && !url.password && url.pathname !== "/") {
