@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Dukungan — ResponKu",
   description: "Dukung ResponKu melalui Saweria.",
 };
-
+// sa
 function getSaweriaUrl(value?: string) {
   value = value?.trim();
   if (!value) return null;

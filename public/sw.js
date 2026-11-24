@@ -4,6 +4,7 @@ self.addEventListener("push", (event) => {
     payload = event.data ? event.data.json() : {};
   } catch {
     payload = {};
+    // s
   }
   const thumbnail = typeof payload.image === "string" && payload.image.startsWith("https://")
     ? payload.image
