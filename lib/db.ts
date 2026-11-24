@@ -813,6 +813,8 @@ export async function upsertOAuthUser(input: {
       {
         $set: {
           email: input.email,
+          displayName: input.displayName,
+          ...(input.avatarUrl ? { avatarUrl: input.avatarUrl } : {}),
           role,
           updatedAt: new Date().toISOString(),
           ...(input.verifiedEmail ? { verifiedEmail: input.verifiedEmail } : {}),
@@ -821,8 +823,6 @@ export async function upsertOAuthUser(input: {
           id: new ObjectId().toHexString(),
           provider: input.provider,
           providerUserId: input.providerUserId,
-          displayName: input.displayName,
-          avatarUrl: input.avatarUrl,
           createdAt: new Date().toISOString(),
         },
         ...(!input.verifiedEmail ? { $unset: { verifiedEmail: "", accountId: "" } } : {}),
@@ -874,11 +874,29 @@ export async function updateOAuthProfile(
   const result = await db
     .collection("oauth_users")
     .updateOne(
-      { id },
+      { $or: [{ id }, { accountId: id }] },
       { $set: { ...patch, updatedAt: new Date().toISOString() } },
     );
-  if (!result.matchedCount) throw new Error("Profil OAuth tidak ditemukan");
-  return db.collection("oauth_users").findOne({ id });
+
+  // Jika akun ditautkan ke profil Supabase lokal, sinkronkan juga ke tabel profiles
+  const admin = getSupabaseAdmin();
+  if (admin) {
+    try {
+      await admin.from("profiles").update({
+        display_name: patch.displayName,
+        username: patch.username,
+        organization: patch.organization,
+        bio: patch.bio || "",
+        ...(patch.avatarUrl ? { avatar_url: patch.avatarUrl } : {}),
+        ...(patch.backgroundUrl ? { background_url: patch.backgroundUrl } : {}),
+      }).eq("id", id);
+    } catch {
+      // Abaikan jika bukan UUID Supabase
+    }
+  }
+
+  const updated = await db.collection("oauth_users").findOne({ $or: [{ id }, { accountId: id }] });
+  return updated;
 }
 
 export async function updateOAuthAvatar(id: string, avatarUrl: string) {

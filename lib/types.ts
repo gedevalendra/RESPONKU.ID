@@ -88,4 +88,5 @@ export type Profile = {
   provider?: "supabase" | "google" | "funikin";
   emailConfirmed?: boolean;
   linkedOAuth?: boolean;
+  tier?: "free" | "pro";
 };

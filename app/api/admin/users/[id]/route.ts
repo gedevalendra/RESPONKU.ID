@@ -7,6 +7,7 @@ import { findManagedUser } from "@/lib/admin-users";
 
 const schema = z.object({
   role: z.enum(["reader", "author", "admin", "superadmin"]).optional(),
+  tier: z.enum(["free", "pro"]).optional(),
   verified: z.boolean().optional(),
   displayName: z.string().trim().min(2).max(100).optional(),
   organizationId: z.string().max(150).nullable().optional(),
@@ -45,6 +46,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         const result = await admin.from("profiles").update({ role: patch.role }).eq("id", target.id);
         if (result.error) throw result.error;
       }
+    }
+    if (patch.tier) {
+      await db.collection("account_roles").updateOne({ userId: target.id }, { $set: { tier: patch.tier } }, { upsert: true });
+      if (target.source === "oauth") await db.collection("oauth_users").updateOne({ id: target.id }, { $set: { tier: patch.tier } });
     }
     if (patch.verified !== undefined) await db.collection("profile_badges").updateOne({ userId: target.id }, { $set: { verified: patch.verified } }, { upsert: true });
     if (patch.organizationId !== undefined) {

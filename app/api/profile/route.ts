@@ -128,10 +128,11 @@ export async function PATCH(request: Request) {
           emailConfirmed: Boolean(actor.emailConfirmed),
         },
       });
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Profil OAuth gagal disimpan.";
       return NextResponse.json(
-        { error: "Profil OAuth gagal disimpan. Pastikan MongoDB tersambung." },
-        { status: 503 },
+        { error: msg },
+        { status: 500 },
       );
     }
   }

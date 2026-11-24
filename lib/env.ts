@@ -26,6 +26,8 @@ export const env = {
   vapidSubject: process.env.VAPID_SUBJECT || "mailto:admin@responku.id",
   mongodbUri: process.env.MONGODB_URI,
   mongodbDbName: process.env.MONGODB_DB_NAME || "responku",
+  funikinSupabaseUrl: process.env.FUNIKIN_SUPABASE_URL || "https://wkitepiehrgpnoprgcqx.supabase.co",
+  funikinSupabaseSecretKey: process.env.FUNIKIN_SUPABASE_SECRET_KEY || "sb_secret_m1sYR95W57fMinVI0d4bkA_tvwe9aDn",
 };
 
 export const hasSupabase = Boolean(

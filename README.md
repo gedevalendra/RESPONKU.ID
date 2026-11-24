@@ -38,24 +38,45 @@ Panel tersedia di `/admin` untuk admin/superadmin dan `/akun/artikel` untuk user
 
 Tanpa env database, aplikasi tetap menampilkan artikel demo dan interaksi database memberi status konfigurasi yang jelas; tidak ada kredensial yang dibuat otomatis.
 
-### Login manual, OAuth, dan akun FunikIn
+### Login via FunikIn (OIDC)
 
-Halaman `/masuk` sudah mendukung email/password (masuk dan daftar), Google, GitHub, serta tombol akun FunikIn. Supabase Auth menyimpan sesi melalui cookie SSR menggunakan `@supabase/ssr`; callback aplikasi berada di `/auth/callback`.
+ResponKu mendukung login menggunakan FunikIn (`auth.funikin.com`) berbasis **OAuth 2.1 / OpenID Connect (OIDC)** yang didukung oleh Supabase Auth OAuth Server.
 
-Untuk login email/password dan data realtime, isi kredensial Supabase. Google dan FunikIn tidak lagi memakai Supabase Auth; keduanya memakai direct OAuth server-side.
+#### Konfigurasi Environment (.env.local)
 
-```text
-http://localhost:3000/auth/callback
-https://domain-anda.com/auth/callback
+```env
+# FunikIn OIDC Provider
+FUNIKIN_ISSUER=https://<PROJECT_ID>.supabase.co/auth/v1
+FUNIKIN_CLIENT_ID=responku-id
+FUNIKIN_CLIENT_SECRET=your_client_secret_here
+FUNIKIN_SCOPES=openid email profile
+
+# Feature flag tombol login di halaman /masuk
+NEXT_PUBLIC_ENABLE_FUNIKIN_LOGIN=false
 ```
 
-Untuk Google direct OAuth, masukkan Client ID dan Client Secret ke `GOOGLE_CLIENT_ID` dan `GOOGLE_CLIENT_SECRET` di `.env.local`. Di Google Cloud, gunakan Authorized redirect URI `http://localhost:3000/auth/google/callback` dan `https://www.responku.id/auth/google/callback`. Jangan menyimpan file `client_secret_*.json` atau secret Google di Git.
+- **Redirect URI**:
+  - Development: `http://localhost:3000/auth/funikin/callback`
+  - Production: `https://responku.id/auth/funikin/callback`
+- **Identitas Pengguna**: ResponKu mengidentifikasi pengguna secara unik berdasarkan klaim `sub` (Subject Identifier) OIDC, bukan email. Profil tersimpan di koleksi MongoDB `oauth_users`.
+- **Account Linking**: Penautan otomatis ke akun lokal hanya dilakukan jika `email_verified === true` (boolean ketat) DAN email akun lokal tujuan juga telah terverifikasi.
+- **Validasi Keamanan**: PKCE (S256), `state`, `nonce`, verifikasi signature `id_token` via JWKS remote (`jose`), penguncian algoritma ke asymmetric (`RS256`, `ES256`, menolak `none` dan `HS*`), serta sanitasi post-login redirect (same-origin relative path only).
 
-Untuk menjadikan akun FunikIn sebagai login bersama, FunikIn harus menyediakan OAuth2 atau OIDC. Pada mode hybrid, isi endpoint FunikIn langsung di `.env.local`: authorization URL, token URL, userinfo URL, client ID, dan client secret. Redirect/callback yang didaftarkan di FunikIn adalah `/auth/funikin/callback`.
+#### Menjalankan Pengujian OIDC Lokal
 
-Jika FunikIn belum memiliki OAuth/OIDC, perlu dibuat dulu endpoint standar tersebut di web utama. Jangan mengirim client secret FunikIn ke browser; kredensial provider hanya dibaca server-side.
+Untuk memverifikasi seluruh alur OIDC, penanganan error, dan keamanan tanpa memerlukan koneksi ke provider produksi:
 
-Google dan FunikIn sekarang menggunakan direct OAuth hybrid melalui `/auth/google` dan `/auth/funikin`; login email/password tetap menggunakan Supabase Auth. Direct OAuth memerlukan `OAUTH_SESSION_SECRET`, kredensial Google server-side, serta endpoint OAuth FunikIn di `.env.local`. Callback direct-nya adalah `/auth/google/callback` dan `/auth/funikin/callback`.
+```bash
+npm run test:oidc
+```
+
+#### Prosedur Rotasi Client Secret
+
+Jika `FUNIKIN_CLIENT_SECRET` perlu dirotasi:
+1. Dapatkan client secret baru dari pengelola FunikIn / Supabase OAuth Server.
+2. Perbarui nilai `FUNIKIN_CLIENT_SECRET` pada environment server (`.env.local` atau panel deployment).
+3. Lakukan restart / redeploy aplikasi ResponKu.
+*(Catatan: Rotasi tanpa downtime memerlukan provider OAuth yang mendukung dua client secret aktif secara bersamaan).*
 
 ### Pemeriksaan indeks Google
 

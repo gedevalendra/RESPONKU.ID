@@ -10,6 +10,7 @@ type User = {
   email: string;
   display_name: string;
   role: string;
+  tier?: "free" | "pro";
   verified: boolean;
   organizationId: string;
 };
@@ -82,6 +83,9 @@ export default function UserRoleManager() {
               <div className="flex flex-wrap justify-between gap-3">
                 <div>
                   <a href={`/akun/${user.id}`} className="font-medium hover:text-blue-500">{user.display_name} {user.verified && <i className="bx bxs-badge-check align-middle text-blue-500" role="img" aria-label="Terverifikasi" />}</a>
+                  <span className={`ml-2 inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${user.tier === "pro" || user.role === "admin" || user.role === "superadmin" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"}`}>
+                    {user.tier === "pro" || user.role === "admin" || user.role === "superadmin" ? "AI Pro" : "AI Gratis"}
+                  </span>
                   <p className="break-all text-sm text-mute">{user.email}</p>
                 </div>
                 <button disabled={busy || protectedRole} className="text-sm text-red-600 disabled:opacity-40" onClick={() => { setDeleting(user); setConfirmation(""); }}>Hapus akun</button>
@@ -97,6 +101,12 @@ export default function UserRoleManager() {
                     <option value="author">Penulis</option>
                     <option value="admin">Admin</option>
                     {(actorRole === "superadmin" || user.role === "superadmin") && <option value="superadmin">Superadmin</option>}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm">Status AI / Tier
+                  <select disabled={busy || protectedUser} value={user.tier || "free"} className="p-3 disabled:opacity-50 font-medium" onChange={(event) => void mutate(user, "PATCH", { tier: event.target.value })}>
+                    <option value="free">Akun Gratis (Key Sendiri di FunikIn)</option>
+                    <option value="pro">Akun Pro (Key Server ResponKu)</option>
                   </select>
                 </label>
                 <label className="grid gap-1 text-sm">Organisasi

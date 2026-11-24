@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     );
   }
   try {
-    const formatted = await formatArticleFromFreeform(document.source);
+    const formatted = await formatArticleFromFreeform(document.source, { actor });
     return NextResponse.json({ ...formatted, sourceFileName: document.fileName });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Format artikel gagal";

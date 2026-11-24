@@ -244,6 +244,28 @@ export default function ProfileSettings({
           <div className="mt-2 min-w-0">
             <h2 className="break-words text-xl font-semibold leading-tight text-ink">{profile.displayName} {profile.verified && <i className="bx bxs-badge-check align-middle text-blue-500" role="img" aria-label="Terverifikasi" />}</h2>
             <p className="mt-1 truncate text-sm text-mute">{profile.username ? `@${profile.username}` : profile.email}</p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              {profile.tier === "pro" || profile.role === "admin" || profile.role === "superadmin" ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                  <i className="bx bxs-zap text-amber-500" /> Fitur AI Pro (Server ResponKu)
+                </span>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-700 ring-1 ring-inset ring-slate-300/40">
+                    <i className="bx bx-bot text-slate-500" /> AI Gratis (Key FunikIn)
+                  </span>
+                  <a
+                    href="https://auth.funikin.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    <span>Atur API Key di FunikIn</span>
+                    <i className="bx bx-external-link text-xs" />
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
           {profile.organization && <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-gray-50 px-3 py-1 text-sm text-mute ring-1 ring-inset ring-gray-200"><i className="bx bx-buildings" aria-hidden="true" />{profile.organization}<i className="bx bxs-badge-check text-gray-800" role="img" aria-label="Organisasi terverifikasi" /></span>}
           {profile.bio && <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-mute">{profile.bio}</p>}

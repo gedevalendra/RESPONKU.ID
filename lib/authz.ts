@@ -11,8 +11,14 @@ import { communityDb } from "@/lib/community";
 export async function getActor(): Promise<Profile | null> {
   const oauthActor = await getOAuthActor();
   if (oauthActor) {
-    const override = await (await communityDb()).collection("account_roles").findOne({ userId: oauthActor.id });
-    return { ...oauthActor, role: (override?.role || (oauthActor.emailConfirmed && roleForEmail(oauthActor.email) === "superadmin" ? "superadmin" : oauthActor.role)) as UserRole };
+    const override = await (await communityDb()).collection("account_roles").findOne<{ role?: string; tier?: "free" | "pro" }>({ userId: oauthActor.id });
+    const role = (override?.role || (oauthActor.emailConfirmed && roleForEmail(oauthActor.email) === "superadmin" ? "superadmin" : oauthActor.role)) as UserRole;
+    const tier = override?.tier || oauthActor.tier || (role === "admin" || role === "superadmin" ? "pro" : "free");
+    return {
+      ...oauthActor,
+      role,
+      tier,
+    };
   }
   if (!env.supabaseUrl || !env.supabasePublicKey) return null;
   const authClient = getSupabaseAuthServer();
@@ -36,17 +42,21 @@ export async function getActor(): Promise<Profile | null> {
     }
     await connectOAuthProfiles(verifiedEmail, user.id);
   }
-  const override = await (await communityDb()).collection("account_roles").findOne({ userId: user.id });
+  const override = await (await communityDb()).collection("account_roles").findOne<{ role?: string; tier?: "free" | "pro" }>({ userId: user.id });
+  const role = override?.role ? (override.role as UserRole) : user.email_confirmed_at && roleForEmail(email) === "superadmin"
+    ? "superadmin"
+    : ((data?.role || "reader") as UserRole);
+  const tier = override?.tier || (role === "admin" || role === "superadmin" ? "pro" : "free");
   return {
     id: user.id,
     email,
     displayName: data?.display_name || user.email?.split("@")[0] || "Pembaca",
-    role:
-      override?.role ? override.role as UserRole : user.email_confirmed_at && roleForEmail(email) === "superadmin"
-        ? "superadmin"
-        : ((data?.role || "reader") as UserRole),
+    role,
+    tier,
   };
 }
+
+export { isProUser } from "@/lib/funikin-ai";
 
 export function isStaff(role?: UserRole | null): boolean {
   return role === "admin" || role === "superadmin";

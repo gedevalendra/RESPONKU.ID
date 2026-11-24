@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getActor } from "@/lib/authz";
-import { env } from "@/lib/env";
 import { recordAiUsage } from "@/lib/ai-usage";
+import { resolveAiKeyForActor } from "@/lib/funikin-ai";
 
 const input = z.object({ imageUrl: z.string().url().max(3000) });
 
@@ -13,11 +13,15 @@ export async function POST(request: Request) {
       { error: "Silakan masuk terlebih dahulu" },
       { status: 401 },
     );
-  if (!env.groqApiKey || !env.groqModel)
+  let credentials;
+  try {
+    credentials = await resolveAiKeyForActor(actor, "groq");
+  } catch (error) {
     return NextResponse.json(
-      { error: "GROQ_API_KEY dan GROQ_MODEL belum diisi di .env.local" },
-      { status: 503 },
+      { error: error instanceof Error ? error.message : "Gagal memverifikasi API key AI" },
+      { status: 403 },
     );
+  }
   const parsed = input.safeParse(await request.json().catch(() => null));
   if (!parsed.success)
     return NextResponse.json(
@@ -29,11 +33,11 @@ export async function POST(request: Request) {
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${env.groqApiKey}`,
+        Authorization: `Bearer ${credentials.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: env.groqModel,
+        model: credentials.model,
         temperature: 0.3,
         max_tokens: 120,
         messages: [
@@ -65,7 +69,7 @@ export async function POST(request: Request) {
     choices?: Array<{ message?: { content?: string } }>;
     usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
-  await recordAiUsage({ provider: "groq", model: env.groqModel, feature: "image_caption", inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens, totalTokens: data.usage?.total_tokens });
+  await recordAiUsage({ provider: "groq", model: credentials.model, feature: "image_caption", inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens, totalTokens: data.usage?.total_tokens });
   const caption = data.choices?.[0]?.message?.content?.trim();
   if (!caption)
     return NextResponse.json(

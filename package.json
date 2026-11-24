@@ -9,6 +9,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:oidc": "node --experimental-strip-types --test tests/oidc-funikin.test.mjs",
+    "test:ai": "node --test tests/funikin-ai-resolver.test.mjs",
+    "test": "node --experimental-strip-types --test tests/oidc-funikin.test.mjs && node --test tests/funikin-ai-resolver.test.mjs",
     "db:indexes": "node scripts/mongodb-indexes.js",
     "auth:seed-superadmin": "node scripts/seed-superadmin.mjs"
   },

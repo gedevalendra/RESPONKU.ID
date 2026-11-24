@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       { status: 422 },
     );
   try {
-    const { article, status, review } = await prepareArticleSubmission(parsed.data);
+    const { article, status, review } = await prepareArticleSubmission(parsed.data, { actor });
     const created = await createArticle({ ...article, author: actor.displayName }, actor, status);
     if (created.status === "published") await notifyNewArticle(created).catch(() => null);
     return NextResponse.json(

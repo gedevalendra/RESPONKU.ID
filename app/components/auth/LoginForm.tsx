@@ -19,6 +19,7 @@ export default function LoginForm({ initialError = "" }: { initialError?: string
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(initialError);
   const [notice, setNotice] = useState("");
+  const isFunikinEnabled = process.env.NEXT_PUBLIC_ENABLE_FUNIKIN_LOGIN === "true";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setStatus("submitting"); setError(""); setNotice("");
@@ -72,7 +73,37 @@ export default function LoginForm({ initialError = "" }: { initialError?: string
       <div className="flex items-center gap-3 py-1 font-mono text-[10px] text-mute"><span className="h-px flex-1 bg-rule" /><span>atau masuk dengan</span><span className="h-px flex-1 bg-rule" /></div>
       <div className="grid grid-cols-2 gap-3">
         <button type="button" onClick={() => signIn("google")} aria-label="Masuk dengan Google" className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-rule bg-paper px-3 text-xs text-ink transition hover:bg-gray-50"><svg aria-hidden="true" viewBox="0 0 24 24" className="size-5"><path fill="#4285F4" d="M21.35 12.23c0-.71-.06-1.4-.18-2.05H12v3.88h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.22Z"/><path fill="#34A853" d="M12 21.7c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.7Z"/><path fill="#FBBC05" d="M6.54 13.79a5.85 5.85 0 0 1 0-3.58V7.68H3.3a9.74 9.74 0 0 0 0 8.64l3.24-2.53Z"/><path fill="#EA4335" d="M12 6.18c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 3.28 14.63 2.3 12 2.3a9.74 9.74 0 0 0-8.7 5.38l3.24 2.53C7.31 7.9 9.46 6.18 12 6.18Z"/></svg><span>Google</span></button>
-        <button type="button" disabled aria-disabled="true" title="Login FunikIn sementara dinonaktifkan" aria-label="Login FunikIn sementara dinonaktifkan" className="inline-flex h-11 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-rule bg-gray-50 px-3 text-xs text-mute opacity-60"><img src="https://www.funikin.com/icon.png" alt="" className="size-5 rounded-full object-cover grayscale" /><span>FunikIn</span></button>
+        {isFunikinEnabled ? (
+          <button
+            type="button"
+            onClick={() => signIn("custom:funikin")}
+            aria-label="Masuk dengan FunikIn"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-rule bg-paper px-3 text-xs text-ink transition hover:bg-gray-50"
+          >
+            <img
+              src="https://www.funikin.com/icon.png"
+              alt=""
+              className="size-5 rounded-full object-cover"
+            />
+            <span>FunikIn</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Login FunikIn sementara dinonaktifkan"
+            aria-label="Login FunikIn sementara dinonaktifkan"
+            className="inline-flex h-11 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-rule bg-gray-50 px-3 text-xs text-mute opacity-60"
+          >
+            <img
+              src="https://www.funikin.com/icon.png"
+              alt=""
+              className="size-5 rounded-full object-cover grayscale"
+            />
+            <span>FunikIn</span>
+          </button>
+        )}
       </div>
 
       {error && <p className="text-center text-xs text-signal">{error}</p>}

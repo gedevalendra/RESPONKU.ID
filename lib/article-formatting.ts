@@ -2,6 +2,8 @@ import "server-only";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { recordAiUsage } from "@/lib/ai-usage";
+import type { Profile } from "@/lib/types";
+import { resolveFormattingProviders } from "@/lib/funikin-ai";
 
 const formattedBlock = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), text: z.string().max(20000) }),
@@ -255,9 +257,12 @@ function mergeFormattedParts(parts: FormattedArticle[], source: string): Formatt
   });
 }
 
-export async function formatArticleFromFreeform(source: string): Promise<FormattedArticle> {
-  const providers = configuredProviders();
-  if (!providers.length) throw new Error("Isi GROQ_API_KEY atau GEMINI_API_KEY_1/2 untuk format artikel otomatis.");
+export async function formatArticleFromFreeform(
+  source: string,
+  options?: { actor?: Profile | null },
+): Promise<FormattedArticle> {
+  const providers = await resolveFormattingProviders(options?.actor);
+  if (!providers.length) throw new Error("Tidak ada provider AI aktif untuk memformat naskah.");
   try {
     const preparedSource = compactSource(source);
     const chunks = splitSource(preparedSource, providers);

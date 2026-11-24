@@ -1,8 +1,9 @@
 import "server-only";
 import { z } from "zod";
 import { env } from "@/lib/env";
-import type { Article, ArticleBlock } from "@/lib/types";
+import type { Article, ArticleBlock, Profile } from "@/lib/types";
 import { recordAiUsage } from "@/lib/ai-usage";
+import { resolveAiKeyForActor } from "@/lib/funikin-ai";
 
 export const analysisSchema = z.object({
   category: z.enum(["Ekonomi", "Teknologi", "Politik", "Olahraga", "Budaya"]),
@@ -16,8 +17,25 @@ export const editorialReviewSchema = z.object({
   reason: z.string().max(500),
 });
 
-export async function analyzeArticle(input: { title: string; dek: string; contentBlocks?: ArticleBlock[]; content?: string[] }) {
-  if (!env.groqApiKey || !env.groqModel) throw new Error("Isi GROQ_API_KEY dan GROQ_MODEL untuk analisis artikel otomatis.");
+export async function analyzeArticle(
+  input: { title: string; dek: string; contentBlocks?: ArticleBlock[]; content?: string[] },
+  options?: { actor?: Profile; apiKey?: string; model?: string },
+) {
+  let apiKey = options?.apiKey;
+  let model = options?.model;
+
+  if (!apiKey && options?.actor) {
+    const creds = await resolveAiKeyForActor(options.actor, "groq");
+    apiKey = creds.apiKey;
+    model = creds.model;
+  }
+
+  if (!apiKey) {
+    apiKey = env.groqApiKey;
+    model = env.groqModel;
+  }
+
+  if (!apiKey || !model) throw new Error("Isi GROQ_API_KEY dan GROQ_MODEL untuk analisis artikel otomatis.");
   const text = [input.title, input.dek, ...(input.contentBlocks?.length
     ? input.contentBlocks.map((block) => "text" in block ? block.text : block.type === "image" ? block.caption || "" : "")
     : input.content || [])].join("\n");
@@ -25,9 +43,9 @@ export async function analyzeArticle(input: { title: string; dek: string; conten
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     signal: AbortSignal.timeout(15000),
-    headers: { Authorization: `Bearer ${env.groqApiKey}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: env.groqModel,
+      model,
       temperature: 0,
       max_completion_tokens: 1024,
       response_format: { type: "json_object" },
@@ -49,23 +67,40 @@ export async function analyzeArticle(input: { title: string; dek: string; conten
     throw new Error(message);
   }
   const data = await response.json();
-  await recordAiUsage({ provider: "groq", model: env.groqModel, feature: "article_analysis", inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens, totalTokens: data.usage?.total_tokens });
+  await recordAiUsage({ provider: "groq", model, feature: "article_analysis", inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens, totalTokens: data.usage?.total_tokens });
   const result = analysisSchema.safeParse(JSON.parse(data.choices?.[0]?.message?.content || "{}"));
   if (!result.success) throw new Error("Hasil analisis Groq tidak valid. Coba lagi.");
   return result.data;
 }
 
-export async function reviewArticle(input: { title: string; dek: string; contentBlocks?: ArticleBlock[]; content?: string[] }) {
-  if (!env.groqApiKey || !env.groqModel) throw new Error("Isi GROQ_API_KEY dan GROQ_MODEL untuk review artikel otomatis.");
+export async function reviewArticle(
+  input: { title: string; dek: string; contentBlocks?: ArticleBlock[]; content?: string[] },
+  options?: { actor?: Profile; apiKey?: string; model?: string },
+) {
+  let apiKey = options?.apiKey;
+  let model = options?.model;
+
+  if (!apiKey && options?.actor) {
+    const creds = await resolveAiKeyForActor(options.actor, "groq");
+    apiKey = creds.apiKey;
+    model = creds.model;
+  }
+
+  if (!apiKey) {
+    apiKey = env.groqApiKey;
+    model = env.groqModel;
+  }
+
+  if (!apiKey || !model) throw new Error("Isi GROQ_API_KEY dan GROQ_MODEL untuk review artikel otomatis.");
   const text = [input.title, input.dek, ...(input.contentBlocks?.length
     ? input.contentBlocks.map((block) => "text" in block ? block.text : block.type === "image" ? block.caption || "" : "")
     : input.content || [])].join("\n");
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     signal: AbortSignal.timeout(20000),
-    headers: { Authorization: `Bearer ${env.groqApiKey}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: env.groqModel,
+      model,
       temperature: 0,
       max_completion_tokens: 2048,
       response_format: { type: "json_object" },
@@ -77,15 +112,21 @@ export async function reviewArticle(input: { title: string; dek: string; content
   });
   if (!response.ok) throw new Error(`Review Groq gagal (HTTP ${response.status}).`);
   const data = await response.json();
-  await recordAiUsage({ provider: "groq", model: env.groqModel, feature: "article_review", inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens, totalTokens: data.usage?.total_tokens });
+  await recordAiUsage({ provider: "groq", model, feature: "article_review", inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens, totalTokens: data.usage?.total_tokens });
   const result = editorialReviewSchema.safeParse(JSON.parse(data.choices?.[0]?.message?.content || "{}"));
   if (!result.success) throw new Error("Hasil review AI tidak valid. Artikel ditahan untuk review admin.");
   return result.data;
 }
 
 
-export async function prepareArticleSubmission<T extends Parameters<typeof reviewArticle>[0]>(input: T) {
-  const [analysis, editorial] = await Promise.allSettled([analyzeArticle(input), reviewArticle(input)]);
+export async function prepareArticleSubmission<T extends Parameters<typeof reviewArticle>[0]>(
+  input: T,
+  options?: { actor?: Profile; apiKey?: string; model?: string },
+) {
+  const [analysis, editorial] = await Promise.allSettled([
+    analyzeArticle(input, options),
+    reviewArticle(input, options),
+  ]);
   const review = editorial.status === "fulfilled" ? editorial.value : null;
   if (editorial.status === "rejected") {
     console.warn("Review AI artikel gagal.", editorial.reason instanceof Error ? editorial.reason.message : "Kesalahan tak dikenal");

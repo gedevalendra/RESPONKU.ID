@@ -44,12 +44,18 @@ export async function GET() {
         created_at: user.createdAt,
         source: "oauth",
         verifiedEmail: user.verifiedEmail,
+        tier: (user as any).tier,
       })),
-    ].map((user) => ({
-      ...user,
-      role: overrides.find((override) => override.userId === user.id)?.role || ((user.source === "supabase" || "verifiedEmail" in user && user.verifiedEmail) && roleForEmail(String(user.email)) === "superadmin" ? "superadmin" : user.role),
-      verified: badges.some((badge) => badge.userId === user.id && badge.verified),
-      organizationId: members.find((member) => member.userId === user.id)?.organizationId || "",
-    })),
+    ].map((user) => {
+      const finalRole = overrides.find((override) => override.userId === user.id)?.role || ((user.source === "supabase" || "verifiedEmail" in user && user.verifiedEmail) && roleForEmail(String(user.email)) === "superadmin" ? "superadmin" : user.role);
+      const overrideTier = overrides.find((override) => override.userId === user.id)?.tier;
+      return {
+        ...user,
+        role: finalRole,
+        tier: overrideTier || (user as any).tier || (finalRole === "admin" || finalRole === "superadmin" ? "pro" : "free"),
+        verified: badges.some((badge) => badge.userId === user.id && badge.verified),
+        organizationId: members.find((member) => member.userId === user.id)?.organizationId || "",
+      };
+    }),
   });
 }
