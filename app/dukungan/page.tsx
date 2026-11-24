@@ -13,6 +13,7 @@ function getSaweriaUrl(value?: string) {
   value = value?.trim();
   if (!value) return null;
 
+  
   try {
     const url = new URL(value);
     if (url.origin === "https://saweria.co" && !url.username && !url.password && url.pathname !== "/") {
