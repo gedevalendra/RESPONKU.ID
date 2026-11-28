@@ -13,9 +13,7 @@ import { getPinnedArticleIds } from "@/lib/homepage-pin";
 import { homepageDescription, homepageTitle, publicPageMetadata, siteOrganization, siteOrigin } from "@/lib/seo";
 import { getPublishedArticles } from "@/lib/data";
 import { publicProfile } from "@/lib/community";
-
 export const metadata = publicPageMetadata("/", homepageTitle, homepageDescription);
-
 const structuredData = {
   "@context": "https://schema.org",
   "@graph": [

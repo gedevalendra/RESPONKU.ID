@@ -49,9 +49,11 @@ function ImageUpload({ kind, busy, onUpload }: {
 export default function ProfileSettings({
   initial,
   articleStats,
+  funikinAiStatus = null,
 }: {
   initial: Profile;
   articleStats: { published: number; pending: number; rejected: number; views: number };
+  funikinAiStatus?: { linked: boolean; providers: string[]; needsRelogin?: boolean; authUrl: string } | null;
 }) {
   const [closing, setClosing] = useState(false);
   const [profile, setProfile] = useState<ProfileForm>({
@@ -251,18 +253,52 @@ export default function ProfileSettings({
                 </span>
               ) : (
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-700 ring-1 ring-inset ring-slate-300/40">
-                    <i className="bx bx-bot text-slate-500" /> AI Gratis (Key FunikIn)
-                  </span>
-                  <a
-                    href="https://auth.funikin.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-700 hover:underline"
-                  >
-                    <span>Atur API Key di FunikIn</span>
-                    <i className="bx bx-external-link text-xs" />
-                  </a>
+                  {funikinAiStatus && funikinAiStatus.providers.length > 0 ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                        <i className="bx bx-check-circle text-blue-600" />
+                        <span>
+                          API Key FunikIn Aktif ({funikinAiStatus.providers.map((p) => p.toUpperCase()).join(", ")})
+                        </span>
+                      </span>
+                      <a
+                        href={funikinAiStatus.authUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                      >
+                        <span>Kelola di FunikIn</span>
+                        <i className="bx bx-external-link text-xs" />
+                      </a>
+                    </>
+                  ) : funikinAiStatus?.needsRelogin ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-700 ring-1 ring-inset ring-slate-300/40">
+                        <i className="bx bx-refresh text-slate-500" /> Perlu Sinkronisasi Sesi FunikIn
+                      </span>
+                      <a
+                        href="/auth/funikin?next=/akun"
+                        className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                      >
+                        <span>Sinkronkan Ulang FunikIn</span>
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-700 ring-1 ring-inset ring-slate-300/40">
+                        <i className="bx bx-bot text-slate-500" /> AI Gratis (Key FunikIn)
+                      </span>
+                      <a
+                        href={funikinAiStatus?.authUrl || "https://auth.funikin.com/dashboard/ai-keys"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                      >
+                        <span>Atur API Key di FunikIn</span>
+                        <i className="bx bx-external-link text-xs" />
+                      </a>
+                    </>
+                  )}
                 </div>
               )}
             </div>

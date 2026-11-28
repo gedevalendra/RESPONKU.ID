@@ -27,7 +27,11 @@ export const env = {
   mongodbUri: process.env.MONGODB_URI,
   mongodbDbName: process.env.MONGODB_DB_NAME || "responku",
   funikinSupabaseUrl: process.env.FUNIKIN_SUPABASE_URL || "https://wkitepiehrgpnoprgcqx.supabase.co",
-  funikinSupabaseSecretKey: process.env.FUNIKIN_SUPABASE_SECRET_KEY || "sb_secret_m1sYR95W57fMinVI0d4bkA_tvwe9aDn",
+  funikinSupabaseAnonKey:
+    process.env.FUNIKIN_SUPABASE_ANON_KEY ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraXRlcGllaHJncG5vcHJnY3F4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0OTUxNjksImV4cCI6MjExMTA3MTE2OX0.iCfPQ8JwPRCRzZil1Gm3o5enkxzYoDVnSTD2GdPJzPw",
+  funikinSupabaseSecretKey: process.env.FUNIKIN_SUPABASE_SECRET_KEY || "",
+  funikinAuthUrl: process.env.NEXT_PUBLIC_FUNIKIN_AUTH_URL || "https://auth.funikin.com",
 };
 
 export const hasSupabase = Boolean(

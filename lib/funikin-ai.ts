@@ -60,73 +60,292 @@ export async function isProUser(actor: Profile): Promise<boolean> {
   return false;
 }
 
+export interface FunikinAuthLink {
+  providerUserId: string;
+  accessToken?: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+}
+
+export interface FunikinAiKeyStatus {
+  linked: boolean;
+  providers: string[];
+  needsRelogin?: boolean;
+  authUrl: string;
+}
+
 /**
- * Ambil ID User FunikIn (UUID auth.users) yang terhubung dengan akun ResponKu
+ * Ambil data tautan FunikIn (UUID auth.users + OAuth access/refresh token) milik akun ResponKu
  */
-export async function getFunikinUserId(actor: Profile): Promise<string | null> {
+export async function getFunikinAuthLink(actor: Profile): Promise<FunikinAuthLink | null> {
   try {
     const db = await communityDb();
     if (!db) return null;
 
-    const funikinDoc = await db.collection("oauth_users").findOne<{ providerUserId?: string }>({
-      provider: "funikin",
-      $or: [
-        { id: actor.id },
-        { accountId: actor.id },
-        { email: actor.email.toLowerCase() },
-        ...(actor.emailConfirmed ? [{ verifiedEmail: actor.email.toLowerCase() }] : []),
-      ],
-    });
+    const funikinDoc = await db.collection("oauth_users").findOne<{
+      providerUserId?: string;
+      funikinAccessToken?: string;
+      funikinRefreshToken?: string;
+      funikinTokenExpiresAt?: string;
+    }>(
+      {
+        provider: "funikin",
+        $or: [
+          { id: actor.id },
+          { accountId: actor.id },
+          { email: actor.email.toLowerCase() },
+          ...(actor.emailConfirmed ? [{ verifiedEmail: actor.email.toLowerCase() }] : []),
+        ],
+      },
+      { sort: { updatedAt: -1 } },
+    );
 
     if (funikinDoc?.providerUserId) {
-      return String(funikinDoc.providerUserId).trim();
+      return {
+        providerUserId: String(funikinDoc.providerUserId).trim(),
+        accessToken: funikinDoc.funikinAccessToken?.trim() || undefined,
+        refreshToken: funikinDoc.funikinRefreshToken?.trim() || undefined,
+        tokenExpiresAt: funikinDoc.funikinTokenExpiresAt || undefined,
+      };
     }
   } catch (error) {
-    console.error("Gagal mendapatkan FunikIn user ID:", error);
+    console.error("Gagal mendapatkan FunikIn auth link:", error);
   }
 
   return null;
 }
 
 /**
- * Ambil daftar API Key aktif milik user dari database Supabase FunikIn
+ * Ambil ID User FunikIn (UUID auth.users) yang terhubung dengan akun ResponKu
  */
-export async function fetchUserAiKeysFromFunikin(funikinUserId: string): Promise<Record<string, string>> {
+export async function getFunikinUserId(actor: Profile): Promise<string | null> {
+  const link = await getFunikinAuthLink(actor);
+  return link?.providerUserId || null;
+}
+
+async function refreshFunikinAccessToken(
+  funikinUserId: string,
+  refreshToken: string,
+): Promise<string | null> {
+  const clientId = process.env.FUNIKIN_CLIENT_ID?.trim();
+  const clientSecret = process.env.FUNIKIN_CLIENT_SECRET?.trim();
+  const issuer = (process.env.FUNIKIN_ISSUER || `${env.funikinSupabaseUrl}/auth/v1`).replace(/\/$/, "");
+
+  const tokenEndpoints = [
+    `${issuer}/oauth/token`,
+    `${issuer}/token?grant_type=refresh_token`,
+  ];
+
+  for (const tokenUrl of tokenEndpoints) {
+    try {
+      const isOAuthToken = tokenUrl.includes("/oauth/token");
+      const headers: Record<string, string> = {
+        Accept: "application/json",
+      };
+      let body: string | URLSearchParams;
+
+      if (isOAuthToken && clientId && clientSecret) {
+        headers["Content-Type"] = "application/x-www-form-urlencoded";
+        headers["Authorization"] = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
+        body = new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+        });
+      } else {
+        headers["Content-Type"] = "application/json";
+        if (env.funikinSupabaseAnonKey) {
+          headers["apikey"] = env.funikinSupabaseAnonKey;
+        }
+        body = JSON.stringify({ refresh_token: refreshToken });
+      }
+
+      const res = await fetch(tokenUrl, {
+        method: "POST",
+        headers,
+        body,
+        cache: "no-store",
+      });
+      if (!res.ok) continue;
+
+      const data = (await res.json()) as {
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+      };
+      if (!data.access_token) continue;
+
+      const nextExpiresAt = data.expires_in
+        ? new Date(Date.now() + Math.max(60, data.expires_in - 60) * 1000).toISOString()
+        : undefined;
+
+      const db = await communityDb();
+      if (db) {
+        await db.collection("oauth_users").updateMany(
+          { provider: "funikin", providerUserId: funikinUserId },
+          {
+            $set: {
+              funikinAccessToken: data.access_token,
+              ...(data.refresh_token ? { funikinRefreshToken: data.refresh_token } : {}),
+              ...(nextExpiresAt ? { funikinTokenExpiresAt: nextExpiresAt } : {}),
+              updatedAt: new Date().toISOString(),
+            },
+          },
+        );
+      }
+
+      return data.access_token;
+    } catch {
+      // Try next endpoint
+    }
+  }
+
+  return null;
+}
+
+function parseUserAiKeyRows(
+  rows: Array<{ provider?: string; api_key_encrypted?: string }>,
+): Record<string, string> {
+  const keys: Record<string, string> = {};
+  for (const row of rows) {
+    if (row.provider && row.api_key_encrypted) {
+      const providerKey = row.provider.toLowerCase().trim();
+      if (!keys[providerKey]) {
+        keys[providerKey] = row.api_key_encrypted.trim();
+      }
+    }
+  }
+  return keys;
+}
+
+/**
+ * Ambil daftar API Key aktif milik user dari database Supabase FunikIn.
+ * Prioritas 1: Memakai OAuth access_token milik user + FUNIKIN_SUPABASE_ANON_KEY (via RLS Supabase, tanpa perlu service_role key).
+ * Prioritas 2: Fallback memakai FUNIKIN_SUPABASE_SECRET_KEY jika valid di server.
+ */
+export async function fetchUserAiKeysFromFunikin(
+  funikinUserId: string,
+  authLink?: FunikinAuthLink | null,
+): Promise<Record<string, string>> {
   const supabaseUrl = env.funikinSupabaseUrl;
+  const anonKey = env.funikinSupabaseAnonKey;
   const secretKey = env.funikinSupabaseSecretKey;
 
-  if (!supabaseUrl || !secretKey) {
-    throw new Error("Konfigurasi koneksi FunikIn Supabase belum lengkap di server ResponKu.");
+  if (!supabaseUrl) {
+    throw new Error("Konfigurasi FUNIKIN_SUPABASE_URL belum lengkap di server ResponKu.");
   }
 
   const endpoint = `${supabaseUrl}/rest/v1/user_ai_keys?user_id=eq.${encodeURIComponent(
     funikinUserId,
-  )}&is_active=eq.true&select=provider,api_key_encrypted`;
+  )}&is_active=eq.true&select=provider,api_key_encrypted&order=created_at.desc`;
 
-  const res = await fetch(endpoint, {
-    headers: {
-      apikey: secretKey,
-      Authorization: `Bearer ${secretKey}`,
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
+  let lastErrorDetail = "";
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`Gagal memuat API key dari FunikIn (HTTP ${res.status}): ${detail}`);
-  }
+  // ===== TIER 1: User OAuth Access Token + Valid FunikIn Anon Key (RLS auth.uid() = user_id) =====
+  if (anonKey && (authLink?.accessToken || authLink?.refreshToken)) {
+    let activeToken = authLink.accessToken;
+    const isExpired =
+      authLink.tokenExpiresAt && new Date(authLink.tokenExpiresAt).getTime() <= Date.now();
 
-  const rows = (await res.json()) as Array<{ provider: string; api_key_encrypted: string }>;
-  const keys: Record<string, string> = {};
+    if ((!activeToken || isExpired) && authLink.refreshToken) {
+      const refreshed = await refreshFunikinAccessToken(funikinUserId, authLink.refreshToken);
+      if (refreshed) activeToken = refreshed;
+    }
 
-  for (const row of rows) {
-    if (row.provider && row.api_key_encrypted) {
-      keys[row.provider.toLowerCase().trim()] = row.api_key_encrypted.trim();
+    if (activeToken) {
+      let res = await fetch(endpoint, {
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${activeToken}`,
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (res.status === 401 && authLink.refreshToken) {
+        const refreshed = await refreshFunikinAccessToken(funikinUserId, authLink.refreshToken);
+        if (refreshed) {
+          res = await fetch(endpoint, {
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${refreshed}`,
+              Accept: "application/json",
+            },
+            cache: "no-store",
+          });
+        }
+      }
+
+      if (res.ok) {
+        const rows = (await res.json()) as Array<{ provider?: string; api_key_encrypted?: string }>;
+        return parseUserAiKeyRows(rows);
+      }
+
+      lastErrorDetail = await res.text().catch(() => `HTTP ${res.status}`);
     }
   }
 
-  return keys;
+  // ===== TIER 2: Fallback Server Secret / Service Role Key =====
+  if (secretKey) {
+    const isOpaqueSecret = secretKey.startsWith("sb_secret_");
+    const headers: Record<string, string> = {
+      apikey: secretKey,
+      Accept: "application/json",
+    };
+    // Supabase opaque sb_secret_ keys MUST NOT be passed in Authorization: Bearer to PostgREST
+    if (!isOpaqueSecret) {
+      headers.Authorization = `Bearer ${secretKey}`;
+    }
+
+    const res = await fetch(endpoint, {
+      headers,
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      const rows = (await res.json()) as Array<{ provider?: string; api_key_encrypted?: string }>;
+      return parseUserAiKeyRows(rows);
+    }
+
+    lastErrorDetail = await res.text().catch(() => `HTTP ${res.status}`);
+  }
+
+  if (!authLink?.accessToken && !authLink?.refreshToken) {
+    throw new Error(
+      "Sesi akun FunikIn Anda perlu disinkronkan ulang agar ResponKu dapat membaca API Key dari auth.funikin.com. Silakan masuk ulang menggunakan tombol Masuk dengan FunikIn.",
+    );
+  }
+
+  throw new Error(
+    `Gagal memuat API key dari FunikIn (${lastErrorDetail || "akses ditolak"}). Silakan masuk ulang menggunakan FunikIn agar izin API Key diperbarui.`,
+  );
+}
+
+/**
+ * Ambil ringkasan status deteksi API Key FunikIn untuk ditampilkan di halaman Akun ResponKu.
+ */
+export async function getFunikinAiKeyStatus(actor: Profile): Promise<FunikinAiKeyStatus> {
+  const authUrl = `${env.funikinAuthUrl.replace(/\/$/, "")}/dashboard/ai-keys`;
+  const authLink = await getFunikinAuthLink(actor);
+  if (!authLink) {
+    return { linked: false, providers: [], authUrl };
+  }
+
+  try {
+    const keys = await fetchUserAiKeysFromFunikin(authLink.providerUserId, authLink);
+    return {
+      linked: true,
+      providers: Object.keys(keys),
+      needsRelogin: false,
+      authUrl,
+    };
+  } catch {
+    return {
+      linked: true,
+      providers: [],
+      needsRelogin: !authLink.accessToken,
+      authUrl,
+    };
+  }
 }
 
 /**
@@ -173,14 +392,14 @@ export async function resolveAiKeyForActor(
   }
 
   // Akun Gratis: Wajib menggunakan API key dari auth.funikin.com
-  const funikinUserId = await getFunikinUserId(actor);
-  if (!funikinUserId) {
+  const authLink = await getFunikinAuthLink(actor);
+  if (!authLink) {
     throw new Error(
       "Akun gratis wajib menghubungkan akun FunikIn untuk menggunakan fitur AI. Silakan masuk atau hubungkan akun Anda dengan FunikIn di menu Akun, lalu atur API key Anda di auth.funikin.com (atau upgrade ke Akun Pro).",
     );
   }
 
-  const userKeys = await fetchUserAiKeysFromFunikin(funikinUserId);
+  const userKeys = await fetchUserAiKeysFromFunikin(authLink.providerUserId, authLink);
 
   if (requiredProvider === "groq") {
     const userGroqKey = userKeys["groq"];
@@ -283,14 +502,14 @@ export async function resolveFormattingProviders(actor?: Profile | null): Promis
   }
 
   // Akun Gratis:
-  const funikinUserId = await getFunikinUserId(actor);
-  if (!funikinUserId) {
+  const authLink = await getFunikinAuthLink(actor);
+  if (!authLink) {
     throw new Error(
       "Akun gratis wajib menghubungkan akun FunikIn untuk format naskah dengan AI. Silakan hubungkan akun FunikIn Anda dan atur API key di auth.funikin.com (atau upgrade ke Akun Pro).",
     );
   }
 
-  const userKeys = await fetchUserAiKeysFromFunikin(funikinUserId);
+  const userKeys = await fetchUserAiKeysFromFunikin(authLink.providerUserId, authLink);
   const providers: FormattingAiProvider[] = [];
 
   if (userKeys["groq"]) {

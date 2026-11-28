@@ -787,6 +787,9 @@ export async function upsertOAuthUser(input: {
   displayName: string;
   avatarUrl?: string;
   verifiedEmail?: string;
+  funikinAccessToken?: string;
+  funikinRefreshToken?: string;
+  funikinTokenExpiresAt?: string;
 }): Promise<Profile> {
   const db = await getMongoDb();
   if (!process.env.MONGODB_URI)
@@ -818,6 +821,9 @@ export async function upsertOAuthUser(input: {
           role,
           updatedAt: new Date().toISOString(),
           ...(input.verifiedEmail ? { verifiedEmail: input.verifiedEmail } : {}),
+          ...(input.funikinAccessToken ? { funikinAccessToken: input.funikinAccessToken } : {}),
+          ...(input.funikinRefreshToken ? { funikinRefreshToken: input.funikinRefreshToken } : {}),
+          ...(input.funikinTokenExpiresAt ? { funikinTokenExpiresAt: input.funikinTokenExpiresAt } : {}),
         },
         $setOnInsert: {
           id: new ObjectId().toHexString(),

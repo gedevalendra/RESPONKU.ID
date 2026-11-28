@@ -30,6 +30,7 @@ Dev redirect: `http://localhost:3000/api/auth/callback/funikin` (must also be re
 4. How many existing users/rows would be affected?
 Base every later decision on this report, not on the assumptions above.
 
+
 ## 3b. Key constraint
 Supabase cannot natively consume an arbitrary external OIDC issuer as a login provider. Therefore ResponKu must handle the OIDC flow itself (Auth.js) and manage its own session. Any RLS that relies on `auth.uid()` will NOT see FunikIn users automatically. Choose the data-access strategy below and justify it in the audit report.
 

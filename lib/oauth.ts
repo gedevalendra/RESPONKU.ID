@@ -178,6 +178,11 @@ async function completeOAuthLogin(
   provider: OAuthProvider,
   user: OAuthUserInfo,
   nextPath?: string | null,
+  funikinTokens?: {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+  },
 ) {
   const providerUserId = String(user.sub || user.id || "").trim();
   if (!providerUserId || !user.email) {
@@ -188,6 +193,11 @@ async function completeOAuthLogin(
   // Syarat 3: Tautkan otomatis hanya jika email_verified === true (boolean ketat)
   const verifiedEmail = determineVerifiedEmail(provider, user);
 
+  const tokenExpiresAt =
+    funikinTokens?.accessToken && funikinTokens?.expiresIn
+      ? new Date(Date.now() + Math.max(60, funikinTokens.expiresIn - 60) * 1000).toISOString()
+      : undefined;
+
   const oauthProfile = {
     provider,
     providerUserId,
@@ -195,6 +205,13 @@ async function completeOAuthLogin(
     verifiedEmail,
     displayName: user.name || user.given_name || email.split("@")[0],
     avatarUrl: user.picture,
+    ...(provider === "funikin" && funikinTokens?.accessToken
+      ? {
+        funikinAccessToken: funikinTokens.accessToken,
+        funikinRefreshToken: funikinTokens.refreshToken,
+        funikinTokenExpiresAt: tokenExpiresAt,
+      }
+      : {}),
   };
 
   const actor = await upsertOAuthUser(oauthProfile);
@@ -207,8 +224,8 @@ async function completeOAuthLogin(
     const firstOAuth = password
       ? null
       : await db
-          ?.collection("oauth_users")
-          .findOne({ verifiedEmail }, { sort: { createdAt: 1, id: 1 } });
+        ?.collection("oauth_users")
+        .findOne({ verifiedEmail }, { sort: { createdAt: 1, id: 1 } });
 
     if (password || firstOAuth) {
       const accountId = password?.id || firstOAuth?.id || actor.id;
@@ -275,6 +292,9 @@ export async function finishOAuth(
   }
 
   let user: OAuthUserInfo;
+  let funikinTokens:
+    | { accessToken?: string; refreshToken?: string; expiresIn?: number }
+    | undefined;
 
   if (provider === "funikin") {
     const discovery = await getFunikinDiscovery();
@@ -307,6 +327,8 @@ export async function finishOAuth(
 
     const tokenData = (await tokenResponse.json()) as {
       access_token?: string;
+      refresh_token?: string;
+      expires_in?: number;
       id_token?: string;
       error?: string;
       error_description?: string;
@@ -317,11 +339,19 @@ export async function finishOAuth(
     if (!tokenResponse.ok || !tokenData.id_token) {
       throw new Error(
         tokenData.error_description ||
-          tokenData.msg ||
-          tokenData.message ||
-          tokenData.error ||
-          "Token ID FunikIn gagal diterima",
+        tokenData.msg ||
+        tokenData.message ||
+        tokenData.error ||
+        "Token ID FunikIn gagal diterima",
       );
+    }
+
+    if (tokenData.access_token) {
+      funikinTokens = {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        expiresIn: tokenData.expires_in,
+      };
     }
 
     const jwks = getFunikinJwks(discovery.jwks_uri);
@@ -438,7 +468,7 @@ export async function finishOAuth(
     }
   }
 
-  return completeOAuthLogin(provider, user, savedNext);
+  return completeOAuthLogin(provider, user, savedNext, funikinTokens);
 }
 
 export async function getOAuthActor(): Promise<Profile | null> {

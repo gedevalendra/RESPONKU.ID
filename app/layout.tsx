@@ -14,7 +14,7 @@ import ActionConfirmation from "./components/layout/ActionFeedback";
 import CookieConsent from "./components/layout/CookieConsent";
 import CopyAttribution from "./components/layout/CopyAttribution";
 import { getWebsiteStatus } from "@/lib/website-status";
-
+// as
 export const metadata: Metadata = {
   ...publicPageMetadata("/", homepageTitle, homepageDescription),
 

@@ -7,18 +7,20 @@ import ReadingActivityMenu from "@/app/components/user/ReadingActivityMenu";
 import GoogleIndexMenu from "@/app/components/user/GoogleIndexMenu";
 import { listArticleReadingHistory, listArticlesFromDatabase, listUserComments, listUserLikedArticles } from "@/lib/db";
 import { publicProfile } from "@/lib/community";
+import { getFunikinAiKeyStatus } from "@/lib/funikin-ai";
 
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   const actor = await getActor();
   if (!actor) redirect("/masuk?next=/akun");
-  const [articles, readingHistory, likedArticles, userComments, profile] = await Promise.all([
+  const [articles, readingHistory, likedArticles, userComments, profile, funikinAiStatus] = await Promise.all([
     listArticlesFromDatabase({ authorId: actor.id }),
     listArticleReadingHistory(actor.id),
     listUserLikedArticles(actor.id),
     listUserComments(actor.id),
     publicProfile(actor.id).catch(() => null),
+    getFunikinAiKeyStatus(actor).catch(() => null),
   ]);
   const profileActor = { ...actor, avatarUrl: profile?.avatarUrl || actor.avatarUrl, backgroundUrl: profile?.backgroundUrl || actor.backgroundUrl, bio: profile?.bio || actor.bio, username: profile?.username || actor.username };
   const articleStats = {
@@ -30,7 +32,7 @@ export default async function AccountPage() {
   return (
     <div className="wrap py-8 sm:py-12">
       <div className="space-y-4">
-        <ProfileSettings initial={profileActor} articleStats={articleStats} />
+        <ProfileSettings initial={profileActor} articleStats={articleStats} funikinAiStatus={funikinAiStatus} />
         <ReadingActivityMenu
           readingHistory={readingHistory.map((item) => ({ ...item, updatedAt: new Date(item.updatedAt).toISOString() }))}
           likedArticles={likedArticles}
